@@ -13,7 +13,8 @@
       "Bash(export PATH=\"/d/Program Files/apache-maven-3.9.6/bin:$PATH\")",
       "Bash(find D:/claude/OperatorBoard/operator-agent -name *.py)",
       "Bash(pip install:*)",
-      "Bash(python generate_word_docs.py)"
+      "Bash(python generate_word_docs.py)",
+      "Bash(curl:*)"
     ]
   }
 }
