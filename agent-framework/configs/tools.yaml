@@ -1,0 +1,23 @@
+tools:
+  search:
+    name: "web_search"
+    description: "Search the web for information"
+    enabled: true
+    config:
+      max_results: 10
+      timeout: 30
+
+  calculator:
+    name: "calculator"
+    description: "Perform mathematical calculations"
+    enabled: true
+    config:
+      precision: 10
+
+  weather:
+    name: "weather"
+    description: "Get weather information for a location"
+    enabled: true
+    config:
+      api_key: "${WEATHER_API_KEY}"
+      unit: "celsius"

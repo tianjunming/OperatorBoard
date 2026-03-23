@@ -1,0 +1,29 @@
+mcp:
+  servers:
+    filesystem:
+      name: "filesystem"
+      description: "File system operations"
+      command: "npx"
+      args:
+        - "-y"
+        - "@modelcontextprotocol/server-filesystem"
+        - "${MCP_FS_PATH:/tmp}"
+      enabled: true
+      env:
+        NODE_ENV: "production"
+
+    github:
+      name: "github"
+      description: "GitHub API integration"
+      command: "npx"
+      args:
+        - "-y"
+        - "@modelcontextprotocol/server-github"
+      enabled: true
+      env:
+        GITHUB_TOKEN: "${GITHUB_TOKEN}"
+
+  client:
+    timeout: 30
+    retry_attempts: 3
+    retry_delay: 1

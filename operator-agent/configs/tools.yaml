@@ -1,0 +1,10 @@
+tools:
+  nl2sql:
+    name: "nl2sql"
+    description: "NL2SQL service for operator data querying - converts natural language to SQL queries"
+    enabled: true
+    config:
+      service_name: "nl2sql-service"
+      base_url: "${NL2SQL_SERVICE_URL:http://localhost:8080}"
+      api_prefix: "/api/v1/nl2sql"
+      timeout: 60

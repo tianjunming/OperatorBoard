@@ -1,0 +1,33 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: nl2sql-service
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/operator_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.operator.nl2sql.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+nl2sql:
+  sqlcoder:
+    url: http://localhost:8081
+    timeout: 60
+  security:
+    allow-destructive-queries: false
+    max-result-rows: 1000
+  schema:
+    refresh-cron: "0 0 * * * *"
