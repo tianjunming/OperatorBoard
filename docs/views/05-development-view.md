@@ -10,23 +10,21 @@
 
 ```
 D--claude-OperatorBoard/
-├── agent-framework/           # 核心框架仓库
-│   ├── pyproject.toml
-│   ├── configs/              # YAML 配置
-│   ├── src/
+├── src/
+│   ├── agent-framework/     # 核心框架
+│   │   ├── pyproject.toml
+│   │   ├── configs/        # YAML 配置
 │   │   └── agent_framework/
-│   │       ├── core/         # 核心抽象
-│   │       ├── tools/        # 工具系统
-│   │       ├── skills/        # Skills 系统
-│   │       ├── mcp/          # MCP 协议
-│   │       ├── rag/          # RAG 系统
-│   │       ├── config/        # 配置加载
-│   │       └── utils/        # 工具函数
-│   └── tests/                # 单元测试
-│
-├── operator-agent/           # 业务实现仓库
-│   ├── pyproject.toml
-│   ├── src/
+│   │       ├── core/       # 核心抽象
+│   │       ├── tools/      # 工具系统
+│   │       ├── skills/     # Skills 系统
+│   │       ├── mcp/        # MCP 协议
+│   │       ├── rag/        # RAG 系统
+│   │       ├── config/     # 配置加载
+│   │       └── utils/      # 工具函数
+│   │
+│   ├── operator-agent/      # 业务实现
+│   │   ├── pyproject.toml
 │   │   └── operator_agent/
 │   │       ├── operator_agent.py
 │   │       └── capabilities/  # 能力模块
@@ -34,41 +32,42 @@ D--claude-OperatorBoard/
 │   │           ├── rag/      # 电信 RAG
 │   │           ├── mcp/      # Agent 数据获取
 │   │           └── skills/   # 数据处理
-│   └── tests/
+│   │
+│   ├── operator-service/   # Java NL2SQL 服务 (MVC+CQRS)
+│   │   ├── pom.xml
+│   │   └── src/main/
+│   │       ├── java/com/operator/nl2sql/
+│   │       │   ├── config/          # 配置类
+│   │       │   ├── controller/      # Controller 层
+│   │       │   │   ├── Nl2SqlController.java
+│   │       │   │   └── query/       # CQRS Query Controllers
+│   │       │   │       ├── OperatorQueryController.java
+│   │       │   │       └── IndicatorQueryController.java
+│   │       │   ├── service/         # Service 层
+│   │       │   │   ├── command/     # CQRS Command
+│   │       │   │   │   └── Nl2SqlCommandService.java
+│   │       │   │   └── query/       # CQRS Query
+│   │       │   │       ├── OperatorQueryService.java
+│   │       │   │       └── IndicatorQueryService.java
+│   │       │   ├── repository/      # Repository 层
+│   │       │   ├── entity/          # 实体类
+│   │       │   │   ├── OperatorInfo.java
+│   │       │   │   └── IndicatorInfo.java
+│   │       │   ├── dto/             # DTO 类
+│   │       │   └── mapper/          # MyBatis Mapper XML
+│   │       │       ├── OperatorMapper.xml
+│   │       │       └── IndicatorMapper.xml
+│   │       └── resources/
+│   │           ├── application.yml
+│   │           └── mapper/
+│   │
+│   └── agent-app/          # React 前端
+│       ├── package.json
+│       ├── vite.config.ts
+│       └── src/
 │
-├── operator-service/         # Java NL2SQL 服务 (MVC+CQRS)
-│   ├── pom.xml
-│   └── src/main/
-│       ├── java/com/operator/nl2sql/
-│       │   ├── config/          # 配置类
-│       │   ├── controller/      # Controller 层
-│       │   │   ├── Nl2SqlController.java
-│       │   │   └── query/       # CQRS Query Controllers
-│       │   │       ├── OperatorQueryController.java
-│       │   │       └── IndicatorQueryController.java
-│       │   ├── service/         # Service 层
-│       │   │   ├── command/     # CQRS Command
-│       │   │   │   └── Nl2SqlCommandService.java
-│       │   │   └── query/       # CQRS Query
-│       │   │       ├── OperatorQueryService.java
-│       │   │       └── IndicatorQueryService.java
-│       │   ├── repository/      # Repository 层
-│       │   │   ├── OperatorRepository.java
-│       │   │   └── IndicatorRepository.java
-│       │   ├── entity/          # 实体类
-│       │   │   ├── OperatorInfo.java
-│       │   │   ├── SiteCellSummary.java
-│       │   │   └── IndicatorInfo.java
-│       │   ├── dto/             # DTO 类
-│       │   └── mapper/          # MyBatis Mapper XML
-│       │       ├── OperatorMapper.xml
-│       │       └── IndicatorMapper.xml
-│       └── resources/
-│           ├── application.yml
-│           └── mapper/
-│
-└── docs/                     # 文档
-    └── views/                # 4+1 架构视图
+└── docs/                   # 文档
+    └── views/              # 4+1 架构视图
 ```
 
 ### 2.2 模块职责
@@ -238,20 +237,20 @@ export VECTOR_STORE_PATH="/data/vectorstore"
 
 ```bash
 # Python 项目
-cd agent-framework
+cd src/agent-framework
 pip install -e ".[dev]"
 
-cd operator-agent
+cd src/operator-agent
 pip install -e ".[dev]"
 
 # Java 项目 (NL2SQL Service)
-cd operator-service
+cd src/operator-service
 mvn compile          # 编译
 mvn spring-boot:run   # 运行
 mvn test             # 测试
 
 # 前端项目
-cd agent-app
+cd src/agent-app
 npm install
 npm run dev          # 开发服务器
 npm run build        # 生产构建
@@ -444,11 +443,11 @@ operator-service: 1.0.0, 1.1.0, ... (MVC+CQRS)
 
 ### 9.1 Schema 更新
 
-数据库 Schema 文件位于 `operator-service/src/main/resources/schema.sql`
+数据库 Schema 文件位于 `src/operator-service/src/main/resources/schema.sql`
 
 ```bash
 # 初始化数据库
-mysql -u root -p < operator-service/src/main/resources/schema.sql
+mysql -u root -p < src/operator-service/src/main/resources/schema.sql
 ```
 
 ### 9.2 Schema 变更流程

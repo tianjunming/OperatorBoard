@@ -121,7 +121,7 @@ operator-nl2sql-service/
 ### 2.4 Agent App (React Frontend)
 
 ```
-agent-app/
+src/agent-app/
 ├── package.json
 ├── vite.config.js
 ├── index.html

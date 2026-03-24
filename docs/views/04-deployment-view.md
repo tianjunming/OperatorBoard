@@ -57,7 +57,7 @@ version: '3.8'
 services:
   operator-agent:
     build:
-      context: ./operator-agent
+      context: ./src/operator-agent
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
@@ -75,7 +75,7 @@ services:
 
   java-service:
     build:
-      context: ./operator-service
+      context: ./src/operator-service
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
