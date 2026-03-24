@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.operator.nl2sql.repository.IndicatorRepository">
+
+    <resultMap id="IndicatorInfoResultMap" type="com.operator.nl2sql.entity.IndicatorInfo">
+        <id property="id" column="id"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="dataMonth" column="data_month"/>
+        <result property="lte700MDlRate" column="lte_700M_dl_rate"/>
+        <result property="lte700MUlRate" column="lte_700M_ul_rate"/>
+        <result property="lte700MDlPrb" column="lte_700M_dl_prb"/>
+        <result property="lte700MUlPrb" column="lte_700M_ul_prb"/>
+        <result property="lte800MDlRate" column="lte_800M_dl_rate"/>
+        <result property="lte800MUlRate" column="lte_800M_ul_rate"/>
+        <result property="lte800MDlPrb" column="lte_800M_dl_prb"/>
+        <result property="lte800MUlPrb" column="lte_800M_ul_prb"/>
+        <result property="lte900MDlRate" column="lte_900M_dl_rate"/>
+        <result property="lte900MUlRate" column="lte_900M_ul_rate"/>
+        <result property="lte900MDlPrb" column="lte_900M_dl_prb"/>
+        <result property="lte900MUlPrb" column="lte_900M_ul_prb"/>
+        <result property="lte1400MDlRate" column="lte_1400M_dl_rate"/>
+        <result property="lte1400MUlRate" column="lte_1400M_ul_rate"/>
+        <result property="lte1400MDlPrb" column="lte_1400M_dl_prb"/>
+        <result property="lte1400MUlPrb" column="lte_1400M_ul_prb"/>
+        <result property="lte1800MDlRate" column="lte_1800M_dl_rate"/>
+        <result property="lte1800MUlRate" column="lte_1800M_ul_rate"/>
+        <result property="lte1800MDlPrb" column="lte_1800M_dl_prb"/>
+        <result property="lte1800MUlPrb" column="lte_1800M_ul_prb"/>
+        <result property="lte2100MDlRate" column="lte_2100M_dl_rate"/>
+        <result property="lte2100MUlRate" column="lte_2100M_ul_rate"/>
+        <result property="lte2100MDlPrb" column="lte_2100M_dl_prb"/>
+        <result property="lte2100MUlPrb" column="lte_2100M_ul_prb"/>
+        <result property="lte2600MDlRate" column="lte_2600M_dl_rate"/>
+        <result property="lte2600MUlRate" column="lte_2600M_ul_rate"/>
+        <result property="lte2600MDlPrb" column="lte_2600M_dl_prb"/>
+        <result property="lte2600MUlPrb" column="lte_2600M_ul_prb"/>
+        <result property="nr700MDlRate" column="nr_700M_dl_rate"/>
+        <result property="nr700MUlRate" column="nr_700M_ul_rate"/>
+        <result property="nr700MDlPrb" column="nr_700M_dl_prb"/>
+        <result property="nr700MUlPrb" column="nr_700M_ul_prb"/>
+        <result property="nr800MDlRate" column="nr_800M_dl_rate"/>
+        <result property="nr800MUlRate" column="nr_800M_ul_rate"/>
+        <result property="nr800MDlPrb" column="nr_800M_dl_prb"/>
+        <result property="nr800MUlPrb" column="nr_800M_ul_prb"/>
+        <result property="nr900MDlRate" column="nr_900M_dl_rate"/>
+        <result property="nr900MUlRate" column="nr_900M_ul_rate"/>
+        <result property="nr900MDlPrb" column="nr_900M_dl_prb"/>
+        <result property="nr900MUlPrb" column="nr_900M_ul_prb"/>
+        <result property="nr1400MDlRate" column="nr_1400M_dl_rate"/>
+        <result property="nr1400MUlRate" column="nr_1400M_ul_rate"/>
+        <result property="nr1400MDlPrb" column="nr_1400M_dl_prb"/>
+        <result property="nr1400MUlPrb" column="nr_1400M_ul_prb"/>
+        <result property="nr1800MDlRate" column="nr_1800M_dl_rate"/>
+        <result property="nr1800MUlRate" column="nr_1800M_ul_rate"/>
+        <result property="nr1800MDlPrb" column="nr_1800M_dl_prb"/>
+        <result property="nr1800MUlPrb" column="nr_1800M_ul_prb"/>
+        <result property="nr2100MDlRate" column="nr_2100M_dl_rate"/>
+        <result property="nr2100MUlRate" column="nr_2100M_ul_rate"/>
+        <result property="nr2100MDlPrb" column="nr_2100M_dl_prb"/>
+        <result property="nr2100MUlPrb" column="nr_2100M_ul_prb"/>
+        <result property="nr2600MDlRate" column="nr_2600M_dl_rate"/>
+        <result property="nr2600MUlRate" column="nr_2600M_ul_rate"/>
+        <result property="nr2600MDlPrb" column="nr_2600M_dl_prb"/>
+        <result property="nr2600MUlPrb" column="nr_2600M_ul_prb"/>
+        <result property="nr3500MDlRate" column="nr_3500M_dl_rate"/>
+        <result property="nr3500MUlRate" column="nr_3500M_ul_rate"/>
+        <result property="nr3500MDlPrb" column="nr_3500M_dl_prb"/>
+        <result property="nr3500MUlPrb" column="nr_3500M_ul_prb"/>
+        <result property="nr4900MDlRate" column="nr_4900M_dl_rate"/>
+        <result property="nr4900MUlRate" column="nr_4900M_ul_rate"/>
+        <result property="nr4900MDlPrb" column="nr_4900M_dl_prb"/>
+        <result property="nr4900MUlPrb" column="nr_4900M_ul_prb"/>
+        <result property="nr2300MDlRate" column="nr_2300M_dl_rate"/>
+        <result property="nr2300MUlRate" column="nr_2300M_ul_rate"/>
+        <result property="nr2300MDlPrb" column="nr_2300M_dl_prb"/>
+        <result property="nr2300MUlPrb" column="nr_2300M_ul_prb"/>
+        <result property="lteAvgDlRate" column="lte_avg_dl_rate"/>
+        <result property="lteAvgPrb" column="lte_avg_prb"/>
+        <result property="nrAvgDlRate" column="nr_avg_dl_rate"/>
+        <result property="nrAvgPrb" column="nr_avg_prb"/>
+        <result property="splitRatio" column="split_ratio"/>
+        <result property="dwellRatio" column="dwell_ratio"/>
+        <result property="terminalPenetration" column="terminal_penetration"/>
+        <result property="durationDwellRatio" column="duration_dwell_ratio"/>
+        <result property="fallbackRatio" column="fallback_ratio"/>
+        <result property="createdTime" column="created_time"/>
+        <result property="updatedTime" column="updated_time"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="IndicatorInfoResultMap">
+        SELECT * FROM indicator_info
+        ORDER BY operator_id, data_month
+    </select>
+
+    <select id="findLatestIndicators" resultMap="IndicatorInfoResultMap">
+        SELECT * FROM indicator_info i
+        WHERE i.data_month = (
+            SELECT MAX(i2.data_month) FROM indicator_info i2
+            WHERE i2.operator_id = i.operator_id
+        )
+        <if test="operatorId != null">
+            AND i.operator_id = #{operatorId}
+        </if>
+        ORDER BY i.operator_id, i.data_month
+    </select>
+
+    <select id="findIndicatorsByOperatorId" resultMap="IndicatorInfoResultMap">
+        SELECT * FROM indicator_info
+        WHERE operator_id = #{operatorId}
+        ORDER BY data_month
+    </select>
+
+    <select id="findIndicatorsByOperatorIdAndMonth" resultMap="IndicatorInfoResultMap">
+        SELECT * FROM indicator_info
+        WHERE operator_id = #{operatorId}
+          AND data_month = #{dataMonth}
+    </select>
+
+    <select id="findTrendData" resultMap="IndicatorInfoResultMap">
+        SELECT * FROM indicator_info
+        WHERE operator_id = #{operatorId}
+        ORDER BY data_month ASC
+    </select>
+
+</mapper>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const API_BASE = '/api/operator';
+const API_BASE = '/api/query';
 
 async function fetchAPI(endpoint, options = {}) {
   const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -14,19 +14,49 @@ async function fetchAPI(endpoint, options = {}) {
 }
 
 export function useOperatorData() {
+  const [operators, setOperators] = useState([]);
+  const [siteCells, setSiteCells] = useState([]);
   const [latestIndicators, setLatestIndicators] = useState([]);
-  const [compareData, setCompareData] = useState(null);
-  const [trendData, setTrendData] = useState([]);
-  const [availableTimes, setAvailableTimes] = useState([]);
+  const [historyIndicators, setHistoryIndicators] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [selectedOperator, setSelectedOperator] = useState('中国移动');
+  const [selectedOperatorId, setSelectedOperatorId] = useState(null);
 
-  const fetchLatestIndicators = useCallback(async (operatorName) => {
+  const fetchOperators = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchAPI(`/indicators/latest?operatorName=${operatorName}&limit=20`);
-      setLatestIndicators(data.results || []);
+      const data = await fetchAPI('/operators');
+      setOperators(data || []);
+      if (data && data.length > 0 && !selectedOperatorId) {
+        setSelectedOperatorId(data[0].id);
+      }
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+      setOperators([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedOperatorId]);
+
+  const fetchSiteCells = useCallback(async (operatorId, band) => {
+    try {
+      let url = `/site-cells?operatorId=${operatorId}`;
+      if (band) url += `&band=${encodeURIComponent(band)}`;
+      const data = await fetchAPI(url);
+      setSiteCells(data || []);
+    } catch (err) {
+      setSiteCells([]);
+    }
+  }, []);
+
+  const fetchLatestIndicators = useCallback(async (operatorId, band) => {
+    setLoading(true);
+    try {
+      let url = `/indicators/latest?operatorId=${operatorId}`;
+      if (band) url += `&band=${encodeURIComponent(band)}`;
+      const data = await fetchAPI(url);
+      setLatestIndicators(data || []);
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -36,64 +66,60 @@ export function useOperatorData() {
     }
   }, []);
 
-  const fetchCompareData = useCallback(async (operatorName, currentMonth, compareMonth, siteCode) => {
-    setLoading(true);
+  const fetchHistoryIndicators = useCallback(async (operatorId, band, dataMonth) => {
     try {
-      let url = `/indicators/compare?operatorName=${operatorName}&currentMonth=${currentMonth}&compareMonth=${compareMonth}`;
-      if (siteCode) url += `&siteCode=${siteCode}`;
+      let url = `/indicators/history?operatorId=${operatorId}`;
+      if (band) url += `&band=${encodeURIComponent(band)}`;
+      if (dataMonth) url += `&dataMonth=${dataMonth}`;
       const data = await fetchAPI(url);
-      setCompareData(data);
-      setError(null);
+      setHistoryIndicators(data || []);
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      setHistoryIndicators([]);
     }
   }, []);
 
-  const fetchTrendData = useCallback(async (operatorName, startTime, endTime, cellId) => {
+  const fetchTrendData = useCallback(async (operatorId, band, start, end) => {
     setLoading(true);
     try {
-      let url = `/indicators/trend?operatorName=${operatorName}&startTime=${startTime}&endTime=${endTime}&limit=1000`;
-      if (cellId) url += `&cellId=${cellId}`;
+      let url = `/indicators/trend?operatorId=${operatorId}`;
+      if (band) url += `&band=${encodeURIComponent(band)}`;
+      if (start) url += `&start=${encodeURIComponent(start)}`;
+      if (end) url += `&end=${encodeURIComponent(end)}`;
       const data = await fetchAPI(url);
-      setTrendData(data.results || []);
+      setHistoryIndicators(data || []);
       setError(null);
     } catch (err) {
       setError(err.message);
-      setTrendData([]);
+      setHistoryIndicators([]);
     } finally {
       setLoading(false);
-    }
-  }, []);
-
-  const fetchAvailableTimes = useCallback(async (operatorName) => {
-    try {
-      let url = '/times';
-      if (operatorName) url += `?operatorName=${operatorName}`;
-      const data = await fetchAPI(url);
-      setAvailableTimes(data.results || []);
-    } catch (err) {
-      setAvailableTimes([]);
     }
   }, []);
 
   useEffect(() => {
-    fetchLatestIndicators(selectedOperator);
-    fetchAvailableTimes(selectedOperator);
-  }, [selectedOperator, fetchLatestIndicators, fetchAvailableTimes]);
+    fetchOperators();
+  }, []);
+
+  useEffect(() => {
+    if (selectedOperatorId) {
+      fetchSiteCells(selectedOperatorId);
+      fetchLatestIndicators(selectedOperatorId);
+    }
+  }, [selectedOperatorId, fetchSiteCells, fetchLatestIndicators]);
 
   return {
+    operators,
+    siteCells,
     latestIndicators,
-    compareData,
-    trendData,
-    availableTimes,
+    historyIndicators,
     loading,
     error,
-    selectedOperator,
-    setSelectedOperator,
-    fetchLatestIndicators: () => fetchLatestIndicators(selectedOperator),
-    fetchCompareData,
+    selectedOperatorId,
+    setSelectedOperatorId,
+    fetchOperators,
+    fetchSiteCells,
+    fetchLatestIndicators,
+    fetchHistoryIndicators,
     fetchTrendData,
   };
 }

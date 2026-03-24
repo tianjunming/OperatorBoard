@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.operator.nl2sql.repository.OperatorRepository">
+
+    <resultMap id="OperatorInfoResultMap" type="com.operator.nl2sql.entity.OperatorInfo">
+        <id property="id" column="id"/>
+        <result property="operatorName" column="operator_name"/>
+        <result property="country" column="country"/>
+        <result property="region" column="region"/>
+        <result property="networkType" column="network_type"/>
+        <result property="dataMonth" column="data_month"/>
+        <result property="createdTime" column="created_time"/>
+        <result property="updatedTime" column="updated_time"/>
+    </resultMap>
+
+    <resultMap id="SiteCellSummaryResultMap" type="com.operator.nl2sql.entity.SiteCellSummary">
+        <id property="id" column="id"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="dataMonth" column="data_month"/>
+        <result property="lte700MSite" column="lte_700M_site"/>
+        <result property="lte700MCell" column="lte_700M_cell"/>
+        <result property="lte800MSite" column="lte_800M_site"/>
+        <result property="lte800MCell" column="lte_800M_cell"/>
+        <result property="lte900MSite" column="lte_900M_site"/>
+        <result property="lte900MCell" column="lte_900M_cell"/>
+        <result property="lte1400MSite" column="lte_1400M_site"/>
+        <result property="lte1400MCell" column="lte_1400M_cell"/>
+        <result property="lte1800MSite" column="lte_1800M_site"/>
+        <result property="lte1800MCell" column="lte_1800M_cell"/>
+        <result property="lte2100MSite" column="lte_2100M_site"/>
+        <result property="lte2100MCell" column="lte_2100M_cell"/>
+        <result property="lte2600MSite" column="lte_2600M_site"/>
+        <result property="lte2600MCell" column="lte_2600M_cell"/>
+        <result property="nr700MSite" column="nr_700M_site"/>
+        <result property="nr700MCell" column="nr_700M_cell"/>
+        <result property="nr800MSite" column="nr_800M_site"/>
+        <result property="nr800MCell" column="nr_800M_cell"/>
+        <result property="nr900MSite" column="nr_900M_site"/>
+        <result property="nr900MCell" column="nr_900M_cell"/>
+        <result property="nr1400MSite" column="nr_1400M_site"/>
+        <result property="nr1400MCell" column="nr_1400M_cell"/>
+        <result property="nr1800MSite" column="nr_1800M_site"/>
+        <result property="nr1800MCell" column="nr_1800M_cell"/>
+        <result property="nr2100MSite" column="nr_2100M_site"/>
+        <result property="nr2100MCell" column="nr_2100M_cell"/>
+        <result property="nr2600MSite" column="nr_2600M_site"/>
+        <result property="nr2600MCell" column="nr_2600M_cell"/>
+        <result property="nr3500MSite" column="nr_3500M_site"/>
+        <result property="nr3500MCell" column="nr_3500M_cell"/>
+        <result property="nr4900MSite" column="nr_4900M_site"/>
+        <result property="nr4900MCell" column="nr_4900M_cell"/>
+        <result property="nr2300MSite" column="nr_2300M_site"/>
+        <result property="nr2300MCell" column="nr_2300M_cell"/>
+        <result property="lteTotalSite" column="lte_total_site"/>
+        <result property="lteTotalCell" column="lte_total_cell"/>
+        <result property="nrTotalSite" column="nr_total_site"/>
+        <result property="nrTotalCell" column="nr_total_cell"/>
+        <result property="createdTime" column="created_time"/>
+        <result property="updatedTime" column="updated_time"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="OperatorInfoResultMap">
+        SELECT id, operator_name, country, region, network_type, data_month, created_time, updated_time
+        FROM operator_info
+        ORDER BY id
+    </select>
+
+    <select id="findByCountry" resultMap="OperatorInfoResultMap">
+        SELECT id, operator_name, country, region, network_type, data_month, created_time, updated_time
+        FROM operator_info
+        WHERE country = #{country}
+        ORDER BY id
+    </select>
+
+    <select id="findByOperatorName" resultMap="OperatorInfoResultMap">
+        SELECT id, operator_name, country, region, network_type, data_month, created_time, updated_time
+        FROM operator_info
+        WHERE operator_name = #{operatorName}
+        ORDER BY id
+    </select>
+
+    <select id="findById" resultMap="OperatorInfoResultMap">
+        SELECT id, operator_name, country, region, network_type, data_month, created_time, updated_time
+        FROM operator_info
+        WHERE id = #{id}
+    </select>
+
+    <select id="findAllSiteCellSummary" resultMap="SiteCellSummaryResultMap">
+        SELECT s.id, s.operator_id, s.data_month,
+               s.lte_700M_site, s.lte_700M_cell,
+               s.lte_800M_site, s.lte_800M_cell,
+               s.lte_900M_site, s.lte_900M_cell,
+               s.lte_1400M_site, s.lte_1400M_cell,
+               s.lte_1800M_site, s.lte_1800M_cell,
+               s.lte_2100M_site, s.lte_2100M_cell,
+               s.lte_2600M_site, s.lte_2600M_cell,
+               s.nr_700M_site, s.nr_700M_cell,
+               s.nr_800M_site, s.nr_800M_cell,
+               s.nr_900M_site, s.nr_900M_cell,
+               s.nr_1400M_site, s.nr_1400M_cell,
+               s.nr_1800M_site, s.nr_1800M_cell,
+               s.nr_2100M_site, s.nr_2100M_cell,
+               s.nr_2600M_site, s.nr_2600M_cell,
+               s.nr_3500M_site, s.nr_3500M_cell,
+               s.nr_4900M_site, s.nr_4900M_cell,
+               s.nr_2300M_site, s.nr_2300M_cell,
+               s.lte_total_site, s.lte_total_cell,
+               s.nr_total_site, s.nr_total_cell,
+               s.created_time, s.updated_time
+        FROM site_info s
+        ORDER BY s.operator_id, s.data_month
+    </select>
+
+    <select id="findSiteCellSummaryByOperatorId" resultMap="SiteCellSummaryResultMap">
+        SELECT s.id, s.operator_id, s.data_month,
+               s.lte_700M_site, s.lte_700M_cell,
+               s.lte_800M_site, s.lte_800M_cell,
+               s.lte_900M_site, s.lte_900M_cell,
+               s.lte_1400M_site, s.lte_1400M_cell,
+               s.lte_1800M_site, s.lte_1800M_cell,
+               s.lte_2100M_site, s.lte_2100M_cell,
+               s.lte_2600M_site, s.lte_2600M_cell,
+               s.nr_700M_site, s.nr_700M_cell,
+               s.nr_800M_site, s.nr_800M_cell,
+               s.nr_900M_site, s.nr_900M_cell,
+               s.nr_1400M_site, s.nr_1400M_cell,
+               s.nr_1800M_site, s.nr_1800M_cell,
+               s.nr_2100M_site, s.nr_2100M_cell,
+               s.nr_2600M_site, s.nr_2600M_cell,
+               s.nr_3500M_site, s.nr_3500M_cell,
+               s.nr_4900M_site, s.nr_4900M_cell,
+               s.nr_2300M_site, s.nr_2300M_cell,
+               s.lte_total_site, s.lte_total_cell,
+               s.nr_total_site, s.nr_total_cell,
+               s.created_time, s.updated_time
+        FROM site_info s
+        WHERE s.operator_id = #{operatorId}
+        ORDER BY s.data_month
+    </select>
+
+    <select id="findSiteCellSummaryByOperatorIdAndMonth" resultMap="SiteCellSummaryResultMap">
+        SELECT s.id, s.operator_id, s.data_month,
+               s.lte_700M_site, s.lte_700M_cell,
+               s.lte_800M_site, s.lte_800M_cell,
+               s.lte_900M_site, s.lte_900M_cell,
+               s.lte_1400M_site, s.lte_1400M_cell,
+               s.lte_1800M_site, s.lte_1800M_cell,
+               s.lte_2100M_site, s.lte_2100M_cell,
+               s.lte_2600M_site, s.lte_2600M_cell,
+               s.nr_700M_site, s.nr_700M_cell,
+               s.nr_800M_site, s.nr_800M_cell,
+               s.nr_900M_site, s.nr_900M_cell,
+               s.nr_1400M_site, s.nr_1400M_cell,
+               s.nr_1800M_site, s.nr_1800M_cell,
+               s.nr_2100M_site, s.nr_2100M_cell,
+               s.nr_2600M_site, s.nr_2600M_cell,
+               s.nr_3500M_site, s.nr_3500M_cell,
+               s.nr_4900M_site, s.nr_4900M_cell,
+               s.nr_2300M_site, s.nr_2300M_cell,
+               s.lte_total_site, s.lte_total_cell,
+               s.nr_total_site, s.nr_total_cell,
+               s.created_time, s.updated_time
+        FROM site_info s
+        WHERE s.operator_id = #{operatorId}
+          AND s.data_month = #{dataMonth}
+    </select>
+
+</mapper>

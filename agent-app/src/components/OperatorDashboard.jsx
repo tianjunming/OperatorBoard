@@ -14,150 +14,136 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { Activity, TrendingUp, Wifi, Signal } from 'lucide-react';
+import { Activity, TrendingUp, Wifi, Signal, Building2 } from 'lucide-react';
 import '../styles/Dashboard.css';
 
-const OPERATORS = ['中国移动', '中国联通', '中国电信'];
+const API_BASE = '/api';
 const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export default function OperatorDashboard() {
-  const [selectedOperator, setSelectedOperator] = useState('中国移动');
+  const [operators, setOperators] = useState([]);
+  const [selectedOperatorId, setSelectedOperatorId] = useState(null);
+  const [siteCells, setSiteCells] = useState([]);
   const [latestIndicators, setLatestIndicators] = useState([]);
-  const [compareData, setCompareData] = useState(null);
-  const [trendData, setTrendData] = useState([]);
+  const [historyIndicators, setHistoryIndicators] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // Compare month state
-  const [compareMonth, setCompareMonth] = useState('2026-02');
   const [currentMonth, setCurrentMonth] = useState('2026-03');
 
   useEffect(() => {
-    fetchLatestData();
-  }, [selectedOperator]);
+    fetchOperators();
+  }, []);
 
-  const fetchLatestData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(
-        `/api/operator/indicators/latest?operatorName=${encodeURIComponent(selectedOperator)}&limit=20`
-      );
-      const data = await response.json();
-      setLatestIndicators(data.results || []);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (selectedOperatorId) {
+      fetchSiteCells(selectedOperatorId);
+      fetchLatestIndicators(selectedOperatorId);
+      fetchHistoryIndicators(selectedOperatorId, currentMonth);
     }
-  };
+  }, [selectedOperatorId, currentMonth]);
 
-  const fetchCompareData = async () => {
+  const fetchOperators = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `/api/operator/indicators/compare?operatorName=${encodeURIComponent(selectedOperator)}&currentMonth=${currentMonth}&compareMonth=${compareMonth}`
-      );
+      const response = await fetch(`${API_BASE}/query/operators`);
       const data = await response.json();
-      setCompareData(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchTrendData = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(
-        `/api/operator/indicators/trend?operatorName=${encodeURIComponent(selectedOperator)}&startTime=2026-03-01T00:00:00&endTime=2026-03-23T23:59:59&limit=100`
-      );
-      const data = await response.json();
-      setTrendData(data.results || []);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Prepare chart data
-  const preparePRBChartData = () => {
-    return latestIndicators.slice(0, 10).map((item) => ({
-      name: item.cell_id || item.cellName || 'Unknown',
-      prb: parseFloat(item.prb_usage || item.prbUsage || 0),
-      dl: parseFloat(item.dl_rate || item.dlRate || 0),
-    }));
-  };
-
-  const prepareRateChartData = () => {
-    return latestIndicators.slice(0, 8).map((item) => ({
-      name: (item.cell_id || item.cellName || 'Unknown').substring(0, 10),
-     下行速率: parseFloat(item.dl_rate || item.dlRate || 0),
-     上行速率: parseFloat(item.ul_rate || item.ulRate || 0),
-    }));
-  };
-
-  const prepareSplitRatioData = () => {
-    const grouped = {};
-    latestIndicators.forEach((item) => {
-      const band = item.band || item.frequency_band || 'Unknown';
-      if (!grouped[band]) {
-        grouped[band] = { count: 0, splitRatio: 0 };
+      setOperators(data || []);
+      if (data && data.length > 0) {
+        setSelectedOperatorId(data[0].id);
       }
-      grouped[band].count++;
-      grouped[band].splitRatio += parseFloat(item.split_ratio || item.splitRatio || 0);
-    });
-    return Object.entries(grouped).map(([band, data]) => ({
-      name: band,
-      value: parseFloat((data.splitRatio / data.count).toFixed(2)),
-      count: data.count,
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSiteCells = async (operatorId) => {
+    try {
+      const response = await fetch(`${API_BASE}/query/site-cells?operatorId=${operatorId}`);
+      const data = await response.json();
+      setSiteCells(data || []);
+    } catch (err) {
+      setSiteCells([]);
+    }
+  };
+
+  const fetchLatestIndicators = async (operatorId) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/query/indicators/latest?operatorId=${operatorId}`);
+      const data = await response.json();
+      setLatestIndicators(data || []);
+    } catch (err) {
+      setError(err.message);
+      setLatestIndicators([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchHistoryIndicators = async (operatorId, dataMonth) => {
+    try {
+      const response = await fetch(`${API_BASE}/query/indicators/history?operatorId=${operatorId}&dataMonth=${dataMonth}`);
+      const data = await response.json();
+      setHistoryIndicators(data || []);
+    } catch (err) {
+      setHistoryIndicators([]);
+    }
+  };
+
+  const getSelectedOperator = () => {
+    return operators.find(op => op.id === selectedOperatorId);
+  };
+
+  // Prepare chart data for site cells by band
+  const prepareBandCellData = () => {
+    if (!siteCells.length) return [];
+    return siteCells.map(item => ({
+      name: item.frequencyBand || 'Unknown',
+      '4G小区': item.cell4gCount || 0,
+      '5G小区': item.cell5gCount || 0,
+      '小区总数': item.cellTotal || 0,
     }));
   };
 
-  const prepareTrendChartData = () => {
-    const grouped = {};
-    trendData.forEach((item) => {
-      const date = (item.data_time || item.dataTime || '').substring(0, 10);
-      if (!grouped[date]) {
-        grouped[date] = { date, dlRate: 0, ulRate: 0, prbUsage: 0, count: 0 };
-      }
-      grouped[date].dlRate += parseFloat(item.dl_rate || item.dlRate || 0);
-      grouped[date].ulRate += parseFloat(item.ul_rate || item.ulRate || 0);
-      grouped[date].prbUsage += parseFloat(item.prb_usage || item.prbUsage || 0);
-      grouped[date].count++;
-    });
-    return Object.values(grouped)
-      .map((g) => ({
-        date: g.date,
-       下行速率: parseFloat((g.dlRate / g.count).toFixed(2)),
-       上行速率: parseFloat((g.ulRate / g.count).toFixed(2)),
-        PRB利用率: parseFloat((g.prbUsage / g.count).toFixed(2)),
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+  // Prepare chart data for indicators by band
+  const prepareIndicatorByBandData = () => {
+    if (!latestIndicators.length) return [];
+    return latestIndicators.map(item => ({
+      name: item.frequencyBand || 'Unknown',
+      '下行速率': parseFloat(item.dlRate || 0),
+      '上行速率': parseFloat(item.ulRate || 0),
+    }));
   };
 
-  const formatChange = (value) => {
-    if (value === null || value === undefined) return '-';
-    const num = parseFloat(value);
-    const sign = num >= 0 ? '+' : '';
-    return `${sign}${num.toFixed(1)}%`;
+  // Prepare PRB usage by band
+  const preparePRBByBandData = () => {
+    if (!latestIndicators.length) return [];
+    return latestIndicators.map(item => ({
+      name: item.frequencyBand || 'Unknown',
+      '下行PRB': parseFloat(item.dlPrbUsage || 0),
+      '上行PRB': parseFloat(item.ulPrbUsage || 0),
+    }));
   };
 
-  const getChangeClass = (value) => {
-    if (value === null || value === undefined) return '';
-    return parseFloat(value) >= 0 ? 'change-positive' : 'change-negative';
+  // Prepare pie chart for cell distribution
+  const prepareCellDistributionData = () => {
+    if (!siteCells.length) return [];
+    return siteCells.map(item => ({
+      name: item.frequencyBand || 'Unknown',
+      value: item.cellTotal || 0,
+    }));
   };
 
   // Calculate summary metrics
   const calculateMetrics = () => {
-    if (latestIndicators.length === 0) return null;
-    const avgPRB = latestIndicators.reduce((sum, i) => sum + parseFloat(i.prb_usage || i.prbUsage || 0), 0) / latestIndicators.length;
-    const avgDlRate = latestIndicators.reduce((sum, i) => sum + parseFloat(i.dl_rate || i.dlRate || 0), 0) / latestIndicators.length;
-    const avgUlRate = latestIndicators.reduce((sum, i) => sum + parseFloat(i.ul_rate || i.ulRate || 0), 0) / latestIndicators.length;
-    const avgSplitRatio = latestIndicators.reduce((sum, i) => sum + parseFloat(i.split_ratio || i.splitRatio || 0), 0) / latestIndicators.length;
-    return { avgPRB, avgDlRate, avgUlRate, avgSplitRatio };
+    if (!latestIndicators.length) return null;
+    const avgDlPrb = latestIndicators.reduce((sum, i) => sum + parseFloat(i.dlPrbUsage || 0), 0) / latestIndicators.length;
+    const avgUlPrb = latestIndicators.reduce((sum, i) => sum + parseFloat(i.ulPrbUsage || 0), 0) / latestIndicators.length;
+    const avgDlRate = latestIndicators.reduce((sum, i) => sum + parseFloat(i.dlRate || 0), 0) / latestIndicators.length;
+    const avgUlRate = latestIndicators.reduce((sum, i) => sum + parseFloat(i.ulRate || 0), 0) / latestIndicators.length;
+    return { avgDlPrb, avgUlPrb, avgDlRate, avgUlRate };
   };
 
   const metrics = calculateMetrics();
@@ -171,28 +157,66 @@ export default function OperatorDashboard() {
         </h2>
         <select
           className="operator-select"
-          value={selectedOperator}
-          onChange={(e) => setSelectedOperator(e.target.value)}
+          value={selectedOperatorId || ''}
+          onChange={(e) => setSelectedOperatorId(Number(e.target.value))}
         >
-          {OPERATORS.map((op) => (
-            <option key={op} value={op}>{op}</option>
+          {operators.map((op) => (
+            <option key={op.id} value={op.id}>
+              {op.operatorName} ({op.country})
+            </option>
           ))}
         </select>
       </div>
 
       {error && <div className="error">{error}</div>}
 
-      {loading && latestIndicators.length === 0 ? (
+      {loading && operators.length === 0 ? (
         <div className="loading">加载中...</div>
       ) : (
         <>
+          {/* Operator Info Card */}
+          {getSelectedOperator() && (
+            <div className="metrics-row">
+              <div className="metric-card">
+                <div className="label">运营商</div>
+                <div className="value" style={{ fontSize: '1.2em' }}>{getSelectedOperator().operatorName}</div>
+                <div className="sub">{getSelectedOperator().country} | {getSelectedOperator().region}</div>
+              </div>
+              <div className="metric-card">
+                <div className="label">网络类型</div>
+                <div className="value">{getSelectedOperator().networkType}</div>
+                <div className="sub">数据月份: {getSelectedOperator().dataMonth}</div>
+              </div>
+              <div className="metric-card">
+                <div className="label">频段数量</div>
+                <div className="value">{siteCells.length}</div>
+                <div className="sub">覆盖频段</div>
+              </div>
+              <div className="metric-card">
+                <div className="label">小区总数</div>
+                <div className="value">
+                  {siteCells.reduce((sum, sc) => sum + (sc.cellTotal || 0), 0)}
+                </div>
+                <div className="sub">
+                  4G: {siteCells.reduce((sum, sc) => sum + (sc.cell4gCount || 0), 0)} /
+                  5G: {siteCells.reduce((sum, sc) => sum + (sc.cell5gCount || 0), 0)}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Summary Metrics */}
           {metrics && (
             <div className="metrics-row">
               <div className="metric-card">
-                <div className="label">平均PRB利用率</div>
-                <div className="value">{metrics.avgPRB.toFixed(1)}%</div>
-                <div className="sub">所有小区</div>
+                <div className="label">平均下行PRB利用率</div>
+                <div className="value">{metrics.avgDlPrb.toFixed(1)}%</div>
+                <div className="sub">各频段平均</div>
+              </div>
+              <div className="metric-card">
+                <div className="label">平均上行PRB利用率</div>
+                <div className="value">{metrics.avgUlPrb.toFixed(1)}%</div>
+                <div className="sub">各频段平均</div>
               </div>
               <div className="metric-card">
                 <div className="label">平均下行速率</div>
@@ -204,44 +228,41 @@ export default function OperatorDashboard() {
                 <div className="value">{metrics.avgUlRate.toFixed(1)}</div>
                 <div className="sub">Mbps</div>
               </div>
-              <div className="metric-card">
-                <div className="label">平均分流比</div>
-                <div className="value">{metrics.avgSplitRatio.toFixed(1)}%</div>
-                <div className="sub">各频段</div>
-              </div>
             </div>
           )}
 
           {/* Charts Row */}
           <div className="dashboard-grid">
-            {/* PRB Utilization Chart */}
+            {/* Cell Count by Band */}
             <div className="chart-card">
               <h3>
                 <Signal size={16} style={{ marginRight: 6 }} />
-                小区PRB利用率 TOP10
+                频段小区数量分布
               </h3>
               <div className="chart-container">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={preparePRBChartData()} layout="vertical">
+                  <BarChart data={prepareBandCellData()}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" domain={[0, 100]} />
-                    <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(value) => [`${value}%`, 'PRB利用率']} />
-                    <Bar dataKey="prb" fill="#4f46e5" radius={[0, 4, 4, 0]} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis />
+                    <Tooltip formatter={(value, name) => [value, name]} />
+                    <Legend />
+                    <Bar dataKey="4G小区" fill="#10b981" stackId="a" />
+                    <Bar dataKey="5G小区" fill="#4f46e5" stackId="a" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* DL/UL Rate Chart */}
+            {/* DL/UL Rate by Band */}
             <div className="chart-card">
               <h3>
                 <TrendingUp size={16} style={{ marginRight: 6 }} />
-                上下行速率对比
+                各频段速率对比
               </h3>
               <div className="chart-container">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={prepareRateChartData()}>
+                  <BarChart data={prepareIndicatorByBandData()}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                     <YAxis />
@@ -254,130 +275,91 @@ export default function OperatorDashboard() {
               </div>
             </div>
 
-            {/* Split Ratio by Band */}
+            {/* Cell Distribution Pie */}
             <div className="chart-card">
               <h3>
-                <Wifi size={16} style={{ marginRight: 6 }} />
-                频段分流比分布
+                <Building2 size={16} style={{ marginRight: 6 }} />
+                小区总数分布
               </h3>
               <div className="chart-container">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={prepareSplitRatioData()}
+                      data={prepareCellDistributionData()}
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
                       outerRadius={100}
                       paddingAngle={2}
                       dataKey="value"
-                      label={({ name, value }) => `${name}: ${value}%`}
+                      label={({ name, value }) => `${name}: ${value}`}
                     >
-                      {prepareSplitRatioData().map((entry, index) => (
+                      {prepareCellDistributionData().map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [`${value}%`, '分流比']} />
+                    <Tooltip formatter={(value) => [value, '小区数']} />
                   </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* PRB Usage by Band */}
+            <div className="chart-card">
+              <h3>
+                <Wifi size={16} style={{ marginRight: 6 }} />
+                PRB利用率对比
+              </h3>
+              <div className="chart-container">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={preparePRBByBandData()}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip formatter={(value, name) => [`${value}%`, name === '下行PRB' ? '下行PRB' : '上行PRB']} />
+                    <Legend />
+                    <Bar dataKey="下行PRB" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="上行PRB" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
           </div>
 
-          {/* Compare Controls */}
+          {/* Month Selector */}
           <div className="dashboard-controls">
             <div className="control-group">
-              <label>当前月份</label>
+              <label>数据月份</label>
               <input
                 type="month"
                 value={currentMonth}
                 onChange={(e) => setCurrentMonth(e.target.value)}
               />
             </div>
-            <div className="control-group">
-              <label>对比月份</label>
-              <input
-                type="month"
-                value={compareMonth}
-                onChange={(e) => setCompareMonth(e.target.value)}
-              />
-            </div>
-            <div className="control-group" style={{ justifyContent: 'flex-end' }}>
-              <label>&nbsp;</label>
-              <button className="btn btn-primary" onClick={fetchCompareData} disabled={loading}>
-                对比查询
-              </button>
-            </div>
-            <div className="control-group" style={{ justifyContent: 'flex-end' }}>
-              <label>&nbsp;</label>
-              <button className="btn btn-primary" onClick={fetchTrendData} disabled={loading}>
-                趋势查询
-              </button>
-            </div>
           </div>
 
-          {/* Trend Chart */}
-          {trendData.length > 0 && (
-            <div className="chart-card" style={{ marginBottom: 24 }}>
-              <h3>指标趋势</h3>
-              <div className="chart-container" style={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={prepareTrendChartData()}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                    <YAxis yAxisId="left" />
-                    <YAxis yAxisId="right" orientation="right" />
-                    <Tooltip />
-                    <Legend />
-                    <Line yAxisId="left" type="monotone" dataKey="下行速率" stroke="#10b981" strokeWidth={2} />
-                    <Line yAxisId="left" type="monotone" dataKey="上行速率" stroke="#f59e0b" strokeWidth={2} />
-                    <Line yAxisId="right" type="monotone" dataKey="PRB利用率" stroke="#4f46e5" strokeWidth={2} strokeDasharray="5 5" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
-
-          {/* Compare Results */}
-          {compareData && compareData.results && compareData.results.length > 0 && (
+          {/* Site Cell Summary Table */}
+          {siteCells.length > 0 && (
             <div className="data-table-card">
-              <h3>月份对比结果 ({compareData.meta?.comparePeriod})</h3>
+              <h3>频段小区汇总</h3>
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>小区ID</th>
                     <th>频段</th>
-                    <th>下行速率</th>
-                    <th>变化</th>
-                    <th>上行速率</th>
-                    <th>变化</th>
-                    <th>PRB利用率</th>
-                    <th>变化</th>
-                    <th>分流比</th>
-                    <th>变化</th>
+                    <th>EARFCN范围</th>
+                    <th>4G小区</th>
+                    <th>5G小区</th>
+                    <th>小区总数</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {compareData.results.map((item, index) => (
+                  {siteCells.map((item, index) => (
                     <tr key={index}>
-                      <td>{item.cell_id || item.cellId}</td>
-                      <td>{item.band || item.frequency_band}</td>
-                      <td>{parseFloat(item.dl_rate || item.dlRate || 0).toFixed(2)} Mbps</td>
-                      <td className={getChangeClass(item.dl_rate_change)}>
-                        {formatChange(item.dl_rate_change)}
-                      </td>
-                      <td>{parseFloat(item.ul_rate || item.ulRate || 0).toFixed(2)} Mbps</td>
-                      <td className={getChangeClass(item.ul_rate_change)}>
-                        {formatChange(item.ul_rate_change)}
-                      </td>
-                      <td>{parseFloat(item.prb_usage || item.prbUsage || 0).toFixed(2)}%</td>
-                      <td className={getChangeClass(item.prb_usage_change)}>
-                        {formatChange(item.prb_usage_change)}
-                      </td>
-                      <td>{parseFloat(item.split_ratio || item.splitRatio || 0).toFixed(2)}%</td>
-                      <td className={getChangeClass(item.split_ratio_change)}>
-                        {formatChange(item.split_ratio_change)}
-                      </td>
+                      <td>{item.frequencyBand}</td>
+                      <td>{item.earfcnStart || '-'} - {item.earfcnEnd || '-'}</td>
+                      <td>{item.cell4gCount || 0}</td>
+                      <td>{item.cell5gCount || 0}</td>
+                      <td>{item.cellTotal || 0}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -385,38 +367,61 @@ export default function OperatorDashboard() {
             </div>
           )}
 
-          {/* Latest Data Table */}
+          {/* Latest Indicators Table */}
           {latestIndicators.length > 0 && (
             <div className="data-table-card">
-              <h3>最新指标数据</h3>
+              <h3>最新频段指标 (最新数据时间: {latestIndicators[0]?.createdTime || '-'})</h3>
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>小区ID</th>
-                    <th>小区名称</th>
-                    <th>基站</th>
                     <th>频段</th>
-                    <th>下行速率</th>
-                    <th>上行速率</th>
-                    <th>PRB利用率</th>
-                    <th>分流比</th>
-                    <th>主流比</th>
+                    <th>下行速率 (Mbps)</th>
+                    <th>上行速率 (Mbps)</th>
+                    <th>下行PRB利用率</th>
+                    <th>上行PRB利用率</th>
                     <th>数据时间</th>
                   </tr>
                 </thead>
                 <tbody>
                   {latestIndicators.map((item, index) => (
                     <tr key={index}>
-                      <td>{item.cell_id || item.cellId}</td>
-                      <td>{item.cell_name || item.cellName}</td>
-                      <td>{item.site_name || item.siteName}</td>
-                      <td>{item.band || item.frequency_band}</td>
-                      <td>{parseFloat(item.dl_rate || item.dlRate || 0).toFixed(2)} Mbps</td>
-                      <td>{parseFloat(item.ul_rate || item.ulRate || 0).toFixed(2)} Mbps</td>
-                      <td>{parseFloat(item.prb_usage || item.prbUsage || 0).toFixed(2)}%</td>
-                      <td>{parseFloat(item.split_ratio || item.splitRatio || 0).toFixed(2)}%</td>
-                      <td>{parseFloat(item.main_ratio || item.mainRatio || 0).toFixed(2)}%</td>
-                      <td>{item.data_time || item.dataTime}</td>
+                      <td>{item.frequencyBand}</td>
+                      <td>{parseFloat(item.dlRate || 0).toFixed(2)}</td>
+                      <td>{parseFloat(item.ulRate || 0).toFixed(2)}</td>
+                      <td>{parseFloat(item.dlPrbUsage || 0).toFixed(2)}%</td>
+                      <td>{parseFloat(item.ulPrbUsage || 0).toFixed(2)}%</td>
+                      <td>{item.createdTime || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Historical Indicators Table */}
+          {historyIndicators.length > 0 && (
+            <div className="data-table-card">
+              <h3>{currentMonth} 历史频段指标</h3>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>频段</th>
+                    <th>下行速率 (Mbps)</th>
+                    <th>上行速率 (Mbps)</th>
+                    <th>下行PRB利用率</th>
+                    <th>上行PRB利用率</th>
+                    <th>数据时间</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyIndicators.map((item, index) => (
+                    <tr key={index}>
+                      <td>{item.frequencyBand}</td>
+                      <td>{parseFloat(item.dlRate || 0).toFixed(2)}</td>
+                      <td>{parseFloat(item.ulRate || 0).toFixed(2)}</td>
+                      <td>{parseFloat(item.dlPrbUsage || 0).toFixed(2)}%</td>
+                      <td>{parseFloat(item.ulPrbUsage || 0).toFixed(2)}%</td>
+                      <td>{item.createdTime || '-'}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -3,6 +3,7 @@ import { URL } from 'url';
 
 const PORT = process.env.PORT || 8000;
 const OPERATOR_AGENT_URL = process.env.OPERATOR_AGENT_URL || 'http://localhost:8080';
+const NL2SQL_SERVICE_URL = process.env.NL2SQL_SERVICE_URL || 'http://localhost:8080';
 
 let pendingConfirmation = null;
 let confirmationResolver = null;
@@ -244,6 +245,139 @@ const server = http.createServer(async (req, res) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(query),
       });
+      const data = await response.json();
+      sendJSON(res, 200, data);
+    } catch (error) {
+      sendJSON(res, 500, { error: error.message });
+    }
+    return;
+  }
+
+  // NL2SQL Service Query Endpoints (CQRS Query Side)
+  if (url.pathname.startsWith('/api/nl2sql/') && req.method === 'GET') {
+    const nl2sqlPath = url.pathname.replace('/api/nl2sql/', '');
+    try {
+      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/nl2sql/${nl2sqlPath}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      sendJSON(res, 200, data);
+    } catch (error) {
+      sendJSON(res, 500, { error: error.message });
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/nl2sql/query' && req.method === 'POST') {
+    const body = await parseBody(req);
+    try {
+      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/nl2sql/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json();
+      sendJSON(res, 200, data);
+    } catch (error) {
+      sendJSON(res, 500, { error: error.message });
+    }
+    return;
+  }
+
+  // Query Controller Endpoints (CQRS)
+  if (url.pathname === '/api/query/operators' && req.method === 'GET') {
+    const params = url.searchParams;
+    const query = {};
+    if (params.get('country')) query.country = params.get('country');
+    if (params.get('operatorName')) query.operatorName = params.get('operatorName');
+
+    try {
+      const queryStr = new URLSearchParams(query).toString();
+      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/query/operators${queryStr ? '?' + queryStr : ''}`);
+      const data = await response.json();
+      sendJSON(res, 200, data);
+    } catch (error) {
+      sendJSON(res, 500, { error: error.message });
+    }
+    return;
+  }
+
+  if (url.pathname.startsWith('/api/query/operators/') && req.method === 'GET') {
+    const id = url.pathname.split('/').pop();
+    try {
+      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/query/operators/${id}`);
+      const data = await response.json();
+      sendJSON(res, 200, data);
+    } catch (error) {
+      sendJSON(res, 500, { error: error.message });
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/query/site-cells' && req.method === 'GET') {
+    const params = url.searchParams;
+    const query = {};
+    if (params.get('band')) query.band = params.get('band');
+    if (params.get('operatorId')) query.operatorId = params.get('operatorId');
+
+    try {
+      const queryStr = new URLSearchParams(query).toString();
+      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/query/site-summary${queryStr ? '?' + queryStr : ''}`);
+      const data = await response.json();
+      sendJSON(res, 200, data);
+    } catch (error) {
+      sendJSON(res, 500, { error: error.message });
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/query/indicators/latest' && req.method === 'GET') {
+    const params = url.searchParams;
+    const query = {};
+    if (params.get('operatorId')) query.operatorId = params.get('operatorId');
+    if (params.get('band')) query.band = params.get('band');
+
+    try {
+      const queryStr = new URLSearchParams(query).toString();
+      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/query/indicators/latest${queryStr ? '?' + queryStr : ''}`);
+      const data = await response.json();
+      sendJSON(res, 200, data);
+    } catch (error) {
+      sendJSON(res, 500, { error: error.message });
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/query/indicators/history' && req.method === 'GET') {
+    const params = url.searchParams;
+    const query = {};
+    if (params.get('operatorId')) query.operatorId = params.get('operatorId');
+    if (params.get('band')) query.band = params.get('band');
+    if (params.get('dataMonth')) query.dataMonth = params.get('dataMonth');
+
+    try {
+      const queryStr = new URLSearchParams(query).toString();
+      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/query/indicators/history${queryStr ? '?' + queryStr : ''}`);
+      const data = await response.json();
+      sendJSON(res, 200, data);
+    } catch (error) {
+      sendJSON(res, 500, { error: error.message });
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/query/indicators/trend' && req.method === 'GET') {
+    const params = url.searchParams;
+    const query = {};
+    if (params.get('operatorId')) query.operatorId = params.get('operatorId');
+    if (params.get('band')) query.band = params.get('band');
+    if (params.get('start')) query.start = params.get('start');
+    if (params.get('end')) query.end = params.get('end');
+
+    try {
+      const queryStr = new URLSearchParams(query).toString();
+      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/query/indicators/trend${queryStr ? '?' + queryStr : ''}`);
       const data = await response.json();
       sendJSON(res, 200, data);
     } catch (error) {

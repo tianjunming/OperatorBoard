@@ -296,6 +296,116 @@ class OperatorAgent(BaseAgent):
             query_params=params,
         )
 
+    async def process_natural_language_query(
+        self,
+        natural_language_query: str,
+    ) -> Dict[str, Any]:
+        """
+        Process natural language query using LLM to determine intent and extract parameters.
+
+        Args:
+            natural_language_query: User's natural language query
+        Returns:
+            Dict with intent type and extracted parameters
+        """
+        import json
+        import os
+
+        # LLM configuration - can be configured via environment variable
+        llm_endpoint = os.getenv("LLM_ENDPOINT", "http://localhost:8081/v1/completions")
+        llm_model = os.getenv("LLM_MODEL", "sqlcoder")
+
+        prompt_template = """你是一个电信运营商数据查询助手。根据用户的自然语言查询，返回结构化的查询参数。
+
+## 可查询的数据类型：
+1. site_data - 运营商站点数据（站点数、小区数，按频段分类）
+2. indicator_data - 运营商指标数据（速率、PRB利用率等）
+3. operator_list - 运营商列表
+4. latest_data - 最新数据（最新月份的站点或指标数据）
+5. nl2sql - 自然语言SQL查询
+
+## Java服务API端点：
+- /operators - 获取运营商列表
+- /site-summary - 获取站点小区汇总数据
+- /indicators/latest - 获取最新指标数据
+
+## 用户查询：{query}
+
+请分析用户查询，返回JSON格式的查询参数：
+{{
+    "intent": "数据意图类型",
+    "operator_name": "运营商名称（如有）",
+    "band": "频段（如有，如700M、900M等）",
+    "data_month": "数据月份（如有，格式YYYY-MM）",
+    "limit": 结果数量限制（默认50）
+}}
+
+只返回JSON，不要有其他文字。"""
+
+        prompt = prompt_template.format(query=natural_language_query)
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    llm_endpoint,
+                    json={
+                        "model": llm_model,
+                        "prompt": prompt,
+                        "max_tokens": 200,
+                        "temperature": 0.1,
+                    },
+                    headers={"Content-Type": "application/json"},
+                )
+
+                if response.status_code != 200:
+                    return {"error": f"LLM调用失败: {response.status_code}", "intent": "unknown"}
+
+                result = response.json()
+                llm_output = result.get("choices", [{}])[0].get("text", "").strip()
+
+                # Parse JSON from LLM output
+                try:
+                    # Try to find JSON in the output
+                    json_start = llm_output.find("{")
+                    json_end = llm_output.rfind("}") + 1
+                    if json_start >= 0 and json_end > json_start:
+                        parsed = json.loads(llm_output[json_start:json_end])
+                        return parsed
+                    else:
+                        return {"error": "无法解析LLM输出", "intent": "unknown"}
+                except json.JSONDecodeError:
+                    return {"error": "JSON解析失败", "intent": "unknown", "raw_output": llm_output}
+
+        except Exception as e:
+            return {"error": f"LLM调用异常: {str(e)}", "intent": "unknown"}
+
+    async def get_site_cells(
+        self,
+        operator_id: Optional[int] = None,
+        band: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get site cell summary data.
+
+        Args:
+            operator_id: Filter by operator ID
+            band: Filter by frequency band
+        Returns:
+            Site cell summary data
+        """
+        params = {}
+        if operator_id:
+            params["operatorId"] = operator_id
+        if band:
+            params["band"] = band
+
+        return await self.call_java_service(
+            service_name="nl2sql-service",
+            endpoint="/site-summary",
+            method="GET",
+            query_params=params,
+        )
+
     # ============ RAG Management ============
 
     def set_telecom_rag(self, retriever: TelecomRAGRetriever) -> None:
