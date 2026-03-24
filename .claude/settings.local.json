@@ -14,7 +14,18 @@
       "Bash(find D:/claude/OperatorBoard/operator-agent -name *.py)",
       "Bash(pip install:*)",
       "Bash(python generate_word_docs.py)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(GIT_SSH_COMMAND=\"ssh -o ConnectTimeout=10\" git push origin master)",
+      "Bash(git push:*)",
+      "Bash(ssh -T -o ConnectTimeout=10 git@github.com)",
+      "Bash(ping -n 2 8.8.8.8)",
+      "Bash(echo \"HTTP_PROXY: $HTTP_PROXY\")",
+      "Bash(echo \"HTTPS_PROXY: $HTTPS_PROXY\")",
+      "Bash(echo \"http_proxy: $http_proxy\")",
+      "Bash(echo \"https_proxy: $https_proxy\")",
+      "Bash(dir \"D:\\\\claude\\\\OperatorBoard\\\\agent-app\")",
+      "Bash(find D:/claude/OperatorBoard/agent-app -type f \\\\\\(-name *.tsx -o -name *.ts -o -name *.jsx -o -name *.js -o -name *.json \\\\\\))",
+      "Bash(find D:/claude/OperatorBoard/docs -type f -name *.md)"
     ]
   }
 }

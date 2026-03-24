@@ -41,7 +41,76 @@ async def gather_with_concurrency(n, *tasks):
 
 ## 3. 关键流程
 
-### 3.1 工具调用流程
+### 3.1 NL2SQL 命令流程 (CQRS Command Side)
+
+```
+User Request
+     │
+     ▼
+┌─────────────────┐
+│ Nl2SqlController│
+│  POST /nl2sql/  │
+│      query      │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐     ┌─────────────────┐
+│ Nl2SqlCommand   │────>│ SqlCoderService │
+│ Service         │     │  (LLM Call)     │
+└────────┬────────┘     └────────┬────────┘
+         │                        │
+         │ SQL                    │ Generated SQL
+         ▼                        ▼
+┌─────────────────┐     ┌─────────────────┐
+│ isSqlSafe()     │────>│   MyBatis       │
+│ (Validation)    │     │   Executor      │
+└────────┬────────┘     └────────┬────────┘
+         │                        │
+         │ Safe?                  │ Execute
+         ▼                        ▼
+    ┌─────────┐           ┌─────────────┐
+    │  Error  │           │   Results   │
+    └─────────┘           └─────────────┘
+```
+
+### 3.2 数据查询流程 (CQRS Query Side)
+
+```
+User Request
+     │
+     ▼
+┌─────────────────┐
+│OperatorQuery    │  ┌─────────────────┐
+│ Controller      │─>│IndicatorQuery  │
+│                 │  │ Controller      │
+└────────┬────────┘  └────────┬────────┘
+         │                    │
+         ▼                    ▼
+┌─────────────────┐  ┌─────────────────┐
+│OperatorQuery    │  │IndicatorQuery   │
+│ Service         │  │ Service         │
+└────────┬────────┘  └────────┬────────┘
+         │                    │
+         ▼                    ▼
+┌─────────────────┐  ┌─────────────────┐
+│OperatorRepo     │  │IndicatorRepo    │
+│ (MyBatis)       │  │ (MyBatis)       │
+└────────┬────────┘  └────────┬────────┘
+         │                    │
+         ▼                    ▼
+┌─────────────────────────────────┐
+│        MySQL Database           │
+│  ┌──────────┐  ┌──────────────┐ │
+│  │operator_ │  │ site_cell_  │ │
+│  │info      │  │ summary      │ │
+│  └──────────┘  └──────────────┘ │
+│  ┌──────────────────────────┐   │
+│  │ indicator_info           │   │
+│  └──────────────────────────┘   │
+└─────────────────────────────────┘
+```
+
+### 3.3 工具调用流程
 
 ```
 User Request
@@ -68,7 +137,7 @@ User Request
     Return to User
 ```
 
-### 3.2 Skill 链式执行流程
+### 3.4 Skill 链式执行流程
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -90,7 +159,7 @@ execute_chain():
   return results
 ```
 
-### 3.3 MCP 客户端请求流程
+### 3.5 MCP 客户端请求流程
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
@@ -111,10 +180,11 @@ execute_chain():
 
 | 组件 | 线程模型 | 说明 |
 |------|----------|------|
-| Agent 主逻辑 | asyncio 单线程 | 事件循环驱动 |
-| HTTP 请求 | asyncio 线程池 | 内部使用 event loop |
+| Agent 主逻辑 (Python) | asyncio 单线程 | 事件循环驱动 |
+| HTTP 请求 (Python) | asyncio 线程池 | 内部使用 event loop |
+| Java NL2SQL Service | Spring Boot 线程池 | Tomcat/Netty 线程池 |
+| MyBatis 查询 | HikariCP 连接池 | 数据库连接管理 |
 | 向量操作 | asyncio 线程池 | 避免阻塞 |
-| 同步工具 | run_in_executor | 线程池执行 |
 
 ### 4.2 线程安全
 
@@ -130,6 +200,14 @@ class ToolRegistry:
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
         return cls._instance
+```
+
+```java
+// Java: Spring Bean 默认单例，线程安全
+@Service
+public class OperatorQueryService {
+    // Spring 管理的 Bean，无状态，线程安全
+}
 ```
 
 ## 5. 资源管理
@@ -149,6 +227,17 @@ class MCPServerConnection:
 
     async def cleanup(self):
         await self._client.disconnect()
+```
+
+```java
+// Java: HikariCP 连接池 (Spring Boot 默认)
+# application.yml
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
 ```
 
 ### 5.2 批量处理
@@ -186,6 +275,14 @@ for attempt in range(retry_attempts):
         await asyncio.sleep(retry_delay * (backoff ** attempt))
 ```
 
+```java
+// Java: Spring Retry
+@Retryable(maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
+public String generateSql(Nl2SqlRequest request) {
+    return sqlCoderService.generateSql(request);
+}
+```
+
 ### 6.2 超时控制
 
 ```python
@@ -200,6 +297,20 @@ async def wait_for(coro, timeout=60.0, default=None):
         return default
 ```
 
+```java
+// Java: 超时控制
+@Configuration
+public class RestTemplateConfig {
+    @Bean
+    public RestTemplate restTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(30000);
+        return new RestTemplate(factory);
+    }
+}
+```
+
 ## 7. 性能考虑
 
 | 优化点 | 策略 | 位置 |
@@ -209,3 +320,5 @@ async def wait_for(coro, timeout=60.0, default=None):
 | 批量文档添加 | AsyncBatch | async_utils.py |
 | 向量查询并行 | asyncio.gather | retriever.py |
 | Skill 链式执行 | 短路评估 | executor.py |
+| CQRS 查询分离 | 直接映射实体 | OperatorQueryService |
+| 数据库连接池 | HikariCP | application.yml |

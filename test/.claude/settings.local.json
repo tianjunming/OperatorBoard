@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python -m pip install -r requirements.txt -q)",
+      "Bash(echo $OPENAI_API_KEY)",
+      "Bash(python:*)",
+      "Bash(cmd.exe /c \"python -m pip install -r requirements.txt\" 2>&1)",
+      "Bash(cmd.exe /c \"cd /d D:\\\\claude\\\\test\\\\dataservice && start.bat\" 2>&1)",
+      "Bash(cmd.exe /c \"cd /d D:\\\\claude\\\\test && python start.py\" 2>&1)",
+      "Bash(./mvnw.cmd clean:*)",
+      "Bash(cmd.exe /c \"mvnw.cmd clean package -DskipTests\")",
+      "Bash(cmd.exe /c \"call mvnw.cmd clean package -DskipTests && echo BUILD SUCCESS || echo BUILD FAILED\")",
+      "Bash(winget install:*)"
+    ]
+  }
+}

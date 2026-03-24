@@ -16,13 +16,13 @@
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                       前端层 (Frontend Layer)                            │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────┐ │
-│  │   React 18     │  │  Recharts       │  │    Lucide React       │ │
-│  │   UI Framework │  │  Data Viz      │  │    Icons              │ │
+│  │   React 18      │  │  Recharts       │  │    Lucide React       │ │
+│  │   UI Framework  │  │  Data Viz      │  │    Icons              │ │
 │  └─────────────────┘  └─────────────────┘  └─────────────────────────┘ │
 │                                                                          │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
 │  │                    Vite + Node.js Server                          │  │
-│  │              (开发服务器 + API 代理)                               │  │
+│  │              (开发服务器 + API 代理 + CQRS 路由)                   │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────┘
                                      │
@@ -33,19 +33,38 @@
 │                                                                          │
 │  ┌─────────────────────────────────┐  ┌───────────────────────────────┐ │
 │  │     operator-agent (Python)     │  │  operator-nl2sql-service    │ │
-│  │  ┌───────────────────────────┐  │  │        (Java Spring Boot)    │ │
+│  │  ┌───────────────────────────┐  │  │     (Java Spring Boot)      │ │
 │  │  │      FastAPI Server      │  │  │  ┌─────────────────────────┐│  │
-│  │  │  NL2SQL API Endpoints    │  │  │  │   NL2SQL Controller    ││  │
-│  │  └───────────────────────────┘  │  │  └─────────────────────────┘│  │
-│  │  ┌───────────────────────────┐  │  │  ┌─────────────────────────┐│  │
-│  │  │     OperatorAgent        │  │  │  │   Nl2SqlService        ││  │
-│  │  │  (LangChain Based)       │  │  │  │   (Core Business)      ││  │
-│  │  └───────────────────────────┘  │  │  └─────────────────────────┘│  │
-│  │  ┌───────────────────────────┐  │  │  ┌─────────────────────────┐│  │
-│  │  │    JavaMicroserviceTool  │  │  │  │   SqlCoderService      ││  │
-│  │  │    (HTTP Client)         │  │  │  │   (LLM Integration)    ││  │
-│  │  └───────────────────────────┘  │  │  └─────────────────────────┘│  │
-│  └─────────────────────────────────┘  └───────────────────────────────┘ │
+│  │  │      (Agent + Tools)    │  │  │  │   MVC + CQRS 架构       ││  │
+│  │  └───────────────────────────┘  │  │  │  ┌───────────────────┐ ││  │
+│  │  ┌───────────────────────────┐  │  │  │  │ Controller Layer │ ││  │
+│  │  │     OperatorAgent        │  │  │  │  │ - Nl2SqlController│ ││  │
+│  │  │    (LangChain Based)     │  │  │  │  │ - OperatorQuery  │ ││  │
+│  │  └───────────────────────────┘  │  │  │  │ - IndicatorQuery │ ││  │
+│  │  ┌───────────────────────────┐  │  │  │  └───────────────────┘ ││  │
+│  │  │    JavaMicroserviceTool  │  │  │  │  ┌───────────────────┐ ││  │
+│  │  │    (HTTP Client)         │  │  │  │  │  Service Layer    │ ││  │
+│  │  └───────────────────────────┘  │  │  │  │  (CQRS)           │ ││  │
+│  └─────────────────────────────────┘  │  │  │  ┌───────────────┐ │ ││  │
+│                                       │  │  │  │Command:      │ │ ││  │
+│                                       │  │  │  │ Nl2SqlCommand│ │ ││  │
+│                                       │  │  │  └───────────────┘ │ ││  │
+│                                       │  │  │  ┌───────────────┐ │ ││  │
+│                                       │  │  │  │Query:        │ │ ││  │
+│                                       │  │  │  │OperatorQuery │ │ ││  │
+│                                       │  │  │  │IndicatorQuery │ │ ││  │
+│                                       │  │  │  └───────────────┘ │ ││  │
+│                                       │  │  └───────────────────┘ ││  │
+│                                       │  │  ┌───────────────────┐ ││  │
+│                                       │  │  │ Repository Layer  │ ││  │
+│                                       │  │  │ - OperatorRepo    │ ││  │
+│                                       │  │  │ - IndicatorRepo   │ ││  │
+│                                       │  │  └───────────────────┘ ││  │
+│                                       │  └─────────────────────────┘│  │
+│                                       │  ┌─────────────────────────┐│  │
+│                                       │  │  SQLCoder + MyBatis     ││  │
+│                                       │  └─────────────────────────┘│  │
+│                                       └───────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────┘
                                      │
                     ┌─────────────────┼─────────────────┐
@@ -103,11 +122,18 @@
 |------|----------|------|----------|
 | Language | Java | 17 | 企业级，稳定，性能好 |
 | Framework | Spring Boot | 3.2 | 生态完整，配置简便 |
+| Architecture | MVC + CQRS | - | 命令查询职责分离，清晰可维护 |
 | ORM | MyBatis | 3.0 | SQL 控制灵活，复杂查询支持好 |
 | DB | MySQL | 8.0 | 运营商场景成熟方案 |
 | HTTP Client | WebClient | - | Spring WebFlux 异步客户端 |
 | LLM | SQLCoder | - | 自托管 NL2SQL 模型，隐私安全 |
 | Connection Pool | HikariCP | - | Spring Boot 默认，高性能 |
+
+**CQRS 架构优势**:
+- **职责分离**: Command (NL2SQL) 和 Query (数据查询) 解耦
+- **性能优化**: Query 端可直接映射数据库实体，减少转换开销
+- **可维护性**: 逻辑清晰，领域边界明确
+- **扩展性**: 独立扩展 Command 和 Query 端
 
 **备选方案考虑**:
 - **Spring Data JPA**: 适合简单 CRUD，复杂 SQL 不够灵活
@@ -141,7 +167,8 @@
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                  Nl2SqlService                          │
+│                  Nl2SqlCommandService                    │
+│                      (CQRS Command)                      │
 │  ┌─────────────────────────────────────────────────┐    │
 │  │  1. 构建 Prompt (Schema + Natural Language)     │    │
 │  └─────────────────────────────────────────────────┘    │
@@ -194,31 +221,146 @@ private boolean isSqlSafe(String sql) {
 }
 ```
 
-## 5. 数据模型设计
+## 5. CQRS 架构设计
 
-### 5.1 时间维度支持
+### 5.1 Controller 层
 
-指标数据支持多时间粒度:
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Controller Layer                           │
+│                                                              │
+│  ┌─────────────────┐  ┌──────────────────────────┐          │
+│  │ Nl2SqlController│  │ OperatorQueryController  │          │
+│  │                 │  │                          │          │
+│  │ POST /nl2sql/   │  │ GET  /query/operators    │          │
+│  │      query      │  │ GET  /query/operators/{id}          │
+│  │                 │  │ GET  /query/site-summary │          │
+│  │ (Command Side)  │  │                          │          │
+│  └─────────────────┘  │ (Query Side)            │          │
+│                       └──────────────────────────┘          │
+│                       ┌──────────────────────────┐          │
+│                       │IndicatorQueryController  │          │
+│                       │                          │          │
+│                       │ GET  /query/indicators  │          │
+│                       │ GET  /query/indicators/ │          │
+│                       │      latest             │          │
+│                       │ GET  /query/indicators/ │          │
+│                       │      trend               │          │
+│                       │                          │          │
+│                       │ (Query Side)            │          │
+│                       └──────────────────────────┘          │
+└─────────────────────────────────────────────────────────────┘
+```
 
-| 粒度 | 字段 | 说明 |
-|------|------|------|
-| 年月 | data_month (YYYY-MM) | 月份对比分析 |
-| 日 | data_date | 日常统计 |
-| 小时 | data_hour | 峰值分析 |
-| 实时 | data_time (datetime) | 最新数据 |
+### 5.2 Service 层
 
-### 5.2 指标体系
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Service Layer (CQRS)                      │
+│                                                              │
+│  ┌─────────────────────────┐  ┌───────────────────────────┐  │
+│  │ Nl2SqlCommandService   │  │ OperatorQueryService     │  │
+│  │ (Command Side)          │  │ (Query Side)             │  │
+│  │                         │  │                           │  │
+│  │ - generateSql()         │  │ - findAllOperators()     │  │
+│  │ - executeQuery()        │  │ - findByCountry()        │  │
+│  │ - isSqlSafe()           │  │ - findByOperatorName()   │  │
+│  │                         │  │ - findSiteCellSummary()  │  │
+│  │ + SqlBuilder便捷方法     │  │                           │  │
+│  └─────────────────────────┘  └───────────────────────────┘  │
+│  ┌─────────────────────────┐  ┌───────────────────────────┐  │
+│  │ SqlCoderService         │  │ IndicatorQueryService    │  │
+│  │                         │  │ (Query Side)             │  │
+│  │ - generateSql()         │  │                          │  │
+│  │ - parseResponse()        │  │ - findLatestIndicators() │  │
+│  │                         │  │ - findIndicatorsByMonth() │  │
+│  └─────────────────────────┘  │ - findTrendData()         │  │
+│                               └───────────────────────────┘  │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────────┐  │
+│  │              SqlBuilder Factory                         │  │
+│  │  ┌───────────────────┐  ┌───────────────────────────┐    │  │
+│  │  │OperatorSqlBuilder │  │ IndicatorSqlBuilder     │    │  │
+│  │  │                   │  │                          │    │  │
+│  │  │- buildAllOperators│  │- buildSelectSql()        │    │  │
+│  │  │- buildSiteSummary │  │- buildByOperatorId()    │    │  │
+│  │  │- buildByBand()   │  │- buildLatestForAll()     │    │  │
+│  │  │                   │  │- buildTrendByOperatorId │    │  │
+│  │  └───────────────────┘  └──────────────────────────┘    │  │
+│  └─────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
 
-| 指标类型 | 字段 | 单位 | 说明 |
-|----------|------|------|------|
-| 速率 | dl_rate, ul_rate | Mbps | 上下行速率 |
-| 资源 | prb_usage | % | PRB 利用率 |
-| 负荷 | split_ratio | % | 分流比 |
-| 质量 | main_ratio | % | 主流比 |
+### 5.3 Repository 层
 
-## 6. 部署架构
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Repository Layer                          │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              OperatorRepository                      │    │
+│  │              (MyBatis Mapper)                       │    │
+│  │                                                       │    │
+│  │ SQL:                                                  │    │
+│  │ - findAll() → SELECT * FROM operator_info           │    │
+│  │ - findByCountry(country)                            │    │
+│  │ - findByOperatorName(name)                          │    │
+│  │ - findSiteCellSummaryByOperatorId(id)               │    │
+│  │ - findSiteCellSummaryByOperatorIdAndMonth(id, month)│    │
+│  │ - findAllSiteCellSummary()                          │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              IndicatorRepository                     │    │
+│  │              (MyBatis Mapper)                      │    │
+│  │                                                       │    │
+│  │ SQL:                                                  │    │
+│  │ - findAll()                                          │    │
+│  │ - findLatestIndicators(operatorId)                  │    │
+│  │ - findIndicatorsByOperatorId(operatorId)            │    │
+│  │ - findIndicatorsByOperatorIdAndMonth(id, month)     │    │
+│  │ - findTrendData(operatorId)                         │    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+```
 
-### 6.1 开发环境
+## 6. 数据模型设计
+
+### 6.1 核心实体
+
+| 实体 | 说明 | 关键字段 |
+|------|------|----------|
+| OperatorInfo | 运营商信息 | id, operator_name, country, region, network_type, data_month |
+| SiteCellSummary | 频段站点汇总(宽表) | id, operator_id, data_month, lte*{band}*Site, lte*{band}*Cell, nr*{band}*Site, nr*{band}*Cell |
+| IndicatorInfo | 频段指标(宽表) | id, operator_id, data_month, lte*{band}*DlRate/UlRate/DlPrb/UlPrb, nr*{band}*DlRate/UlRate/DlPrb/UlPrb, 汇总指标 |
+
+### 6.2 指标体系 (宽表设计)
+
+采用宽表设计，每行代表 1 个运营商 × 1 个月的数据，列按频段展开。
+
+**LTE 频段 (7个)**: 700M, 800M, 900M, 1400M, 1800M, 2100M, 2600M
+**NR 频段 (10个)**: 700M, 800M, 900M, 1400M, 1800M, 2100M, 2600M, 3500M, 4900M, 2300M
+
+| 指标类型 | 字段模式 | 单位 | 说明 |
+|----------|----------|------|------|
+| LTE速率 | lte{band}DlRate, lte{band}UlRate | Mbps | LTE 各频段上下行速率 |
+| LTE资源 | lte{band}DlPrb, lte{band}UlPrb | % | LTE 各频段 PRB 利用率 |
+| NR速率 | nr{band}DlRate, nr{band}UlRate | Mbps | NR 各频段上下行速率 |
+| NR资源 | nr{band}DlPrb, nr{band}UlPrb | % | NR 各频段 PRB 利用率 |
+| LTE汇总 | lteAvgDlRate, lteAvgPrb | % | LTE 全网平均速率/PRB |
+| NR汇总 | nrAvgDlRate, nrAvgPrb | % | NR 全网平均速率/PRB |
+| 分流指标 | splitRatio, dwellRatio | % | 分流比, 驻留比 |
+| 终端指标 | terminalPenetration, durationDwellRatio | % | 终端渗透率, 时长驻留比 |
+| 回流指标 | fallbackRatio | % | 回流比 (原 return_ratio) |
+
+**变更说明**:
+- 采用宽表设计，每个频段独立列，避免行扩展
+- 每行 = 1 运营商 × 1 月份
+- 支持多频段对比分析
+
+## 7. 部署架构
+
+### 7.1 开发环境
 
 ```
 ┌─────────────────────────────────────────┐
@@ -232,13 +374,13 @@ private boolean isSqlSafe(String sql) {
 │  │  └─────────┘  └───────────────┘  │  │
 │  └───────────────────────────────────┘  │
 │                                         │
-│  Terminal 1: npm run start:all         │
-│  Terminal 2: mvn spring-boot:run       │
-│  Terminal 3: python -m operator_agent  │
+│  Terminal 1: npm run start:all (agent-app)  │
+│  Terminal 2: mvn spring-boot:run (NL2SQL)   │
+│  Terminal 3: python -m operator_agent       │
 └─────────────────────────────────────────┘
 ```
 
-### 6.2 生产环境建议
+### 7.2 生产环境建议
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -265,7 +407,7 @@ private boolean isSqlSafe(String sql) {
 ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
 │  operator-agent │ │  operator-agent │ │  operator-agent │
 │    Instance 1   │ │    Instance 2   │ │    Instance N   │
-│    (Python)    │ │    (Python)    │ │    (Python)    │
+│    (Python)     │ │    (Python)     │ │    (Python)     │
 └────────┬────────┘ └────────┬────────┘ └────────┬────────┘
          │                    │                    │
          └────────────────────┼────────────────────┘
@@ -277,6 +419,7 @@ private boolean isSqlSafe(String sql) {
 │  NL2SQL Service │ │  NL2SQL Service │ │  NL2SQL Service │
 │    Instance 1   │ │    Instance 2   │ │    Instance N   │
 │    (Java)       │ │    (Java)       │ │    (Java)       │
+│    (MVC+CQRS)   │ │    (MVC+CQRS)   │ │    (MVC+CQRS)   │
 └────────┬────────┘ └────────┬────────┘ └────────┬────────┘
          │                    │                     │
          └────────────────────┼────────────────────┘
@@ -291,9 +434,30 @@ private boolean isSqlSafe(String sql) {
 └─────────────────┘ └─────────────────┘ └─────────────────┘
 ```
 
-## 7. 性能考量
+## 8. API 端点汇总
 
-### 7.1 前端性能
+### 8.1 NL2SQL API (Command Side)
+
+| 端点 | 方法 | 描述 |
+|------|------|------|
+| /api/v1/nl2sql/query | POST | 自然语言转 SQL 查询 |
+| /api/v1/nl2sql/schema | GET | 获取数据库 Schema |
+| /api/v1/nl2sql/health | GET | 健康检查 |
+
+### 8.2 Query API (CQRS Query Side)
+
+| 端点 | 方法 | 参数 | 描述 |
+|------|------|------|------|
+| /api/v1/query/operators | GET | country, operatorName | 运营商列表 |
+| /api/v1/query/operators/{id} | GET | - | 运营商详情 |
+| /api/v1/query/site-summary | GET | operatorId, dataMonth | 站点汇总 (宽表) |
+| /api/v1/query/indicators | GET | operatorId, dataMonth | 指标列表 (宽表) |
+| /api/v1/query/indicators/latest | GET | operatorId | 最新指标 |
+| /api/v1/query/indicators/trend | GET | operatorId | 趋势数据 |
+
+## 9. 性能考量
+
+### 9.1 前端性能
 
 | 优化项 | 方案 | 预期收益 |
 |--------|------|----------|
@@ -301,7 +465,7 @@ private boolean isSqlSafe(String sql) {
 | 图表渲染 | 虚拟化大数据集 | 支持 10k+ 数据点 |
 | API 请求 | 请求缓存 + 防抖 | 减少 50% 请求 |
 
-### 7.2 后端性能
+### 9.2 后端性能
 
 | 优化项 | 方案 | 预期收益 |
 |--------|------|----------|
@@ -309,43 +473,46 @@ private boolean isSqlSafe(String sql) {
 | SQLCoder 缓存 | Schema 内存缓存 | 减少 30% 延迟 |
 | 异步处理 | WebClient 非阻塞 | 1000+ 并发 |
 
-### 7.3 NL2SQL 性能
+### 9.3 CQRS 性能优势
 
-| 阶段 | 延迟目标 | 优化手段 |
-|------|----------|----------|
-| SQLCoder 调用 | < 2s | 本地部署，低延迟 |
-| SQL 执行 | < 500ms | 索引优化，LIMIT |
-| 响应返回 | < 3s 端到端 | 异步流水线 |
+| 优化点 | 优势 |
+|--------|------|
+| 直接映射 | Query 端直接映射数据库实体，减少 DTO 转换 |
+| 宽表设计 | site_cell_summary 和 indicator_info 采用宽表，每行=1运营商×1月份，减少 JOIN |
+| 索引优化 | 支持 (operator_id, data_month) 联合索引 |
+| 查询分离 | Command 和 Query 可独立优化 |
+| SQL Builder | SQL 构建逻辑独立，便于优化和维护 |
 
-## 8. 安全考量
+## 10. 安全考量
 
-### 8.1 SQL 注入防护
+### 10.1 SQL 注入防护
 
 - 所有用户输入通过参数化查询
 - NL2SQL 结果必须经过安全验证
 - 数据库账号权限最小化
 
-### 8.2 API 安全
+### 10.2 API 安全
 
 - CORS 配置限制
 - 请求频率限制（可选）
 - 输入验证（必选）
 
-### 8.3 数据安全
+### 10.3 数据安全
 
 - SQLCoder 本地部署，数据不出网
 - 数据库敏感字段加密
 - 审计日志记录
 
-## 9. 可扩展性设计
+## 11. 可扩展性设计
 
-### 9.1 新增指标
+### 11.1 新增频段
 
-1. 在 `indicator_info` 表添加新字段
+1. 在 `site_info` / `indicator_info` 表添加新频段列 (如 lte2300MDlRate)
 2. 更新 `SchemaCache` 的 schema 描述
-3. 前端自动识别并支持展示
+3. 更新 `IndicatorSqlBuilder` / `OperatorSqlBuilder` 的频段常量
+4. 前端自动识别并支持展示
 
-### 9.2 新增 LLM Provider
+### 11.2 新增 LLM Provider
 
 ```java
 public interface LlmProvider {
@@ -360,11 +527,11 @@ public class OpenAiProvider implements LlmProvider { ... }
 public class SqlCoderProvider implements LlmProvider { ... }
 ```
 
-### 9.3 新增图表类型
+### 11.3 新增图表类型
 
 在 `OperatorDashboard.jsx` 中添加 Recharts 组件即可。
 
-## 10. 技术债务与改进建议
+## 12. 技术债务与改进建议
 
 | 优先级 | 项目 | 说明 |
 |--------|------|------|
@@ -374,12 +541,20 @@ public class SqlCoderProvider implements LlmProvider { ... }
 | P2 | 监控告警 | 生产必备 |
 | P2 | 日志聚合 | 问题排查 |
 
-## 11. 总结
+## 13. 总结
 
-本系统采用前后端分离架构，后端使用 Python (Agent) + Java (NL2SQL) 的混合方案，充分利用各语言优势:
+本系统采用前后端分离架构，后端使用 Python (Agent) + Java (NL2SQL+CQRS) 的混合方案:
 
 - **Python**: AI/ML 生态成熟，适合 Agent 开发
 - **Java**: 企业级稳定，性能优异，适合数据服务
+- **MVC+CQRS**: 命令查询职责分离，架构清晰
 - **React + Recharts**: 现代化前端，数据可视化能力强
 
 NL2SQL 采用 SQLCoder 自托管方案，平衡了准确率、成本和隐私要求。
+
+数据模型采用宽表设计，每行代表 1 个运营商 × 1 个月的数据，列按 LTE/NR 频段展开:
+- **LTE**: 7 个频段 (700M-2600M)
+- **NR**: 10 个频段 (700M-4900M, 2300M)
+- **汇总指标**: 分流比、驻留比、终端渗透率、时长驻留比、回流比
+
+SQL Builder 模式将 SQL 构建逻辑从 Service 层分离，便于维护和优化。

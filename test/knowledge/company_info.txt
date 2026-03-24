@@ -1,0 +1,16 @@
+Company Knowledge Base
+
+Product Information
+- Our flagship product is an AI-powered analytics platform
+- We offer three pricing tiers: Basic ($99/mo), Pro ($299/mo), Enterprise (custom)
+- All plans include 24/7 customer support
+
+Company Policies
+- Refund policy: Full refund within 30 days of purchase
+- Data retention: User data is retained for 2 years after account deletion
+- Privacy: We do not share user data with third parties
+
+Technical Support
+- Email: support@company.com
+- Phone: 1-800-xxx-xxxx
+- Hours: Monday to Friday, 9am to 6pm EST

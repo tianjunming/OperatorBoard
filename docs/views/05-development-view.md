@@ -36,6 +36,37 @@ D--claude-OperatorBoard/
 │   │           └── skills/   # 数据处理
 │   └── tests/
 │
+├── operator-service/         # Java NL2SQL 服务 (MVC+CQRS)
+│   ├── pom.xml
+│   └── src/main/
+│       ├── java/com/operator/nl2sql/
+│       │   ├── config/          # 配置类
+│       │   ├── controller/      # Controller 层
+│       │   │   ├── Nl2SqlController.java
+│       │   │   └── query/       # CQRS Query Controllers
+│       │   │       ├── OperatorQueryController.java
+│       │   │       └── IndicatorQueryController.java
+│       │   ├── service/         # Service 层
+│       │   │   ├── command/     # CQRS Command
+│       │   │   │   └── Nl2SqlCommandService.java
+│       │   │   └── query/       # CQRS Query
+│       │   │       ├── OperatorQueryService.java
+│       │   │       └── IndicatorQueryService.java
+│       │   ├── repository/      # Repository 层
+│       │   │   ├── OperatorRepository.java
+│       │   │   └── IndicatorRepository.java
+│       │   ├── entity/          # 实体类
+│       │   │   ├── OperatorInfo.java
+│       │   │   ├── SiteCellSummary.java
+│       │   │   └── IndicatorInfo.java
+│       │   ├── dto/             # DTO 类
+│       │   └── mapper/          # MyBatis Mapper XML
+│       │       ├── OperatorMapper.xml
+│       │       └── IndicatorMapper.xml
+│       └── resources/
+│           ├── application.yml
+│           └── mapper/
+│
 └── docs/                     # 文档
     └── views/                # 4+1 架构视图
 ```
@@ -44,13 +75,17 @@ D--claude-OperatorBoard/
 
 | 模块 | 职责 | 依赖 |
 |------|------|------|
-| core | BaseAgent, Types, Exceptions | 无 |
-| tools | 工具注册、调用管理 | core |
-| skills | Skill 注册、执行 | core |
-| mcp | MCP 协议、客户端 | core |
-| rag | 向量存储、检索 | core |
-| config | 配置加载、Schema | core |
-| capabilities | 业务扩展 | agent_framework |
+| agent-framework/core | BaseAgent, Types, Exceptions | 无 |
+| agent-framework/tools | 工具注册、调用管理 | core |
+| agent-framework/skills | Skill 注册、执行 | core |
+| agent-framework/mcp | MCP 协议、客户端 | core |
+| agent-framework/rag | 向量存储、检索 | core |
+| agent-framework/config | 配置加载、Schema | core |
+| operator-agent/capabilities | 业务扩展 | agent_framework |
+| operator-service/controller | REST API 路由 | service |
+| operator-service/service/command | NL2SQL 命令处理 | repository |
+| operator-service/service/query | 数据查询服务 | repository |
+| operator-service/repository | MyBatis Mapper 接口 | entity |
 
 ## 3. 依赖管理
 
@@ -92,7 +127,45 @@ dependencies = [
 ]
 ```
 
-### 3.3 依赖关系图
+### 3.3 Operator Service 依赖 (pom.xml)
+
+```xml
+<!-- operator-service/pom.xml -->
+<dependencies>
+    <!-- Spring Boot -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- MyBatis -->
+    <dependency>
+        <groupId>org.mybatis.spring.boot</groupId>
+        <artifactId>mybatis-spring-boot-starter</artifactId>
+        <version>3.0.3</version>
+    </dependency>
+
+    <!-- MySQL -->
+    <dependency>
+        <groupId>com.mysql</groupId>
+        <artifactId>mysql-connector-j</artifactId>
+    </dependency>
+
+    <!-- Lombok -->
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+    </dependency>
+
+    <!-- Validation -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+</dependencies>
+```
+
+### 3.4 依赖关系图
 
 ```
 operator-agent
@@ -104,6 +177,14 @@ operator-agent
             ├── pyyaml
             ├── chromadb
             └── httpx
+
+operator-service (Java)
+    │
+    ├── Spring Boot
+    │     ├── spring-boot-starter-web
+    │     └── spring-boot-starter-validation
+    ├── MyBatis
+    └── MySQL Connector
 ```
 
 ## 4. 开发环境
@@ -117,17 +198,23 @@ export AGENT_REGISTRY_URL="http://localhost:8001"
 export JAVA_SERVICE_BASE_URL="http://localhost:8080"
 export VECTOR_STORE_PATH="./data/vectorstore"
 
+# Java NL2SQL Service
+export DB_USERNAME="root"
+export DB_PASSWORD="root"
+export DB_URL="jdbc:mysql://localhost:3306/operator_db"
+export NL2SQL_SERVICE_URL="http://localhost:8081"
+
 # .env.production
 export AGENT_NAME="OperatorAgent-Prod"
 export AGENT_REGISTRY_URL="http://agent-registry:8001"
-export JAVA_SERVICE_BASE_URL="http://java-service:8080"
+export JAVA_SERVICE_BASE_URL="http://nl2sql-service:8080"
 export VECTOR_STORE_PATH="/data/vectorstore"
 ```
 
 ### 4.2 IDE 配置
 
 ```json
-// .vscode/settings.json
+// .vscode/settings.json (Python)
 {
     "python.analysis.typeCheckingMode": "strict",
     "python.linting.enabled": true,
@@ -137,25 +224,37 @@ export VECTOR_STORE_PATH="/data/vectorstore"
 }
 ```
 
+```json
+// .vscode/settings.json (Java)
+{
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.compile.nullAnalysis.mode": "automatic"
+}
+```
+
 ## 5. 构建与测试
 
 ### 5.1 构建命令
 
 ```bash
-# 安装开发依赖
+# Python 项目
 cd agent-framework
 pip install -e ".[dev]"
 
 cd operator-agent
 pip install -e ".[dev]"
 
-# 运行测试
-pytest tests/
+# Java 项目 (NL2SQL Service)
+cd operator-service
+mvn compile          # 编译
+mvn spring-boot:run   # 运行
+mvn test             # 测试
 
-# 代码检查
-black src/
-ruff check src/
-mypy src/
+# 前端项目
+cd agent-app
+npm install
+npm run dev          # 开发服务器
+npm run build        # 生产构建
 ```
 
 ### 5.2 CI/CD 流程
@@ -167,7 +266,7 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  test:
+  test-python:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -184,6 +283,19 @@ jobs:
     - name: Type check
       run: mypy src/
 
+  test-java:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+    - name: Build with Maven
+      run: mvn compile
+    - name: Run tests
+      run: mvn test
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -196,6 +308,8 @@ jobs:
 
 ### 6.1 命名约定
 
+**Python (agent-framework, operator-agent)**
+
 | 类型 | 约定 | 示例 |
 |------|------|------|
 | 类 | PascalCase | `BaseAgent`, `ToolRegistry` |
@@ -204,9 +318,20 @@ jobs:
 | 模块 | snake_case | `async_utils.py`, `java_service_tool.py` |
 | 类型 | PascalCase | `AgentConfig`, `ToolResult` |
 
+**Java (operator-service)**
+
+| 类型 | 约定 | 示例 |
+|------|------|------|
+| 类 | PascalCase | `Nl2SqlController`, `OperatorQueryService` |
+| 方法 | camelCase | `findByCountry()`, `executeQuery()` |
+| 常量 | UPPER_SNAKE | `MAX_RESULT_ROWS` |
+| 包 | lowercase | `com.operator.nl2sql.controller.query` |
+| 字段 | camelCase | `operatorName`, `frequencyBand` |
+
 ### 6.2 文档字符串
 
 ```python
+# Python
 class BaseTool:
     """Base class for tools in the agent framework.
 
@@ -239,6 +364,35 @@ class BaseTool:
         ...
 ```
 
+```java
+// Java
+/**
+ * NL2SQL Command Service (CQRS Command Side)
+ *
+ * <p>Responsible for:
+ * <ul>
+ *   <li>Generating SQL from natural language queries via SQLCoder</li>
+ *   <li>Executing generated SQL safely</li>
+ *   <li>Validating SQL for security</li>
+ * </ul>
+ *
+ * @since 2.0
+ */
+@Service
+public class Nl2SqlCommandService {
+
+    /**
+     * Execute a natural language query and return results.
+     *
+     * @param request the NL2SQL request containing the natural language query
+     * @return list of result maps
+     */
+    public List<Map<String, Object>> executeQuery(String sql, Integer maxResults) {
+        // implementation
+    }
+}
+```
+
 ## 7. 版本管理
 
 ### 7.1 发布流程
@@ -255,6 +409,7 @@ feature branch → develop → release → main
 ```
 agent-framework: 0.1.0, 0.2.0, ...
 operator-agent: 0.1.0, 0.2.0, ...
+operator-service: 1.0.0, 1.1.0, ... (MVC+CQRS)
 
 语义化版本:
 - MAJOR: 不兼容的 API 变更
@@ -275,11 +430,33 @@ operator-agent: 0.1.0, 0.2.0, ...
 ### 8.2 代码审查清单
 
 ```
-□ 代码遵循命名约定
+□ Python/Java 代码遵循命名约定
 □ 添加/更新了文档字符串
 □ 新功能有对应的测试
 □ 所有测试通过
 □ 没有引入安全问题
 □ 更新了相关配置文件
 □ 添加了必要的依赖说明
+□ 更新了架构文档 (如有必要)
 ```
+
+## 9. 数据库迁移
+
+### 9.1 Schema 更新
+
+数据库 Schema 文件位于 `operator-service/src/main/resources/schema.sql`
+
+```bash
+# 初始化数据库
+mysql -u root -p < operator-service/src/main/resources/schema.sql
+```
+
+### 9.2 Schema 变更流程
+
+1. 修改 `schema.sql` 文件
+2. 更新 `SchemaCache.java` 的 schema 描述
+3. 更新对应的 Entity 类
+4. 更新 MyBatis Mapper XML
+5. 更新 Repository 接口
+6. 更新 Query Service
+7. 更新前端 Dashboard
