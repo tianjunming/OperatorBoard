@@ -34,3 +34,31 @@
 4. **类型安全**: 使用 Pydantic 进行配置验证
 5. **前后端分离**: API 解耦，独立部署
 6. **NL2SQL 自托管**: 数据隐私优先，本地 LLM 部署
+7. **CQRS 架构**: 命令查询职责分离，清晰可维护
+
+### 系统组件
+
+| 组件 | 技术栈 | 职责 |
+|------|--------|------|
+| agent-framework | Python | 核心 Agent 框架 |
+| operator-agent | Python | 业务 Agent 实现 |
+| operator-service | Java Spring Boot | NL2SQL 服务 (MVC+CQRS) |
+| agent-app | React + Node.js | 前端应用 |
+
+### 核心变更 (MVC+CQRS)
+
+operator-service 已从传统三层架构迁移到 MVC+CQRS 架构:
+
+- **Controller Layer**: Nl2SqlController (Command) + OperatorQueryController/IndicatorQueryController (Query)
+- **Service Layer**: Nl2SqlCommandService (Command) + OperatorQueryService/IndicatorQueryService (Query)
+- **Repository Layer**: OperatorRepository + IndicatorRepository (MyBatis)
+- **数据模型**: operator_info (运营商) + site_info (站点宽表) + indicator_info (指标宽表)
+
+### LLM-based Intent Detection
+
+operator-agent 新增 LLM-based 自然语言查询路由:
+
+- **Intent Detection**: 通过 LLM prompt 分析用户查询意图
+- **支持的 Intent**: site_data, indicator_data, operator_list, latest_data, nl2sql
+- **运营商匹配**: 支持模糊匹配和名称映射 (北京联通→中国联通)
+- **数据来源**: 中国/欧洲 8 家运营商测试数据
