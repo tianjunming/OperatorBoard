@@ -366,12 +366,15 @@ async def agent_run(request: AgentRunRequest):
 
             # Filter by operator if specified
             if operator_name:
-                # Find operator ID by name
+                # Find operator ID by name (fuzzy match)
                 op_id = None
                 for op in operators:
-                    if isinstance(op, dict) and op.get("operatorName") == operator_name:
-                        op_id = op.get("id")
-                        break
+                    if isinstance(op, dict):
+                        op_name = op.get("operatorName", "")
+                        # Exact or partial match
+                        if op_name == operator_name or operator_name in op_name or op_name in operator_name:
+                            op_id = op.get("id")
+                            break
                 if op_id:
                     site_cells = [sc for sc in site_cells if isinstance(sc, dict) and sc.get("operatorId") == op_id]
 
@@ -393,9 +396,12 @@ async def agent_run(request: AgentRunRequest):
             if operator_name:
                 op_id = None
                 for op in operators:
-                    if isinstance(op, dict) and op.get("operatorName") == operator_name:
-                        op_id = op.get("id")
-                        break
+                    if isinstance(op, dict):
+                        op_name = op.get("operatorName", "")
+                        # Fuzzy match
+                        if op_name == operator_name or operator_name in op_name or op_name in operator_name:
+                            op_id = op.get("id")
+                            break
                 if op_id:
                     site_cells = [sc for sc in site_cells if isinstance(sc, dict) and sc.get("operatorId") == op_id]
 

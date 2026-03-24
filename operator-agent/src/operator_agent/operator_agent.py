@@ -324,6 +324,11 @@ class OperatorAgent(BaseAgent):
 4. latest_data - 最新数据（最新月份的站点或指标数据）
 5. nl2sql - 自然语言SQL查询
 
+## 运营商名称映射（使用正式名称）：
+- "北京联通"、"上海联通"、"广州联通"等 → "中国联通"
+- "北京移动"、"上海移动"等 → "中国移动"
+- "北京电信"、"上海电信"等 → "中国电信"
+
 ## Java服务API端点：
 - /operators - 获取运营商列表
 - /site-summary - 获取站点小区汇总数据
@@ -334,7 +339,7 @@ class OperatorAgent(BaseAgent):
 请分析用户查询，返回JSON格式的查询参数：
 {{
     "intent": "数据意图类型",
-    "operator_name": "运营商名称（如有）",
+    "operator_name": "运营商正式名称（如中国联通、中国移动、中国电信）",
     "band": "频段（如有，如700M、900M等）",
     "data_month": "数据月份（如有，格式YYYY-MM）",
     "limit": 结果数量限制（默认50）
