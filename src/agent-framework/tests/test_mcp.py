@@ -1,10 +1,9 @@
 """Tests for the MCP module."""
 
 import pytest
-from agent_framework.mcp.protocol import MCPProtocol, MCPTool
+from agent_framework.mcp.protocol import MCPProtocol, MCPTool, MCPServerDefinition
 from agent_framework.mcp.client import MCPClient
 from agent_framework.mcp.server import MCPServerConnection, MCPServerManager
-from agent_framework.core.types import MCPServerDefinition
 from agent_framework.core.exceptions import MCPConnectionError
 
 

@@ -3,6 +3,9 @@
 from typing import Protocol, Any, Dict, List, Optional, runtime_checkable
 from pydantic import BaseModel, Field
 
+# Re-export MCPServerDefinition from mcp.protocol for backwards compatibility
+from agent_framework.mcp.protocol import MCPServerDefinition as _MCPServerDefinition
+
 
 @runtime_checkable
 class ToolProtocol(Protocol):
@@ -46,15 +49,8 @@ class SkillDefinition(BaseModel):
     config: Dict[str, Any] = Field(default_factory=dict, description="Skill configuration")
 
 
-class MCPServerDefinition(BaseModel):
-    """Definition of an MCP server."""
-
-    name: str = Field(..., description="Unique name of the MCP server")
-    description: str = Field(..., description="Description of the MCP server")
-    command: str = Field(..., description="Command to start the server")
-    args: List[str] = Field(default_factory=list, description="Command arguments")
-    enabled: bool = Field(default=True, description="Whether the server is enabled")
-    env: Dict[str, str] = Field(default_factory=dict, description="Environment variables")
+# Backwards compatible alias
+MCPServerDefinition = _MCPServerDefinition
 
 
 class AgentConfig(BaseModel):
