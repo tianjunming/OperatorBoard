@@ -5,12 +5,20 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStore as LangChainVectorStore
-from langchain_community.vectorstores import Chroma as ChromaVectorStore
-from langchain_community.vectorstores import FAISS as FAISSVectorStore
-from langchain_openai import OpenAIEmbeddings
-from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from ..core.exceptions import VectorStoreError
+
+
+def _get_chroma_vectorstore():
+    """Lazy import for Chroma vectorstore."""
+    from langchain_community.vectorstores import Chroma as ChromaVectorStore
+    return ChromaVectorStore
+
+
+def _get_faiss_vectorstore():
+    """Lazy import for FAISS vectorstore."""
+    from langchain_community.vectorstores import FAISS as FAISSVectorStore
+    return FAISSVectorStore
 
 
 class VectorStoreManager:
@@ -34,7 +42,7 @@ class VectorStoreManager:
         persist_directory: Optional[str] = None,
         collection_name: str = "default",
         embeddings: Optional[Any] = None,
-    ) -> ChromaVectorStore:
+    ):
         """
         Create a Chroma vector store.
 
@@ -46,6 +54,7 @@ class VectorStoreManager:
         Returns:
             Chroma vector store
         """
+        ChromaVectorStore = _get_chroma_vectorstore()
         try:
             store = ChromaVectorStore(
                 persist_directory=persist_directory,
@@ -61,7 +70,7 @@ class VectorStoreManager:
         self,
         name: str,
         embedding_function: Any,
-    ) -> FAISSVectorStore:
+    ):
         """
         Create a FAISS vector store.
 
@@ -71,6 +80,7 @@ class VectorStoreManager:
         Returns:
             FAISS vector store
         """
+        FAISSVectorStore = _get_faiss_vectorstore()
         try:
             store = FAISSVectorStore(embedding_function=embedding_function)
             self._stores[name] = store
@@ -231,6 +241,8 @@ class VectorStoreManager:
             path: Path to load from
             embeddings: Embeddings to use
         """
+        ChromaVectorStore = _get_chroma_vectorstore()
+        FAISSVectorStore = _get_faiss_vectorstore()
         try:
             path_obj = Path(path)
             if not path_obj.exists():

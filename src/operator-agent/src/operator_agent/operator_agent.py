@@ -1,6 +1,7 @@
 """Operator Agent implementation with all capabilities."""
 
 from typing import Any, Dict, List, Optional
+import httpx
 from langchain_core.documents import Document
 
 from agent_framework.core import BaseAgent, AgentConfig
@@ -13,9 +14,7 @@ from .capabilities.rag import TelecomRAGRetriever, TelecomVectorStore
 from .capabilities.mcp import AgentMCPClient, SystemDataSource, RESTDataSource
 from .capabilities.skills import (
     OperatorDataSkill,
-    MultiOperatorDataSkill,
     DataAggregatorSkill,
-    DataEnricherSkill,
     ReportGeneratorSkill,
 )
 

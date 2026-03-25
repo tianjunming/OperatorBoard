@@ -4,10 +4,20 @@ from typing import Any, Dict, List, Optional, Union
 import os
 
 from langchain_core.embeddings import Embeddings
-from langchain_openai import OpenAIEmbeddings
-from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from ..core.exceptions import EmbeddingError
+
+
+def _get_openai_embeddings():
+    """Lazy import for OpenAI embeddings."""
+    from langchain_openai import OpenAIEmbeddings
+    return OpenAIEmbeddings
+
+
+def _get_huggingface_embeddings():
+    """Lazy import for HuggingFace embeddings."""
+    from langchain_community.embeddings import HuggingFaceEmbeddings
+    return HuggingFaceEmbeddings
 
 
 class EmbeddingsManager:
@@ -80,7 +90,7 @@ class EmbeddingsManager:
         model: str = "text-embedding-3-small",
         api_key: Optional[str] = None,
         **kwargs
-    ) -> OpenAIEmbeddings:
+    ):
         """
         Create OpenAI embeddings.
 
@@ -91,6 +101,7 @@ class EmbeddingsManager:
         Returns:
             OpenAI embeddings instance
         """
+        OpenAIEmbeddings = _get_openai_embeddings()
         return OpenAIEmbeddings(model=model, api_key=api_key or os.getenv("OPENAI_API_KEY"), **kwargs)
 
     @classmethod
@@ -98,7 +109,7 @@ class EmbeddingsManager:
         cls,
         model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
         **kwargs
-    ) -> HuggingFaceEmbeddings:
+    ):
         """
         Create HuggingFace embeddings.
 
@@ -108,6 +119,7 @@ class EmbeddingsManager:
         Returns:
             HuggingFace embeddings instance
         """
+        HuggingFaceEmbeddings = _get_huggingface_embeddings()
         return HuggingFaceEmbeddings(model_name=model_name, **kwargs)
 
     def create_and_register(
