@@ -85,54 +85,13 @@ public class Nl2SqlService {
 
     public List<Map<String, Object>> getIndicators(
             String operatorName, String siteCode, LocalDateTime dataTime, int limit) {
-        StringBuilder sql = new StringBuilder();
-        sql.append("SELECT i.*, s.site_name, s.band, o.operator_name ");
-        sql.append("FROM indicator_info i ");
-        sql.append("JOIN site_info s ON i.site_id = s.id ");
-        sql.append("JOIN operator_info o ON s.operator_id = o.id ");
-        sql.append("WHERE 1=1 ");
-
-        if (operatorName != null && !operatorName.isBlank()) {
-            sql.append("AND o.operator_name = '").append(operatorName).append("' ");
-        }
-        if (siteCode != null && !siteCode.isBlank()) {
-            sql.append("AND s.site_code = '").append(siteCode).append("' ");
-        }
-        if (dataTime != null) {
-            sql.append("AND i.data_time = '").append(dataTime.format(DATETIME_FORMATTER)).append("' ");
-        } else {
-            sql.append("AND i.data_time = (SELECT MAX(data_time) FROM indicator_info) ");
-        }
-        sql.append("ORDER BY i.data_time DESC ");
-        sql.append("LIMIT ").append(limit);
-
-        return sqlExecutorService.execute(sql.toString(), limit);
+        String dataTimeStr = dataTime != null ? dataTime.format(DATETIME_FORMATTER) : null;
+        return sqlExecutorService.getIndicators(operatorName, siteCode, dataTimeStr, limit);
     }
 
     public List<Map<String, Object>> getLatestIndicators(
             String operatorName, String[] frequencyBands, int limit) {
-        StringBuilder sql = new StringBuilder();
-        sql.append("SELECT i.*, s.site_name, s.band, o.operator_name ");
-        sql.append("FROM indicator_info i ");
-        sql.append("JOIN site_info s ON i.site_id = s.id ");
-        sql.append("JOIN operator_info o ON s.operator_id = o.id ");
-        sql.append("WHERE i.data_time = (SELECT MAX(data_time) FROM indicator_info) ");
-
-        if (operatorName != null && !operatorName.isBlank()) {
-            sql.append("AND o.operator_name = '").append(operatorName).append("' ");
-        }
-        if (frequencyBands != null && frequencyBands.length > 0) {
-            sql.append("AND s.band IN (");
-            for (int i = 0; i < frequencyBands.length; i++) {
-                sql.append("'").append(frequencyBands[i]).append("'");
-                if (i < frequencyBands.length - 1) sql.append(",");
-            }
-            sql.append(") ");
-        }
-        sql.append("ORDER BY i.prb_usage DESC ");
-        sql.append("LIMIT ").append(limit);
-
-        return sqlExecutorService.execute(sql.toString(), limit);
+        return sqlExecutorService.getLatestIndicators(operatorName, frequencyBands, limit);
     }
 
     public Nl2SqlResponse compareIndicators(
@@ -215,45 +174,14 @@ public class Nl2SqlService {
 
     private List<Map<String, Object>> getIndicatorsByTime(
             String operatorName, String siteCode, LocalDateTime dataTime, int limit) {
-        StringBuilder sql = new StringBuilder();
-        sql.append("SELECT i.*, s.site_name, s.band, o.operator_name ");
-        sql.append("FROM indicator_info i ");
-        sql.append("JOIN site_info s ON i.site_id = s.id ");
-        sql.append("JOIN operator_info o ON s.operator_id = o.id ");
-        sql.append("WHERE i.data_time = '").append(dataTime.format(DATETIME_FORMATTER)).append("' ");
-
-        if (operatorName != null && !operatorName.isBlank()) {
-            sql.append("AND o.operator_name = '").append(operatorName).append("' ");
-        }
-        if (siteCode != null && !siteCode.isBlank()) {
-            sql.append("AND s.site_code = '").append(siteCode).append("' ");
-        }
-        sql.append("LIMIT ").append(limit);
-
-        return sqlExecutorService.execute(sql.toString(), limit);
+        String dataTimeStr = dataTime.format(DATETIME_FORMATTER);
+        return sqlExecutorService.getIndicatorsByTime(operatorName, siteCode, dataTimeStr, limit);
     }
 
     private List<Map<String, Object>> getIndicatorsByMonth(
             String operatorName, String siteCode, YearMonth month, int limit) {
         String yearMonth = month.format(YEAR_MONTH_FORMATTER);
-        StringBuilder sql = new StringBuilder();
-        sql.append("SELECT i.*, s.site_name, s.band, o.operator_name, ");
-        sql.append("DATE_FORMAT(i.data_time, '%Y-%m') as data_month ");
-        sql.append("FROM indicator_info i ");
-        sql.append("JOIN site_info s ON i.site_id = s.id ");
-        sql.append("JOIN operator_info o ON s.operator_id = o.id ");
-        sql.append("WHERE DATE_FORMAT(i.data_time, '%Y-%m') = '").append(yearMonth).append("' ");
-
-        if (operatorName != null && !operatorName.isBlank()) {
-            sql.append("AND o.operator_name = '").append(operatorName).append("' ");
-        }
-        if (siteCode != null && !siteCode.isBlank()) {
-            sql.append("AND s.site_code = '").append(siteCode).append("' ");
-        }
-        sql.append("ORDER BY i.data_time DESC ");
-        sql.append("LIMIT ").append(limit);
-
-        return sqlExecutorService.execute(sql.toString(), limit);
+        return sqlExecutorService.getIndicatorsByMonth(operatorName, siteCode, yearMonth, limit);
     }
 
     private List<Map<String, Object>> enrichWithChangeRate(
@@ -312,50 +240,13 @@ public class Nl2SqlService {
     public List<Map<String, Object>> getTrendData(
             String operatorName, String siteCode, String cellId,
             String indicator, LocalDateTime startTime, LocalDateTime endTime, int limit) {
-        StringBuilder sql = new StringBuilder();
-        sql.append("SELECT i.data_time, i.cell_id, i.cell_name, s.site_name, o.operator_name, ");
-        sql.append("i.dl_rate, i.ul_rate, i.prb_usage, i.split_ratio, i.main_ratio, s.band ");
-        sql.append("FROM indicator_info i ");
-        sql.append("JOIN site_info s ON i.site_id = s.id ");
-        sql.append("JOIN operator_info o ON s.operator_id = o.id ");
-        sql.append("WHERE i.data_time BETWEEN '").append(startTime.format(DATETIME_FORMATTER))
-                .append("' AND '").append(endTime.format(DATETIME_FORMATTER)).append("' ");
-
-        if (operatorName != null && !operatorName.isBlank()) {
-            sql.append("AND o.operator_name = '").append(operatorName).append("' ");
-        }
-        if (siteCode != null && !siteCode.isBlank()) {
-            sql.append("AND s.site_code = '").append(siteCode).append("' ");
-        }
-        if (cellId != null && !cellId.isBlank()) {
-            sql.append("AND i.cell_id = '").append(cellId).append("' ");
-        }
-        sql.append("ORDER BY i.data_time ASC ");
-        sql.append("LIMIT ").append(limit);
-
-        return sqlExecutorService.execute(sql.toString(), limit);
+        String startTimeStr = startTime.format(DATETIME_FORMATTER);
+        String endTimeStr = endTime.format(DATETIME_FORMATTER);
+        return sqlExecutorService.getTrendData(operatorName, siteCode, cellId, startTimeStr, endTimeStr, limit);
     }
 
     public List<Map<String, Object>> getAvailableTimes(String operatorName, String siteCode) {
-        StringBuilder sql = new StringBuilder();
-        sql.append("SELECT DISTINCT DATE_FORMAT(i.data_time, '%Y-%m') as year_month, ");
-        sql.append("COUNT(*) as record_count, ");
-        sql.append("MIN(i.data_time) as first_record, ");
-        sql.append("MAX(i.data_time) as last_record ");
-        sql.append("FROM indicator_info i ");
-        sql.append("JOIN site_info s ON i.site_id = s.id ");
-        sql.append("JOIN operator_info o ON s.operator_id = o.id ");
-        sql.append("WHERE 1=1 ");
-
-        if (operatorName != null && !operatorName.isBlank()) {
-            sql.append("AND o.operator_name = '").append(operatorName).append("' ");
-        }
-        if (siteCode != null && !siteCode.isBlank()) {
-            sql.append("AND s.site_code = '").append(siteCode).append("' ");
-        }
-        sql.append("GROUP BY year_month ORDER BY year_month DESC LIMIT 100");
-
-        return sqlExecutorService.execute(sql.toString(), 100);
+        return sqlExecutorService.getAvailableTimes(operatorName, siteCode, 100);
     }
 
     private boolean isSqlSafe(String sql) {

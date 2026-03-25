@@ -2,21 +2,25 @@
 
 import os
 from typing import Optional, List, Dict, Any
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 
 from ..operator_agent import OperatorAgent, OperatorAgentFactory
 from ..config import load_operator_config
+from .auth import verify_api_key, get_allowed_origins
 
 app = FastAPI(title="Operator Agent API", version="1.0.0")
 
+# CORS configuration - use specific origins instead of "*"
+ALLOWED_ORIGINS = get_allowed_origins()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -100,14 +104,14 @@ async def health_check():
 
 
 @app.get("/api/capabilities")
-async def get_capabilities():
+async def get_capabilities(_: bool = Depends(verify_api_key)):
     """Get agent capabilities."""
     agent = await get_agent()
     return agent.get_capabilities_summary()
 
 
 @app.post("/api/operator/indicators/latest")
-async def get_latest_indicators(query: IndicatorQuery):
+async def get_latest_indicators(query: IndicatorQuery, _: bool = Depends(verify_api_key)):
     """Get latest indicator data from NL2SQL service."""
     agent = await get_agent()
 
@@ -129,7 +133,7 @@ async def get_latest_indicators(query: IndicatorQuery):
 
 
 @app.post("/api/operator/indicators/compare")
-async def compare_indicators(query: CompareQuery):
+async def compare_indicators(query: CompareQuery, _: bool = Depends(verify_api_key)):
     """Compare indicators between two months."""
     agent = await get_agent()
 
@@ -155,7 +159,7 @@ async def compare_indicators(query: CompareQuery):
 
 
 @app.post("/api/operator/indicators/trend")
-async def get_indicator_trend(query: TrendQuery):
+async def get_indicator_trend(query: TrendQuery, _: bool = Depends(verify_api_key)):
     """Get indicator trend data."""
     agent = await get_agent()
 
@@ -184,7 +188,7 @@ async def get_indicator_trend(query: TrendQuery):
 
 
 @app.post("/api/operator/times")
-async def get_available_times(query: TimesQuery):
+async def get_available_times(query: TimesQuery, _: bool = Depends(verify_api_key)):
     """Get available time points in the database."""
     agent = await get_agent()
 
@@ -208,7 +212,7 @@ async def get_available_times(query: TimesQuery):
 
 
 @app.post("/api/operator/nl2sql/query")
-async def nl2sql_query(request: Dict[str, Any]):
+async def nl2sql_query(request: Dict[str, Any], _: bool = Depends(verify_api_key)):
     """Execute natural language query via NL2SQL."""
     agent = await get_agent()
 
@@ -226,7 +230,7 @@ async def nl2sql_query(request: Dict[str, Any]):
 
 
 @app.post("/api/operator/site-cells")
-async def get_site_cells(query: SiteCellsQuery):
+async def get_site_cells(query: SiteCellsQuery, _: bool = Depends(verify_api_key)):
     """Get site cell summary data."""
     agent = await get_agent()
 
@@ -325,7 +329,7 @@ def format_site_data(site_cells: list, operators: list, latest_only: bool = Fals
 
 
 @app.post("/api/agent/run")
-async def agent_run(request: AgentRunRequest):
+async def agent_run(request: AgentRunRequest, _: bool = Depends(verify_api_key)):
     """
     Run the agent with user input.
     This endpoint uses LLM-based intent detection to process natural language queries.

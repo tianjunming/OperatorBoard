@@ -20,13 +20,19 @@ public class SqlCoderService {
     private final SchemaCache schemaCache;
     private final ObjectMapper objectMapper;
     private final WebClient webClient;
+    private final PromptSanitizer promptSanitizer;
 
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    public SqlCoderService(SqlCoderConfig sqlCoderConfig, SchemaCache schemaCache, ObjectMapper objectMapper) {
+    public SqlCoderService(
+            SqlCoderConfig sqlCoderConfig,
+            SchemaCache schemaCache,
+            ObjectMapper objectMapper,
+            PromptSanitizer promptSanitizer) {
         this.sqlCoderConfig = sqlCoderConfig;
         this.schemaCache = schemaCache;
         this.objectMapper = objectMapper;
+        this.promptSanitizer = promptSanitizer;
         this.webClient = WebClient.builder()
                 .baseUrl(sqlCoderConfig.getSqlCoderUrl())
                 .build();
@@ -41,7 +47,10 @@ public class SqlCoderService {
     }
 
     private String generateSql(String nlQuery, Nl2SqlRequest request) {
-        String prompt = buildPrompt(nlQuery, request);
+        // SANITIZE INPUT FIRST to prevent prompt injection
+        String sanitizedQuery = promptSanitizer.sanitize(nlQuery);
+
+        String prompt = buildPrompt(sanitizedQuery, request);
 
         try {
             Map<String, Object> requestBody = Map.of(
@@ -78,9 +87,13 @@ public class SqlCoderService {
             if (request.getEndTime() != null) {
                 additionalContext.append("End Time: ").append(request.getEndTime().format(DATETIME_FORMATTER)).append("\n");
             }
+            // SANITIZE indicators using whitelist
             if (request.getIndicators() != null && request.getIndicators().length > 0) {
-                additionalContext.append("Requested Indicators: ");
-                additionalContext.append(String.join(", ", request.getIndicators())).append("\n");
+                String[] safeIndicators = promptSanitizer.sanitizeIndicators(request.getIndicators());
+                if (safeIndicators.length > 0) {
+                    additionalContext.append("Requested Indicators: ");
+                    additionalContext.append(String.join(", ", safeIndicators)).append("\n");
+                }
             }
         }
 

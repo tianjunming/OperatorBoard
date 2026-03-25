@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="nl2sql.safe.indicator">
+
+    <select id="getIndicators" resultType="java.util.HashMap">
+        SELECT i.*, s.site_name, s.band, o.operator_name
+        FROM indicator_info i
+        JOIN site_info s ON i.site_id = s.id
+        JOIN operator_info o ON s.operator_id = o.id
+        WHERE 1=1
+        <if test="operatorName != null and operatorName != ''">
+            AND o.operator_name = #{operatorName}
+        </if>
+        <if test="siteCode != null and siteCode != ''">
+            AND s.site_code = #{siteCode}
+        </if>
+        <if test="dataTime != null">
+            AND i.data_time = #{dataTime}
+        </if>
+        <if test="dataTime == null">
+            AND i.data_time = (SELECT MAX(data_time) FROM indicator_info)
+        </if>
+        ORDER BY i.data_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="getLatestIndicators" resultType="java.util.HashMap">
+        SELECT i.*, s.site_name, s.band, o.operator_name
+        FROM indicator_info i
+        JOIN site_info s ON i.site_id = s.id
+        JOIN operator_info o ON s.operator_id = o.id
+        WHERE i.data_time = (SELECT MAX(data_time) FROM indicator_info)
+        <if test="operatorName != null and operatorName != ''">
+            AND o.operator_name = #{operatorName}
+        </if>
+        <if test="frequencyBands != null and frequencyBands.length > 0">
+            AND s.band IN
+            <foreach collection="frequencyBands" item="band" open="(" separator="," close=")">
+                #{band}
+            </foreach>
+        </if>
+        ORDER BY i.prb_usage DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="getIndicatorsByTime" resultType="java.util.HashMap">
+        SELECT i.*, s.site_name, s.band, o.operator_name
+        FROM indicator_info i
+        JOIN site_info s ON i.site_id = s.id
+        JOIN operator_info o ON s.operator_id = o.id
+        WHERE i.data_time = #{dataTime}
+        <if test="operatorName != null and operatorName != ''">
+            AND o.operator_name = #{operatorName}
+        </if>
+        <if test="siteCode != null and siteCode != ''">
+            AND s.site_code = #{siteCode}
+        </if>
+        LIMIT #{limit}
+    </select>
+
+    <select id="getIndicatorsByMonth" resultType="java.util.HashMap">
+        SELECT i.*, s.site_name, s.band, o.operator_name,
+               DATE_FORMAT(i.data_time, '%Y-%m') as data_month
+        FROM indicator_info i
+        JOIN site_info s ON i.site_id = s.id
+        JOIN operator_info o ON s.operator_id = o.id
+        WHERE DATE_FORMAT(i.data_time, '%Y-%m') = #{yearMonth}
+        <if test="operatorName != null and operatorName != ''">
+            AND o.operator_name = #{operatorName}
+        </if>
+        <if test="siteCode != null and siteCode != ''">
+            AND s.site_code = #{siteCode}
+        </if>
+        ORDER BY i.data_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="getTrendData" resultType="java.util.HashMap">
+        SELECT i.data_time, i.cell_id, i.cell_name, s.site_name, o.operator_name,
+               i.dl_rate, i.ul_rate, i.prb_usage, i.split_ratio, i.main_ratio, s.band
+        FROM indicator_info i
+        JOIN site_info s ON i.site_id = s.id
+        JOIN operator_info o ON s.operator_id = o.id
+        WHERE i.data_time BETWEEN #{startTime} AND #{endTime}
+        <if test="operatorName != null and operatorName != ''">
+            AND o.operator_name = #{operatorName}
+        </if>
+        <if test="siteCode != null and siteCode != ''">
+            AND s.site_code = #{siteCode}
+        </if>
+        <if test="cellId != null and cellId != ''">
+            AND i.cell_id = #{cellId}
+        </if>
+        ORDER BY i.data_time ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="getAvailableTimes" resultType="java.util.HashMap">
+        SELECT DISTINCT DATE_FORMAT(i.data_time, '%Y-%m') as year_month,
+               COUNT(*) as record_count,
+               MIN(i.data_time) as first_record,
+               MAX(i.data_time) as last_record
+        FROM indicator_info i
+        JOIN site_info s ON i.site_id = s.id
+        JOIN operator_info o ON s.operator_id = o.id
+        WHERE 1=1
+        <if test="operatorName != null and operatorName != ''">
+            AND o.operator_name = #{operatorName}
+        </if>
+        <if test="siteCode != null and siteCode != ''">
+            AND s.site_code = #{siteCode}
+        </if>
+        GROUP BY year_month
+        ORDER BY year_month DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>
