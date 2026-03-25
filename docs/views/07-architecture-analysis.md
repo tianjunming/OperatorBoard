@@ -586,9 +586,33 @@ while (true) {
 
 | 任务 | 优先级 | 说明 |
 |------|--------|------|
-| MCP 传输层实现 | 低 | 仅 JSON-RPC 序列化层，传输层待实现 |
+| - | - | 所有计划任务已完成 |
 
-### 7.3 配置说明
+### 7.3 MCP 传输层实现
+
+**新增文件:**
+- `agent-framework/src/agent_framework/mcp/transport/http.py` - HTTP 传输层
+- `agent-framework/src/agent_framework/mcp/transport/websocket.py` - WebSocket 传输层
+- `agent-framework/src/agent_framework/mcp/transport/__init__.py` - 传输层模块
+
+**传输类型:**
+
+| 传输类型 | 实现类 | 说明 |
+|----------|--------|------|
+| HTTP | `HTTPTransport`, `HTTPTransportClient` | FastAPI-based JSON-RPC |
+| WebSocket | `WebSocketTransport`, `WebSocketServer` | 双向流式通信 |
+| Stdio | `StdioTransport` | 子进程 stdin/stdout |
+
+**HTTP 端点:**
+```
+POST /mcp     - JSON-RPC 请求/响应
+GET  /health  - 健康检查
+WS   /ws/{id} - WebSocket  streaming
+```
+
+**依赖:** `fastapi`, `uvicorn`, `websockets`
+
+### 7.4 配置说明
 
 **Java 服务安全配置 (application.yml):**
 ```yaml
@@ -615,7 +639,7 @@ nl2sql:
     refresh-cron: "0 0 * * * *"  # 每小时刷新
 ```
 
-### 7.4 重构验证
+### 7.5 重构验证
 
 ```bash
 # Java 编译
