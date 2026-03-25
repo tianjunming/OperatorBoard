@@ -4,6 +4,10 @@
 
 逻辑视图描述系统的功能结构和主要组件设计。
 
+**PlantUML Diagram:** [02-logical-view.puml](../diagrams/02-logical-view.puml)
+
+![Logical View](../diagrams/02-logical-view.png)
+
 ## 2. 包结构
 
 ### 2.1 Agent Framework (核心框架)

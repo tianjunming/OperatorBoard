@@ -4,6 +4,10 @@
 
 进程视图关注系统的并发处理、异步执行和进程间通信。
 
+**PlantUML Diagram:** [03-process-view.puml](../diagrams/03-process-view.puml)
+
+![Process View](../diagrams/03-process-view.png)
+
 ## 2. 异步架构
 
 ### 2.1 异步执行模型

@@ -1,0 +1,66 @@
+@startuml 03-process-view
+!theme plain
+
+title 进程视图 - Process View
+
+skinparam backgroundColor #FEFEFE
+skinparam activityStyle rectangle
+
+|#wheat|User Request|
+
+start
+
+:OperatorDashboard\nreceives input;
+
+if (View Type?) then (Chat)
+    :ChatContainer\ninvokes agent;
+    note right: async/await
+    :OperatorAgent\nprocesses query;
+    :Intent Detection\n(LLM-based);
+    if (Intent?) then (nl2sql)
+        :JavaServiceTool\ncalls NL2SQL;
+    else (query)
+        :Query Routes\ndirect call;
+    endif
+else (Dashboard)
+    :QueryRoutes\nparallel calls;
+    fork
+        :OperatorQuery\nService;
+        note right: CQRS Query
+    fork again
+        :IndicatorQuery\nService;
+        note right: CQRS Query
+    end fork
+endif
+
+:HttpClient\nasync request;
+
+|#lightblue|Async Processing|
+
+fork
+    :OperatorQuery\nController;
+    --> OperatorQuery\nService;
+    --> Operator\nRepository;
+    --> MySQL\nDatabase;
+fork again
+    :IndicatorQuery\n Controller;
+    --> IndicatorQuery\nService;
+    --> Indicator\nRepository;
+    --> MySQL\nDatabase;
+end fork
+
+:SQLCoderService\n(LLM Call);
+
+:SqlExecutor\nService;
+
+:MySQL\nDatabase\nExecution;
+
+:Response\nSerialization;
+
+|#wheat|User Response|
+
+:Recharts\nVisualization;
+
+stop
+
+@enduml

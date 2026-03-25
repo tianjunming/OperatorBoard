@@ -14,6 +14,23 @@
 
 ---
 
+## PlantUML  Diagrams
+
+4+1 视图的 PlantUML 源文件位于 `docs/diagrams/` 目录：
+
+| 视图 | 文件 | 说明 |
+|------|------|------|
+| 场景视图 | [01-scenario-view.puml](../diagrams/01-scenario-view.puml) | 用例图、参与者和关系 |
+| 逻辑视图 | [02-logical-view.puml](../diagrams/02-logical-view.puml) | 包结构、组件关系 |
+| 进程视图 | [03-process-view.puml](../diagrams/03-process-view.puml) | 活动图、异步流程 |
+| 部署视图 | [04-deployment-view.puml](../diagrams/04-deployment-view.puml) | 部署拓扑、节点关系 |
+| 开发视图 | [05-development-view.puml](../diagrams/05-development-view.puml) | 代码组织、模块依赖 |
+| MCP传输层 | [06-mcp-transport.puml](../diagrams/06-mcp-transport.puml) | HTTP/WebSocket/Stdio 传输架构 |
+
+**渲染工具:** 可使用 [PlantUML Online Editor](https://www.plantuml.com/online/) 或本地 PlantUML 渲染器生成图片。
+
+---
+
 ## 概述
 
 ### 4+1 视图模型

@@ -1,0 +1,56 @@
+@startuml 04-deployment-view
+!theme plain
+
+title 部署视图 - Deployment View
+
+skinparam backgroundColor #FEFEFE
+skinparam node {
+    BackgroundColor #LightBlue
+    BorderColor #DarkBlue
+}
+
+skinparam database {
+    BackgroundColor #LightYellow
+    BorderColor #DarkOrange
+}
+
+node "End Users\n(REST Clients)" as Users {
+}
+
+node "API Gateway\n/ Load Balancer" as Gateway {
+}
+
+node "OperatorAgent\nInstance N\n(Python/AIO)" as AgentN {
+    package "Capabilities" {
+        [Tools]
+        [Skills]
+        [MCP Client]
+    }
+}
+
+node "Java Microservices\n(MVC+CQRS)" as JavaServices {
+    database "MySQL\noperator_db" as MySQL {
+        [operator_info]
+        [site_info]
+        [indicator_info]
+    }
+
+    [NL2SQL Service]
+    [SQLCoder LLM]
+}
+
+node "Infrastructure" as Infra {
+    [Agent Registry\n(MCP Hub)]
+    [Vector Store\n(Chroma)]
+    [Message Queue]
+}
+
+Users --> Gateway : HTTPS
+Gateway --> AgentN : HTTP
+AgentN --> JavaServices : HTTP
+AgentN --> Infra : MCP/HTTP
+
+JavaServices --> MySQL : JDBC
+JavaServices --> SQLCoder : REST
+
+@enduml

@@ -590,6 +590,10 @@ while (true) {
 
 ### 7.3 MCP 传输层实现
 
+**PlantUML Diagram:** [06-mcp-transport.puml](../diagrams/06-mcp-transport.puml)
+
+![MCP Transport](../diagrams/06-mcp-transport.png)
+
 **新增文件:**
 - `agent-framework/src/agent_framework/mcp/transport/http.py` - HTTP 传输层
 - `agent-framework/src/agent_framework/mcp/transport/websocket.py` - WebSocket 传输层

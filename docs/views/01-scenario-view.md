@@ -4,6 +4,10 @@
 
 场景视图描述系统的功能需求和用户交互，解答"系统为用户做什么"的问题。
 
+**PlantUML Diagram:** [01-scenario-view.puml](../diagrams/01-scenario-view.puml)
+
+![Scenario View](../diagrams/01-scenario-view.png)
+
 ## 2. 主要参与者 (Actors)
 
 | 参与者 | 描述 | 类型 |

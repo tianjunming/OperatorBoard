@@ -1,0 +1,72 @@
+@startuml 06-mcp-transport
+!theme plain
+
+title MCP 传输层架构 - MCP Transport Architecture
+
+skinparam backgroundColor #FEFEFE
+
+package "agent-framework.mcp" {
+    [protocol.py\nMCPProtocol\nMCPTool\nMCPServerDefinition] as Protocol
+    [client.py\nMCPClient] as Client
+    [server.py\nMCPServerConnection\nMCPServerManager\nMCPTransportFactory\nStdioTransport] as Server
+}
+
+package "agent-framework.mcp.transport" {
+    [http.py\nHTTPTransport\nHTTPTransportClient] as HTTPTransport
+    [websocket.py\nWebSocketTransport\nWebSocketServer] as WSTransport
+}
+
+package "External Services" {
+    [FastAPI Server\n(HTTP)] as FastAPI
+    [WebSocket Server] as WSServer
+    [stdio subprocess] as StdioProc
+}
+
+' Transport types
+rectangle "HTTP Transport" #LightBlue {
+    HTTPTransport -up-> FastAPI : POST /mcp
+    HTTPTransport -up-> FastAPI : WS /ws/{id}
+}
+
+rectangle "WebSocket Transport" #LightGreen {
+    WSTransport -up-> WSServer : ws://
+}
+
+rectangle "Stdio Transport" #LightYellow {
+    Server -up-> StdioProc : stdin/stdout
+}
+
+' Protocol usage
+Client --> Protocol : serialize/deserialize
+Server --> Protocol : serialize/deserialize
+HTTPTransport --> Protocol
+WSTransport --> Protocol
+
+' Factory pattern
+MCPTransportFactory -down-> HTTPTransport : create
+MCPTransportFactory -down-> WSTransport : create
+MCPTransportFactory -down-> StdioTransport : create
+
+note top of Protocol
+  JSON-RPC 2.0 Protocol
+  - create_request()
+  - create_response()
+  - create_notification()
+  - parse_message()
+end note
+
+note top of HTTPTransport
+  Endpoints:
+  - POST /mcp (JSON-RPC)
+  - GET /health
+  - WS /ws/{client_id}
+end note
+
+note top of WSTransport
+  Features:
+  - Bidirectional streaming
+  - Ping/pong keepalive
+  - Request/response correlation
+end note
+
+@enduml

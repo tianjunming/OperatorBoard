@@ -4,6 +4,10 @@
 
 开发视图描述代码组织、依赖管理和开发流程。
 
+**PlantUML Diagram:** [05-development-view.puml](../diagrams/05-development-view.puml)
+
+![Development View](../diagrams/05-development-view.png)
+
 ## 2. 代码组织
 
 ### 2.1 仓库结构

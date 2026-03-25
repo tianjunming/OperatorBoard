@@ -1,0 +1,87 @@
+@startuml 02-logical-view
+!theme plain
+
+title 逻辑视图 - Logical View
+
+skinparam backgroundColor #FEFEFE
+skinparam packageStyle rectangle
+
+package "agent-app (React Frontend)" {
+    [OperatorDashboard]
+    [ChatContainer]
+    [Recharts Charts]
+}
+
+package "agent-app Server (Node.js)" {
+    [Query Routes] as QueryRoutes
+    [NL2SQL Routes] as NL2SQLRoutes
+}
+
+package "operator-agent (Python)" {
+    [OperatorAgent]
+    [JavaServiceTool]
+    [NL2SQLEndpoints]
+    [AgentRegistry]
+}
+
+package "operator-nl2sql-service (Java Spring Boot)" {
+    package "Controller Layer" {
+        [Nl2SqlController\n(Command)]
+        [OperatorQueryController\n(Query)]
+        [IndicatorQueryController\n(Query)]
+    }
+
+    package "Service Layer (CQRS)" {
+        [Nl2SqlCommandService\n(Command)]
+        [OperatorQueryService\n(Query)]
+        [IndicatorQueryService\n(Query)]
+    }
+
+    package "Repository Layer" {
+        [OperatorRepository]
+        [IndicatorRepository]
+    }
+}
+
+package "MySQL Database" {
+    [operator_info]
+    [site_info]
+    [indicator_info]
+}
+
+package "SQLCoder LLM" {
+    [NL2SQL Model]
+}
+
+' === Relationships ===
+OperatorDashboard --> QueryRoutes : /api/query/*
+OperatorDashboard --> NL2SQLRoutes : /api/nl2sql/*
+ChatContainer --> QueryRoutes
+
+QueryRoutes --> OperatorAgent
+NL2SQLRoutes --> OperatorAgent
+
+OperatorAgent --> JavaServiceTool
+OperatorAgent --> NL2SQLEndpoints
+OperatorAgent --> AgentRegistry : MCP
+
+JavaServiceTool --> OperatorQueryController
+JavaServiceTool --> IndicatorQueryController
+NL2SQLEndpoints --> Nl2SqlController
+
+Nl2SqlController --> Nl2SqlCommandService
+OperatorQueryController --> OperatorQueryService
+IndicatorQueryController --> IndicatorQueryService
+
+Nl2SqlCommandService --> OperatorRepository
+Nl2SqlCommandService --> IndicatorRepository
+OperatorQueryService --> OperatorRepository
+IndicatorQueryService --> IndicatorRepository
+
+OperatorRepository --> operator_info
+IndicatorRepository --> site_info
+IndicatorRepository --> indicator_info
+
+Nl2SqlCommandService --> SQLCoder : REST /v1/completions
+
+@enduml

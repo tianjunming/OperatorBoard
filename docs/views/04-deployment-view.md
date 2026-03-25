@@ -4,6 +4,10 @@
 
 部署视图描述系统的物理部署架构和基础设施配置。
 
+**PlantUML Diagram:** [04-deployment-view.puml](../diagrams/04-deployment-view.puml)
+
+![Deployment View](../diagrams/04-deployment-view.png)
+
 ## 2. 系统拓扑
 
 ```

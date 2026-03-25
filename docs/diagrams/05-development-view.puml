@@ -1,0 +1,127 @@
+@startuml 05-development-view
+!theme plain
+
+title 开发视图 - Development View
+
+skinparam backgroundColor #FEFEFE
+skinparam packageStyle rectangle
+
+package "src/agent-framework" as af {
+    package "core" {
+        [agent.py]
+        [types.py]
+        [exceptions.py]
+    }
+    package "tools" {
+        [base.py]
+        [registry.py]
+        [manager.py]
+    }
+    package "skills" {
+        [base.py]
+        [registry.py]
+        [executor.py]
+    }
+    package "mcp" {
+        [protocol.py]
+        [client.py]
+        [server.py]
+        package "transport" {
+            [http.py]
+            [websocket.py]
+        }
+    }
+    package "rag" {
+        [embeddings.py]
+        [vectorstore.py]
+        [retriever.py]
+    }
+    package "config" {
+        [schema.py]
+        [loader.py]
+    }
+}
+
+package "src/operator-agent" as oa {
+    [operator_agent.py]
+    package "api" {
+        [server.py]
+    }
+    package "capabilities" {
+        package "tools" {
+            [java_service_tool.py]
+            [http_tool.py]
+        }
+        package "skills" {
+            [operator_data_skill.py]
+            [data_aggregator_skill.py]
+            [report_generator_skill.py]
+        }
+        package "mcp" {
+            [agent_mcp_client.py]
+            [system_data_source.py]
+        }
+    }
+    [operator_config.py]
+}
+
+package "src/operator-service" as os {
+    package "controller" {
+        [Nl2SqlController.java]
+        package "query" {
+            [OperatorQueryController.java]
+            [IndicatorQueryController.java]
+        }
+    }
+    package "service" {
+        package "command" {
+            [Nl2SqlCommandService.java]
+        }
+        package "query" {
+            [OperatorQueryService.java]
+            [IndicatorQueryService.java]
+        }
+    }
+    package "repository" {
+        [OperatorRepository.java]
+        [IndicatorRepository.java]
+    }
+    package "entity" {
+        [OperatorInfo.java]
+        [SiteCellSummary.java]
+        [IndicatorInfo.java]
+    }
+    package "config" {
+        [SecurityConfig.java]
+        [SchemaCache.java]
+        [SqlCoderConfig.java]
+    }
+}
+
+package "src/agent-app" as app {
+    [App.jsx]
+    [ErrorBoundary.jsx]
+    package "components" {
+        [ChatContainer.jsx]
+        [OperatorDashboard.jsx]
+    }
+    package "hooks" {
+        [useAgentStream.js]
+        [useOperatorData.js]
+    }
+    package "styles" {
+        [index.css]
+        [Dashboard.css]
+    }
+}
+
+' Dependencies
+oa --> af
+os --> af : none
+app --> af : none
+
+note "operator-agent depends on\nagent-framework" as N1
+note "operator-service is\nindependent Python module" as N2
+note "agent-app uses\nagent-framework types" as N3
+
+@enduml
