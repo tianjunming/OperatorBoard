@@ -10,6 +10,7 @@
 4. [部署视图 (Deployment View)](04-deployment-view.md)
 5. [开发视图 (Development View)](05-development-view.md)
 6. [技术架构与选型](06-technical-architecture.md)
+7. [架构深度分析](07-architecture-analysis.md)
 
 ---
 
