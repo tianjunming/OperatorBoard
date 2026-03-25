@@ -13,7 +13,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -49,7 +48,6 @@ public class SecurityConfig {
         return new ApiKeyAuthFilter(securityEnabled, apiKeysConfig);
     }
 
-    @Component
     public static class ApiKeyAuthFilter extends OncePerRequestFilter {
 
         private final boolean securityEnabled;
