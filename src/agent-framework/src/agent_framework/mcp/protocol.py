@@ -95,6 +95,20 @@ class MCPToolCallResult(BaseModel):
     error: Optional[str] = None
 
 
+class MCPServerDefinition(BaseModel):
+    """MCP server definition for configuration."""
+
+    name: str
+    description: Optional[str] = None
+    command: str
+    args: List[str] = Field(default_factory=list)
+    enabled: bool = True
+    env: Dict[str, str] = Field(default_factory=dict)
+    transport: Literal["http", "websocket", "stdio"] = "http"
+    url: Optional[str] = None
+    port: Optional[int] = None
+
+
 class MCPProtocol:
     """
     MCP protocol handler.
