@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 const API_BASE = '/api/query';
 
@@ -18,12 +18,28 @@ export function useOperatorData() {
   const [siteCells, setSiteCells] = useState([]);
   const [latestIndicators, setLatestIndicators] = useState([]);
   const [historyIndicators, setHistoryIndicators] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingKeys, setLoadingKeys] = useState(new Set());
   const [error, setError] = useState(null);
   const [selectedOperatorId, setSelectedOperatorId] = useState(null);
 
+  const addLoadingKey = useCallback((key) => {
+    setLoadingKeys(prev => new Set([...prev, key]));
+  }, []);
+
+  const removeLoadingKey = useCallback((key) => {
+    setLoadingKeys(prev => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+  }, []);
+
+  const isLoading = useCallback((key) => {
+    return key ? loadingKeys.has(key) : loadingKeys.size > 0;
+  }, [loadingKeys]);
+
   const fetchOperators = useCallback(async () => {
-    setLoading(true);
+    addLoadingKey('operators');
     try {
       const data = await fetchAPI('/operators');
       setOperators(data || []);
@@ -35,11 +51,12 @@ export function useOperatorData() {
       setError(err.message);
       setOperators([]);
     } finally {
-      setLoading(false);
+      removeLoadingKey('operators');
     }
-  }, [selectedOperatorId]);
+  }, [selectedOperatorId, addLoadingKey, removeLoadingKey]);
 
   const fetchSiteCells = useCallback(async (operatorId, band) => {
+    addLoadingKey('siteCells');
     try {
       let url = `/site-cells?operatorId=${operatorId}`;
       if (band) url += `&band=${encodeURIComponent(band)}`;
@@ -47,11 +64,13 @@ export function useOperatorData() {
       setSiteCells(data || []);
     } catch (err) {
       setSiteCells([]);
+    } finally {
+      removeLoadingKey('siteCells');
     }
-  }, []);
+  }, [addLoadingKey, removeLoadingKey]);
 
   const fetchLatestIndicators = useCallback(async (operatorId, band) => {
-    setLoading(true);
+    addLoadingKey('latestIndicators');
     try {
       let url = `/indicators/latest?operatorId=${operatorId}`;
       if (band) url += `&band=${encodeURIComponent(band)}`;
@@ -62,11 +81,12 @@ export function useOperatorData() {
       setError(err.message);
       setLatestIndicators([]);
     } finally {
-      setLoading(false);
+      removeLoadingKey('latestIndicators');
     }
-  }, []);
+  }, [addLoadingKey, removeLoadingKey]);
 
   const fetchHistoryIndicators = useCallback(async (operatorId, band, dataMonth) => {
+    addLoadingKey('historyIndicators');
     try {
       let url = `/indicators/history?operatorId=${operatorId}`;
       if (band) url += `&band=${encodeURIComponent(band)}`;
@@ -75,11 +95,13 @@ export function useOperatorData() {
       setHistoryIndicators(data || []);
     } catch (err) {
       setHistoryIndicators([]);
+    } finally {
+      removeLoadingKey('historyIndicators');
     }
-  }, []);
+  }, [addLoadingKey, removeLoadingKey]);
 
   const fetchTrendData = useCallback(async (operatorId, band, start, end) => {
-    setLoading(true);
+    addLoadingKey('trend');
     try {
       let url = `/indicators/trend?operatorId=${operatorId}`;
       if (band) url += `&band=${encodeURIComponent(band)}`;
@@ -92,9 +114,9 @@ export function useOperatorData() {
       setError(err.message);
       setHistoryIndicators([]);
     } finally {
-      setLoading(false);
+      removeLoadingKey('trend');
     }
-  }, []);
+  }, [addLoadingKey, removeLoadingKey]);
 
   useEffect(() => {
     fetchOperators();
@@ -112,7 +134,8 @@ export function useOperatorData() {
     siteCells,
     latestIndicators,
     historyIndicators,
-    loading,
+    loadingKeys,
+    isLoading,
     error,
     selectedOperatorId,
     setSelectedOperatorId,

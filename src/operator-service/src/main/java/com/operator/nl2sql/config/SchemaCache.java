@@ -1,16 +1,21 @@
 package com.operator.nl2sql.config;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
-import java.util.StringJoiner;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Component
 public class SchemaCache {
 
-    private String schemaContext;
+    private final AtomicReference<String> schemaContext = new AtomicReference<>();
 
     private final SqlCoderConfig sqlCoderConfig;
+
+    @Value("${nl2sql.schema.refresh-enabled:false}")
+    private boolean refreshEnabled;
 
     public SchemaCache(SqlCoderConfig sqlCoderConfig) {
         this.sqlCoderConfig = sqlCoderConfig;
@@ -21,7 +26,23 @@ public class SchemaCache {
         refreshSchema();
     }
 
-    public void refreshSchema() {
+    /**
+     * Scheduled schema refresh using cron expression from config.
+     * Default cron: "0 0 * * * *" (every hour at minute 0)
+     * Can be disabled via nl2sql.schema.refresh-enabled=false
+     */
+    @Scheduled(cron = "${nl2sql.schema.refresh-cron:0 0 * * * *}")
+    public void scheduledRefresh() {
+        if (refreshEnabled) {
+            refreshSchema();
+        }
+    }
+
+    /**
+     * Manually trigger schema refresh.
+     * Thread-safe operation using AtomicReference.
+     */
+    public synchronized void refreshSchema() {
         StringBuilder sb = new StringBuilder();
         sb.append("# Database Schema\n\n");
 
@@ -111,10 +132,10 @@ public class SchemaCache {
         sb.append("| duration_dwell_ratio | DECIMAL(5,2) | 时长驻留比 (%) |\n");
         sb.append("| fallback_ratio | DECIMAL(5,2) | 回流比 (%) |\n");
 
-        this.schemaContext = sb.toString();
+        this.schemaContext.set(sb.toString());
     }
 
     public String getSchemaContext() {
-        return schemaContext;
+        return schemaContext.get();
     }
 }

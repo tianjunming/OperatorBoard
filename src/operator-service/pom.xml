@@ -81,6 +81,12 @@
             <artifactId>snakeyaml</artifactId>
         </dependency>
 
+        <!-- Spring Security for API Key Authentication -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

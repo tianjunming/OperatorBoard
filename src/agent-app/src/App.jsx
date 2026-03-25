@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ChatContainer from './components/ChatContainer.jsx';
 import OperatorDashboard from './components/OperatorDashboard';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import './styles/Dashboard.css';
 
 function App() {
@@ -27,7 +28,15 @@ function App() {
         </nav>
       </header>
       <main className="app-main">
-        {view === 'chat' ? <ChatContainer /> : <OperatorDashboard />}
+        <ErrorBoundary name="Dashboard">
+          {view === 'chat' ? (
+            <ErrorBoundary name="Chat">
+              <ChatContainer />
+            </ErrorBoundary>
+          ) : (
+            <OperatorDashboard />
+          )}
+        </ErrorBoundary>
       </main>
     </div>
   );

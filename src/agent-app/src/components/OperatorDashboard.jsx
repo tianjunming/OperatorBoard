@@ -26,9 +26,13 @@ export default function OperatorDashboard() {
   const [siteCells, setSiteCells] = useState([]);
   const [latestIndicators, setLatestIndicators] = useState([]);
   const [historyIndicators, setHistoryIndicators] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingKeys, setLoadingKeys] = useState(new Set());
   const [error, setError] = useState(null);
   const [currentMonth, setCurrentMonth] = useState('2026-03');
+
+  const addLoadingKey = (key) => setLoadingKeys(prev => new Set([...prev, key]));
+  const removeLoadingKey = (key) => setLoadingKeys(prev => { const next = new Set(prev); next.delete(key); return next; });
+  const isLoading = (key) => key ? loadingKeys.has(key) : loadingKeys.size > 0;
 
   useEffect(() => {
     fetchOperators();
@@ -43,7 +47,7 @@ export default function OperatorDashboard() {
   }, [selectedOperatorId, currentMonth]);
 
   const fetchOperators = async () => {
-    setLoading(true);
+    addLoadingKey('operators');
     try {
       const response = await fetch(`${API_BASE}/query/operators`);
       const data = await response.json();
@@ -54,22 +58,25 @@ export default function OperatorDashboard() {
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      removeLoadingKey('operators');
     }
   };
 
   const fetchSiteCells = async (operatorId) => {
+    addLoadingKey('siteCells');
     try {
       const response = await fetch(`${API_BASE}/query/site-cells?operatorId=${operatorId}`);
       const data = await response.json();
       setSiteCells(data || []);
     } catch (err) {
       setSiteCells([]);
+    } finally {
+      removeLoadingKey('siteCells');
     }
   };
 
   const fetchLatestIndicators = async (operatorId) => {
-    setLoading(true);
+    addLoadingKey('latestIndicators');
     try {
       const response = await fetch(`${API_BASE}/query/indicators/latest?operatorId=${operatorId}`);
       const data = await response.json();
@@ -78,17 +85,20 @@ export default function OperatorDashboard() {
       setError(err.message);
       setLatestIndicators([]);
     } finally {
-      setLoading(false);
+      removeLoadingKey('latestIndicators');
     }
   };
 
   const fetchHistoryIndicators = async (operatorId, dataMonth) => {
+    addLoadingKey('historyIndicators');
     try {
       const response = await fetch(`${API_BASE}/query/indicators/history?operatorId=${operatorId}&dataMonth=${dataMonth}`);
       const data = await response.json();
       setHistoryIndicators(data || []);
     } catch (err) {
       setHistoryIndicators([]);
+    } finally {
+      removeLoadingKey('historyIndicators');
     }
   };
 
@@ -170,7 +180,7 @@ export default function OperatorDashboard() {
 
       {error && <div className="error">{error}</div>}
 
-      {loading && operators.length === 0 ? (
+      {isLoading('operators') && operators.length === 0 ? (
         <div className="loading">加载中...</div>
       ) : (
         <>

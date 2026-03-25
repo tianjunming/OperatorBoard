@@ -31,7 +31,7 @@ class OperatorAgent(BaseAgent):
     - Skills: Operator data fetching and summarization via OperatorDataSkill, etc.
     """
 
-    def __init__(self, config: AgentConfig):
+    def __init__(self, config: AgentConfig, intent_detection_config: Optional[Dict[str, Any]] = None):
         """Initialize the Operator Agent."""
         super().__init__(config)
 
@@ -42,9 +42,24 @@ class OperatorAgent(BaseAgent):
         self._system_sources: Dict[str, SystemDataSource] = {}
         self._telecom_rag: Optional[TelecomRAGRetriever] = None
 
+        # Intent detection config
+        self._intent_detection_config = intent_detection_config or self._default_intent_detection_config()
+
         # Execution tracking
         self._tool_results: Dict[str, Any] = {}
         self._execution_history: List[Dict[str, Any]] = []
+
+    def _default_intent_detection_config(self) -> Dict[str, Any]:
+        """Return default intent detection config."""
+        return {
+            "enabled": True,
+            "llm_endpoint": "http://localhost:8081/v1/completions",
+            "llm_model": "sqlcoder",
+            "timeout": 30,
+            "max_tokens": 200,
+            "temperature": 0.1,
+            "prompt_template": "",
+        }
 
     async def initialize(self) -> None:
         """Initialize the agent and all its components."""
@@ -309,13 +324,19 @@ class OperatorAgent(BaseAgent):
             Dict with intent type and extracted parameters
         """
         import json
-        import os
 
-        # LLM configuration - can be configured via environment variable
-        llm_endpoint = os.getenv("LLM_ENDPOINT", "http://localhost:8081/v1/completions")
-        llm_model = os.getenv("LLM_MODEL", "sqlcoder")
+        # Use loaded config or fall back to environment variables
+        config = self._intent_detection_config
+        llm_endpoint = config.get("llm_endpoint", "http://localhost:8081/v1/completions")
+        llm_model = config.get("llm_model", "sqlcoder")
+        timeout = config.get("timeout", 30)
+        max_tokens = config.get("max_tokens", 200)
+        temperature = config.get("temperature", 0.1)
+        prompt_template = config.get("prompt_template", "")
 
-        prompt_template = """你是一个电信运营商数据查询助手。根据用户的自然语言查询，返回结构化的查询参数。
+        # Use default template if no template in config
+        if not prompt_template:
+            prompt_template = """你是一个电信运营商数据查询助手。根据用户的自然语言查询，返回结构化的查询参数。
 
 ## 可查询的数据类型：
 1. site_data - 运营商站点数据（站点数、小区数，按频段分类）
@@ -350,14 +371,14 @@ class OperatorAgent(BaseAgent):
         prompt = prompt_template.format(query=natural_language_query)
 
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=float(timeout)) as client:
                 response = await client.post(
                     llm_endpoint,
                     json={
                         "model": llm_model,
                         "prompt": prompt,
-                        "max_tokens": 200,
-                        "temperature": 0.1,
+                        "max_tokens": max_tokens,
+                        "temperature": temperature,
                     },
                     headers={"Content-Type": "application/json"},
                 )
@@ -668,6 +689,7 @@ class OperatorAgentFactory:
         java_services: Optional[List[Dict[str, str]]] = None,
         http_services: Optional[List[Dict[str, str]]] = None,
         mcp_clients: Optional[List[Dict[str, str]]] = None,
+        intent_detection_config: Optional[Dict[str, Any]] = None,
     ) -> OperatorAgent:
         """
         Create an OperatorAgent with configured capabilities.
@@ -677,10 +699,11 @@ class OperatorAgentFactory:
             java_services: List of Java service configs
             http_services: List of HTTP service configs
             mcp_clients: List of MCP client configs
+            intent_detection_config: Intent detection configuration
         Returns:
             Configured OperatorAgent
         """
-        agent = OperatorAgent(config)
+        agent = OperatorAgent(config, intent_detection_config=intent_detection_config)
         await agent.initialize()
 
         if java_services:
@@ -689,6 +712,7 @@ class OperatorAgentFactory:
                     service_name=svc["name"],
                     base_url=svc["base_url"],
                     api_prefix=svc.get("api_prefix", "/api"),
+                    api_key=svc.get("api_key") or None,
                 )
 
         if http_services:
@@ -725,8 +749,10 @@ class OperatorAgentFactory:
 
         operator_config = load_operator_config(config_dir)
         java_services = operator_config.get_java_services()
+        intent_config = operator_config.get_intent_detection_config()
 
         return await OperatorAgentFactory.create_with_capabilities(
             config=config,
             java_services=java_services if java_services else None,
+            intent_detection_config=intent_config if intent_config else None,
         )

@@ -4,32 +4,6 @@
   margin: 0 auto;
 }
 
-.app-nav {
-  display: flex;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.nav-btn {
-  padding: 8px 20px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 20px;
-  background: transparent;
-  color: white;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.nav-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.nav-btn.active {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: white;
-}
-
 .dashboard-header {
   display: flex;
   justify-content: space-between;

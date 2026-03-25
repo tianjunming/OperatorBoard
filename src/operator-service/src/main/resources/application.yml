@@ -27,6 +27,8 @@ nl2sql:
     url: http://localhost:8081
     timeout: 60
   security:
+    enabled: false
+    api-keys: ${NL2SQL_API_KEYS:}
     allow-destructive-queries: false
     max-result-rows: 1000
   schema:

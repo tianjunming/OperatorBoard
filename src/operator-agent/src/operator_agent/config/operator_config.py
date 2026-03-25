@@ -52,9 +52,47 @@ class OperatorAgentConfig:
                     "base_url": self._expand_env_vars(config.get("base_url", "")),
                     "api_prefix": config.get("api_prefix", "/api"),
                     "timeout": config.get("timeout", 60),
+                    "api_key": self._expand_env_vars(config.get("api_key", "")),
                 })
 
         return java_services
+
+    def get_intent_detection_config(self) -> Dict[str, Any]:
+        """
+        Get intent detection configuration.
+
+        Returns:
+            Intent detection config with expanded env vars
+        """
+        intent_file = self.config_dir / "intent_detection.yaml"
+        if not intent_file.exists():
+            return self._default_intent_detection_config()
+
+        with open(intent_file, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f) or {}
+
+        intent_config = config.get("intent_detection", {})
+        return {
+            "enabled": intent_config.get("enabled", True),
+            "llm_endpoint": self._expand_env_vars(intent_config.get("llm_endpoint", "http://localhost:8081/v1/completions")),
+            "llm_model": intent_config.get("llm_model", "sqlcoder"),
+            "timeout": intent_config.get("timeout", 30),
+            "max_tokens": intent_config.get("max_tokens", 200),
+            "temperature": intent_config.get("temperature", 0.1),
+            "prompt_template": intent_config.get("prompt_template", ""),
+        }
+
+    def _default_intent_detection_config(self) -> Dict[str, Any]:
+        """Return default intent detection config."""
+        return {
+            "enabled": True,
+            "llm_endpoint": "http://localhost:8081/v1/completions",
+            "llm_model": "sqlcoder",
+            "timeout": 30,
+            "max_tokens": 200,
+            "temperature": 0.1,
+            "prompt_template": "",
+        }
 
     def _expand_env_vars(self, value: str) -> str:
         """Expand environment variables in config values."""

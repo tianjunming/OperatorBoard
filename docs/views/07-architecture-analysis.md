@@ -10,6 +10,7 @@
 4. [operator-service 分析](#4-operator-service-分析)
 5. [agent-app 分析](#5-agent-app-分析)
 6. [关键技术债](#6-关键技术债)
+7. [重构完成状态](#7-重构完成状态)
 
 ---
 
@@ -551,3 +552,85 @@ while (true) {
 4. **响应式**: 将 `block()` 改为真正的响应式链式调用
 5. **前端**: 添加 Error Boundary 和请求重试机制
 6. **Schema**: 添加运行时 Schema 刷新端点
+
+---
+
+## 7. 重构完成状态
+
+### 7.1 已完成重构
+
+#### Phase 1: 高优先级 (安全 & 可靠性)
+
+| 任务 | 状态 | 实现方式 |
+|------|------|----------|
+| Java 服务 API Key 认证 | ✅ 已完成 | Spring Security + ApiKeyAuthFilter，默认禁用 |
+| 意图检测模板外部化 | ✅ 已完成 | `configs/intent_detection.yaml` + `configs/tools.yaml` |
+| Schema 缓存刷新机制 | ✅ 已完成 | `@Scheduled` cron + `AtomicReference` 线程安全刷新 |
+
+#### Phase 2: 中优先级 (性能 & UX)
+
+| 任务 | 状态 | 实现方式 |
+|------|------|----------|
+| 消除 Reactive Block | ✅ 已完成 | `SqlCoderService.generateSqlAsync()` 返回 `Mono<String>` |
+| 前端 Error Boundary | ✅ 已完成 | `ErrorBoundary.jsx` 组件 + App.jsx 集成 |
+| 流式重试机制 | ✅ 已完成 | `useAgentStream.js` 指数退避 + `isRetryableError()` |
+
+#### Phase 3: 低优先级 (代码质量)
+
+| 任务 | 状态 | 实现方式 |
+|------|------|----------|
+| CSS 样式分离 | ✅ 已完成 | 共享样式移至 `index.css`，Dashboard.css 仅保留看板样式 |
+| 独立请求 Loading 状态 | ✅ 已完成 | `loadingKeys: Set<string>` 替代单一 `loading: boolean` |
+
+### 7.2 待完成项
+
+| 任务 | 优先级 | 说明 |
+|------|--------|------|
+| MCP 传输层实现 | 低 | 仅 JSON-RPC 序列化层，传输层待实现 |
+
+### 7.3 配置说明
+
+**Java 服务安全配置 (application.yml):**
+```yaml
+nl2sql:
+  security:
+    enabled: false  # 默认禁用，向后兼容
+    api-keys: ${NL2SQL_API_KEYS:}  # 逗号分隔的 API Key 列表
+```
+
+**意图检测配置 (intent_detection.yaml):**
+```yaml
+intent_detection:
+  enabled: true
+  llm_endpoint: "http://localhost:8081/v1/completions"
+  prompt_template: |  # 模板已外部化
+    你是一个电信运营商数据查询助手...
+```
+
+**Schema 刷新配置 (application.yml):**
+```yaml
+nl2sql:
+  schema:
+    refresh-enabled: false  # 默认禁用
+    refresh-cron: "0 0 * * * *"  # 每小时刷新
+```
+
+### 7.4 重构验证
+
+```bash
+# Java 编译
+cd operator-service && mvn compile
+
+# Python 语法检查
+python -m py_compile operator-agent/src/operator_agent/operator_agent.py
+
+# 前端构建
+cd agent-app && npm run build
+```
+
+**手动测试清单:**
+- [ ] 无 API Key 访问 Java 服务 (security.enabled=true) 应返回 401
+- [ ] 意图检测配置变更 (intent_detection.yaml) 生效
+- [ ] Schema 刷新定时任务执行 (refresh-enabled=true)
+- [ ] 前端错误显示 Error Boundary 友好界面
+- [ ] SSE 断开后自动重试 (3 次指数退避)

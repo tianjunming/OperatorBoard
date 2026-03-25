@@ -46,31 +46,51 @@ public class SqlCoderService {
         return generateSql(naturalLanguageQuery, null);
     }
 
+    /**
+     * Synchronous version for backward compatibility.
+     * @deprecated Use {@link #generateSqlAsync(Nl2SqlRequest)} for reactive contexts.
+     */
+    @Deprecated
     private String generateSql(String nlQuery, Nl2SqlRequest request) {
+        return generateSqlAsync(nlQuery, request).block();
+    }
+
+    /**
+     * Async version returning Mono for reactive programming.
+     */
+    public Mono<String> generateSqlAsync(Nl2SqlRequest request) {
+        return generateSqlAsync(request.getNaturalLanguageQuery(), request);
+    }
+
+    public Mono<String> generateSqlAsync(String naturalLanguageQuery) {
+        return generateSqlAsync(naturalLanguageQuery, null);
+    }
+
+    private Mono<String> generateSqlAsync(String nlQuery, Nl2SqlRequest request) {
         // SANITIZE INPUT FIRST to prevent prompt injection
-        String sanitizedQuery = promptSanitizer.sanitize(nlQuery);
+        String sanitizedQuery;
+        try {
+            sanitizedQuery = promptSanitizer.sanitize(nlQuery);
+        } catch (IllegalArgumentException e) {
+            return Mono.error(e);
+        }
 
         String prompt = buildPrompt(sanitizedQuery, request);
 
-        try {
-            Map<String, Object> requestBody = Map.of(
-                    "prompt", prompt,
-                    "max_tokens", 500,
-                    "temperature", 0.1
-            );
+        Map<String, Object> requestBody = Map.of(
+                "prompt", prompt,
+                "max_tokens", 500,
+                "temperature", 0.1
+        );
 
-            String response = webClient.post()
-                    .uri("/v1/completions")
-                    .bodyValue(requestBody)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .timeout(Duration.ofSeconds(sqlCoderConfig.getTimeout()))
-                    .block();
-
-            return parseSqlFromResponse(response);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to call SQLCoder: " + e.getMessage(), e);
-        }
+        return webClient.post()
+                .uri("/v1/completions")
+                .bodyValue(requestBody)
+                .retrieve()
+                .bodyToMono(String.class)
+                .timeout(Duration.ofSeconds(sqlCoderConfig.getTimeout()))
+                .map(this::parseSqlFromResponse)
+                .onErrorMap(e -> new RuntimeException("Failed to call SQLCoder: " + e.getMessage(), e));
     }
 
     private String buildPrompt(String nlQuery, Nl2SqlRequest request) {

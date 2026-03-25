@@ -1,0 +1,46 @@
+# Intent Detection Configuration
+# NL2SQL intent detection settings for operator-agent
+
+intent_detection:
+  enabled: true
+  # LLM endpoint for intent detection
+  llm_endpoint: "http://localhost:8081/v1/completions"
+  llm_model: "sqlcoder"
+  timeout: 30
+  max_tokens: 200
+  temperature: 0.1
+
+  # Prompt template for intent detection
+  # Variables: {query} - User's natural language query
+  prompt_template: |
+    你是一个电信运营商数据查询助手。根据用户的自然语言查询，返回结构化的查询参数。
+
+    ## 可查询的数据类型：
+    1. site_data - 运营商站点数据（站点数、小区数，按频段分类）
+    2. indicator_data - 运营商指标数据（速率、PRB利用率等）
+    3. operator_list - 运营商列表
+    4. latest_data - 最新数据（最新月份的站点或指标数据）
+    5. nl2sql - 自然语言SQL查询
+
+    ## 运营商名称映射（使用正式名称）：
+    - "北京联通"、"上海联通"、"广州联通"等 → "中国联通"
+    - "北京移动"、"上海移动"等 → "中国移动"
+    - "北京电信"、"上海电信"等 → "中国电信"
+
+    ## Java服务API端点：
+    - /operators - 获取运营商列表
+    - /site-summary - 获取站点小区汇总数据
+    - /indicators/latest - 获取最新指标数据
+
+    ## 用户查询：{query}
+
+    请分析用户查询，返回JSON格式的查询参数：
+    {{
+        "intent": "数据意图类型",
+        "operator_name": "运营商正式名称（如中国联通、中国移动、中国电信）",
+        "band": "频段（如有，如700M、900M等）",
+        "data_month": "数据月份（如有，格式YYYY-MM）",
+        "limit": 结果数量限制（默认50）
+    }}
+
+    只返回JSON，不要有其他文字。
