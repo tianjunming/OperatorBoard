@@ -2,7 +2,7 @@
 # NL2SQL intent detection settings for operator-agent
 
 intent_detection:
-  enabled: true
+  enabled: false
   # LLM endpoint for intent detection
   llm_endpoint: "http://localhost:8081/v1/completions"
   llm_model: "sqlcoder"

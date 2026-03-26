@@ -326,6 +326,18 @@ class OperatorAgent(BaseAgent):
 
         # Use loaded config or fall back to environment variables
         config = self._intent_detection_config
+
+        # Check if intent detection is enabled
+        if not config.get("enabled", True):
+            # Return default intent when disabled
+            return {
+                "intent": "unknown",
+                "operator_name": None,
+                "data_month": None,
+                "band": None,
+                "limit": 50,
+            }
+
         llm_endpoint = config.get("llm_endpoint", "http://localhost:8081/v1/completions")
         llm_model = config.get("llm_model", "sqlcoder")
         timeout = config.get("timeout", 30)
