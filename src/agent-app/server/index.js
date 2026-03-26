@@ -4,9 +4,18 @@ import { URL } from 'url';
 const PORT = process.env.PORT || 8000;
 const OPERATOR_AGENT_URL = process.env.OPERATOR_AGENT_URL || 'http://localhost:8080';
 const NL2SQL_SERVICE_URL = process.env.NL2SQL_SERVICE_URL || 'http://localhost:8080';
+const OPERATOR_AGENT_API_KEY = process.env.OPERATOR_AGENT_API_KEYS || '';
 
 let pendingConfirmation = null;
 let confirmationResolver = null;
+
+function getAgentHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  if (OPERATOR_AGENT_API_KEY) {
+    headers['X-API-Key'] = OPERATOR_AGENT_API_KEY;
+  }
+  return headers;
+}
 
 function parseBody(req) {
   return new Promise((resolve, reject) => {
@@ -44,7 +53,7 @@ function sendSSEText(res, text) {
 async function proxyToAgent(agentInput) {
   const response = await fetch(`${OPERATOR_AGENT_URL}/api/agent/run`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAgentHeaders(),
     body: JSON.stringify(agentInput),
   });
 
@@ -151,7 +160,7 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === '/api/agent/capabilities' && req.method === 'GET') {
     try {
-      const response = await fetch(`${OPERATOR_AGENT_URL}/api/capabilities`);
+      const response = await fetch(`${OPERATOR_AGENT_URL}/api/capabilities`, { headers: getAgentHeaders() });
       const capabilities = await response.json();
       sendJSON(res, 200, capabilities);
     } catch {
@@ -175,7 +184,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const response = await fetch(`${OPERATOR_AGENT_URL}/api/operator/indicators/latest`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAgentHeaders(),
         body: JSON.stringify(query),
       });
       const data = await response.json();
@@ -198,7 +207,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const response = await fetch(`${OPERATOR_AGENT_URL}/api/operator/indicators/compare`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAgentHeaders(),
         body: JSON.stringify(query),
       });
       const data = await response.json();
@@ -223,7 +232,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const response = await fetch(`${OPERATOR_AGENT_URL}/api/operator/indicators/trend`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAgentHeaders(),
         body: JSON.stringify(query),
       });
       const data = await response.json();
@@ -242,7 +251,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const response = await fetch(`${OPERATOR_AGENT_URL}/api/operator/times`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAgentHeaders(),
         body: JSON.stringify(query),
       });
       const data = await response.json();

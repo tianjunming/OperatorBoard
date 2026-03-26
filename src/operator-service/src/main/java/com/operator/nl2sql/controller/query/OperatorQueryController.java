@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/query")
+@RequestMapping("/api/v1/nl2sql")
 public class OperatorQueryController {
 
     private final OperatorQueryService operatorQueryService;

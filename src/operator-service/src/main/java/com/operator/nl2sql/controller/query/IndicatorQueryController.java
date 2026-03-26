@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/query/indicators")
+@RequestMapping("/api/v1/nl2sql/indicators")
 public class IndicatorQueryController {
 
     private final IndicatorQueryService indicatorQueryService;

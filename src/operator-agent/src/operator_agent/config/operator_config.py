@@ -18,7 +18,8 @@ class OperatorAgentConfig:
             config_dir: Directory containing config files. Defaults to ./configs
         """
         if config_dir is None:
-            self.config_dir = Path(__file__).parent.parent.parent / "configs"
+            # Path: operator_agent/config/operator_config.py -> operator_agent/config -> operator_agent -> operator-agent -> configs
+            self.config_dir = Path(__file__).parent.parent.parent.parent / "configs"
         else:
             self.config_dir = Path(config_dir)
 

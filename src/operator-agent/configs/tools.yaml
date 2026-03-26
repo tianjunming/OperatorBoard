@@ -5,7 +5,7 @@ tools:
     enabled: true
     config:
       service_name: "nl2sql-service"
-      base_url: "${NL2SQL_SERVICE_URL:http://localhost:8080}"
+      base_url: "http://localhost:8081"
       api_prefix: "/api/v1/nl2sql"
       timeout: 60
       api_key: "${NL2SQL_API_KEY:}"

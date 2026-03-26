@@ -1,6 +1,7 @@
 """Java Microservice Tool for calling Java-based microservice APIs."""
 
 from typing import Any, Dict, List, Optional
+from pydantic import Field
 import httpx
 
 from agent_framework.tools import BaseTool
@@ -16,6 +17,11 @@ class JavaMicroserviceTool(BaseTool):
 
     name: str = "java_microservice"
     description: str = "Call Java Spring Boot microservice APIs with automatic JSON serialization"
+    service_name: str = Field(description="Name of the Java service")
+    base_url: str = Field(description="Base URL of the service")
+    api_prefix: str = Field(default="/api", description="API prefix")
+    timeout: float = Field(default=60.0, description="Request timeout in seconds")
+    api_key: Optional[str] = Field(default=None, description="Optional API key for authentication")
 
     def __init__(
         self,
@@ -36,12 +42,33 @@ class JavaMicroserviceTool(BaseTool):
             timeout: Request timeout in seconds
             api_key: Optional API key for authentication
         """
-        super().__init__(**kwargs)
-        self.service_name = service_name
-        self.base_url = base_url.rstrip("/")
-        self.api_prefix = api_prefix.rstrip("/")
-        self.timeout = timeout
-        self.api_key = api_key
+        super().__init__(
+            service_name=service_name,
+            base_url=base_url.rstrip("/"),
+            api_prefix=api_prefix.rstrip("/"),
+            timeout=timeout,
+            api_key=api_key,
+            **kwargs,
+        )
+
+    def _run(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Synchronous execution of a Java microservice API call.
+
+        Args:
+            tool_input: Dict with keys:
+                - endpoint: API endpoint (e.g., "/users/{id}")
+                - method: HTTP method (default: GET)
+                - path_params: Path parameters for URL templating
+                - query_params: Query string parameters
+                - body: Request body for POST/PUT
+                - headers: Additional headers
+
+        Returns:
+            API response as dict
+        """
+        import asyncio
+        return asyncio.get_event_loop().run_until_complete(self.run(tool_input))
 
     async def run(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """

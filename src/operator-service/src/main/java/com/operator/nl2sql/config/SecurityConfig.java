@@ -33,11 +33,15 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/health", "/actuator/**").permitAll()
-                .requestMatchers("/api/**").authenticated()
-                .anyRequest().permitAll()
-            )
+            .authorizeHttpRequests(auth -> {
+                if (securityEnabled) {
+                    auth.requestMatchers("/api/**").authenticated();
+                } else {
+                    auth.requestMatchers("/api/**").permitAll();
+                }
+                auth.requestMatchers("/health", "/actuator/**").permitAll()
+                    .anyRequest().permitAll();
+            })
             .addFilterBefore(apiKeyAuthFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

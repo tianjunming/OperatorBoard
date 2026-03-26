@@ -126,7 +126,7 @@ async def get_latest_indicators(query: IndicatorQuery, _: bool = Depends(verify_
         query_params=params,
     )
 
-    if "error" in result:
+    if result.get("error"):
         raise HTTPException(status_code=500, detail=result["error"])
 
     return result
@@ -152,7 +152,7 @@ async def compare_indicators(query: CompareQuery, _: bool = Depends(verify_api_k
         query_params=params,
     )
 
-    if "error" in result:
+    if result.get("error"):
         raise HTTPException(status_code=500, detail=result["error"])
 
     return result
@@ -181,7 +181,7 @@ async def get_indicator_trend(query: TrendQuery, _: bool = Depends(verify_api_ke
         query_params=params,
     )
 
-    if "error" in result:
+    if result.get("error"):
         raise HTTPException(status_code=500, detail=result["error"])
 
     return result
@@ -205,7 +205,7 @@ async def get_available_times(query: TimesQuery, _: bool = Depends(verify_api_ke
         query_params=params,
     )
 
-    if "error" in result:
+    if result.get("error"):
         raise HTTPException(status_code=500, detail=result["error"])
 
     return result
@@ -223,7 +223,7 @@ async def nl2sql_query(request: Dict[str, Any], _: bool = Depends(verify_api_key
         body=request,
     )
 
-    if "error" in result:
+    if result.get("error"):
         raise HTTPException(status_code=500, detail=result["error"])
 
     return result
@@ -247,7 +247,7 @@ async def get_site_cells(query: SiteCellsQuery, _: bool = Depends(verify_api_key
         query_params=params,
     )
 
-    if "error" in result:
+    if result.get("error"):
         raise HTTPException(status_code=500, detail=result["error"])
 
     return result
