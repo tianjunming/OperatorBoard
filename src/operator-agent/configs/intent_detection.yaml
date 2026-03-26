@@ -2,10 +2,11 @@
 # NL2SQL intent detection settings for operator-agent
 
 intent_detection:
-  enabled: false
+  enabled: true
   # LLM endpoint for intent detection
-  llm_endpoint: "http://localhost:8081/v1/completions"
-  llm_model: "sqlcoder"
+  llm_endpoint: "https://api.minimax.chat/v1/chat/completions"
+  llm_model: "MiniMax-Text-01"
+  api_key: "${MINIMAX_API_KEY}"
   timeout: 30
   max_tokens: 200
   temperature: 0.1
