@@ -50,8 +50,8 @@ function sendSSEText(res, text) {
   res.write(`data: ${text}\n`);
 }
 
-async function proxyToAgent(agentInput) {
-  const response = await fetch(`${OPERATOR_AGENT_URL}/api/agent/run`, {
+async function proxyToAgentStream(agentInput, onChunk) {
+  const response = await fetch(`${OPERATOR_AGENT_URL}/api/agent/stream`, {
     method: 'POST',
     headers: getAgentHeaders(),
     body: JSON.stringify(agentInput),
@@ -61,7 +61,43 @@ async function proxyToAgent(agentInput) {
     throw new Error(`Agent error: ${response.status}`);
   }
 
-  return response.json();
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') {
+          return { done: true };
+        }
+        if (data.startsWith('{') && data.endsWith('}')) {
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === 'content' && parsed.content) {
+              onChunk?.(parsed.content);
+            } else if (parsed.type === 'error') {
+              throw new Error(parsed.content);
+            }
+          } catch (e) {
+            if (e.message !== 'JSON.parse error') {
+              throw e;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return { done: true };
 }
 
 const server = http.createServer(async (req, res) => {
@@ -89,42 +125,12 @@ const server = http.createServer(async (req, res) => {
     });
 
     try {
-      const result = await proxyToAgent({
-        input: userInput,
-        stream: true,
-      });
-
-      if (result.type === 'confirmation') {
-        res.write(`data: ${JSON.stringify({ type: 'confirmation', message: result.message })}\n`);
-        res.write(`data: [AUTO_CONFIRM] ${result.message}\n`);
-
-        pendingConfirmation = result;
-        const confirmed = await new Promise((resolve) => {
-          confirmationResolver = resolve;
-
-          setTimeout(() => {
-            if (confirmationResolver) {
-              confirmationResolver(true);
-              confirmationResolver = null;
-            }
-          }, 100);
-        });
-
-        if (confirmed) {
-          const confirmResult = await proxyToAgent({
-            input: userInput,
-            confirmed: true,
-          });
-
-          if (confirmResult.content) {
-            res.write(`data: ${JSON.stringify({ content: confirmResult.content })}\n`);
-          }
+      await proxyToAgentStream(
+        { input: userInput, stream: true },
+        (chunk) => {
+          res.write(`data: ${JSON.stringify({ content: chunk })}\n`);
         }
-      } else if (result.content) {
-        res.write(`data: ${JSON.stringify({ content: result.content })}\n`);
-      } else if (result.result) {
-        res.write(`data: ${JSON.stringify({ content: result.result })}\n`);
-      }
+      );
 
       res.write('data: [DONE]\n');
     } catch (error) {

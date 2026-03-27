@@ -1,6 +1,8 @@
 """FastAPI server for operator-agent NL2SQL endpoints."""
 
 import os
+import json
+import asyncio
 from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -331,14 +333,69 @@ def format_site_data(site_cells: list, operators: list, latest_only: bool = Fals
 @app.post("/api/agent/run")
 async def agent_run(request: AgentRunRequest, _: bool = Depends(verify_api_key)):
     """
-    Run the agent with user input.
-    This endpoint uses LLM-based intent detection to process natural language queries.
+    Run the agent with user input (synchronous JSON response).
     """
+    result = await _process_agent_request(request.input, request.confirmed)
+    return result
+
+
+@app.post("/api/agent/stream")
+async def agent_stream(request: AgentRunRequest, _: bool = Depends(verify_api_key)):
+    """
+    Run the agent with user input (SSE streaming response).
+    """
+    from fastapi.responses import StreamingResponse
+
+    async def generate():
+        try:
+            # Send start marker
+            yield "data: {\"type\": \"start\"}\n\n"
+
+            # Process request
+            result = await _process_agent_request(request.input, request.confirmed)
+
+            # Send result as SSE
+            if "error" in result:
+                yield f"data: {{\"type\": \"error\", \"content\": {json.dumps(result['error'])}}}\n\n"
+            elif "content" in result:
+                # Stream content word by word for better UX
+                content = result["content"]
+                for i in range(0, len(content), 50):
+                    chunk = content[i:i+50]
+                    yield f"data: {{\"type\": \"content\", \"content\": {json.dumps(chunk)}}}\n\n"
+                    await asyncio.sleep(0.01)  # Small delay for streaming effect
+            else:
+                yield f"data: {{\"type\": \"content\", \"content\": {json.dumps(str(result))}}}\n\n"
+
+            yield "data: [DONE]\n\n"
+
+        except Exception as e:
+            yield f"data: {{\"type\": \"error\", \"content\": {json.dumps(str(e))}}}\n\n"
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+        }
+    )
+
+
+async def _process_agent_request(user_input: str, confirmed: bool = False) -> Dict[str, Any]:
+    """
+    Shared logic for processing agent requests.
+    """
+    import asyncio
+    import json
+
     agent = await get_agent()
 
     try:
         # Use LLM to analyze the query intent
-        intent_result = await agent.process_natural_language_query(request.input)
+        intent_result = await agent.process_natural_language_query(user_input)
 
         if "error" in intent_result:
             return {"content": f"Intent detection failed: {intent_result['error']}"}
@@ -370,19 +427,16 @@ async def agent_run(request: AgentRunRequest, _: bool = Depends(verify_api_key))
 
             # Filter by operator if specified
             if operator_name:
-                # Find operator ID by name (fuzzy match)
                 op_id = None
                 for op in operators:
                     if isinstance(op, dict):
                         op_name = op.get("operatorName", "")
-                        # Exact or partial match
                         if op_name == operator_name or operator_name in op_name or op_name in operator_name:
                             op_id = op.get("id")
                             break
                 if op_id:
                     site_cells = [sc for sc in site_cells if isinstance(sc, dict) and sc.get("operatorId") == op_id]
 
-            # Filter by month if specified
             if data_month:
                 site_cells = [sc for sc in site_cells if isinstance(sc, dict) and sc.get("dataMonth") == data_month]
 
@@ -396,20 +450,17 @@ async def agent_run(request: AgentRunRequest, _: bool = Depends(verify_api_key))
             site_cells = site_cells_result.get("data") if isinstance(site_cells_result, dict) else site_cells_result
             site_cells = site_cells if isinstance(site_cells, list) else []
 
-            # Filter by operator if specified
             if operator_name:
                 op_id = None
                 for op in operators:
                     if isinstance(op, dict):
                         op_name = op.get("operatorName", "")
-                        # Fuzzy match
                         if op_name == operator_name or operator_name in op_name or op_name in operator_name:
                             op_id = op.get("id")
                             break
                 if op_id:
                     site_cells = [sc for sc in site_cells if isinstance(sc, dict) and sc.get("operatorId") == op_id]
 
-            # Find latest month
             latest_month = None
             for sc in site_cells:
                 if isinstance(sc, dict) and sc.get("dataMonth"):
@@ -467,7 +518,7 @@ async def agent_run(request: AgentRunRequest, _: bool = Depends(verify_api_key))
             return {"content": "\n".join(lines)}
 
         elif intent == "nl2sql":
-            result = await agent.query_nl2sql(natural_language_query=request.input)
+            result = await agent.query_nl2sql(natural_language_query=user_input)
             if "error" in result:
                 return {"content": f"查询失败: {result['error']}"}
 
@@ -488,7 +539,7 @@ async def agent_run(request: AgentRunRequest, _: bool = Depends(verify_api_key))
 
         else:
             # Fallback to NL2SQL
-            result = await agent.query_nl2sql(natural_language_query=request.input)
+            result = await agent.query_nl2sql(natural_language_query=user_input)
             if "error" in result:
                 return {"content": f"查询失败: {result['error']}"}
 
