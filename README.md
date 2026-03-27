@@ -5,9 +5,34 @@
 ## 系统架构
 
 ```
-agent-app (React) → operator-agent (Python) → operator-service (Java) → MySQL
-                                                      ↓
-                                                  SQLCoder (LLM)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              OperatorBoard                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐               │
+│  │  agent-app   │     │operator-agent│     │operator-svc  │               │
+│  │   (React)    │────▶│   (Python)    │────▶│    (Java)    │               │
+│  │   :3000      │     │   :8080       │     │   :8081      │               │
+│  └──────────────┘     └──────────────┘     └──────────────┘               │
+│         │                    │                    │                        │
+│         │                    │                    ▼                        │
+│         │                    │             ┌──────────────┐                 │
+│         │                    │             │    MySQL     │                 │
+│         │                    │             │    :3306     │                 │
+│         │                    │             └──────────────┘                 │
+│         │                    │                    │                        │
+│         │                    │             ┌──────────────┐                 │
+│         │                    └─────────────▶│  SQLCoder   │                 │
+│         │                              LLM │   (LLM)     │                 │
+│         │                              │   └──────────────┘                 │
+│         │                              │                                    │
+│  ┌──────┴──────┐                       │                                    │
+│  │ API Proxy   │                       │                                    │
+│  │  (Node)     │                       │                                    │
+│  │   :8000     │                       │                                    │
+│  └─────────────┘                       │                                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## 服务端口
@@ -20,6 +45,351 @@ agent-app (React) → operator-agent (Python) → operator-service (Java) → My
 | operator-service | 8081 | Java Spring Boot NL2SQL |
 | MySQL | 3306 | 数据库 |
 | SQLCoder | 8081 | LLM NL2SQL 模型 |
+
+## API 调用流程
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           API 请求处理流程                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. 客户端请求                                                               │
+│     │                                                                      │
+│     ▼                                                                      │
+│  2. [认证检查] X-API-Key 验证                                                │
+│     │                                                                      │
+│     ├── 失败 ──▶ HTTP 401/403 + E4001/E4002                                 │
+│     │                                                                      │
+│     ▼                                                                      │
+│  3. [意图理解] LLM 分析用户查询                                              │
+│     │                                                                      │
+│     ├── 失败 ──▶ HTTP 500 + E1001 (INTENT_DETECTION_FAILED)                  │
+│     │                                                                      │
+│     ▼                                                                      │
+│  4. [路由分发] 根据意图类型选择处理器                                          │
+│     │                                                                      │
+│     ├── site_data ──▶ /api/operator/site-cells                             │
+│     ├── latest_data ──▶ /api/operator/indicators/latest                    │
+│     ├── indicator_data ──▶ /api/operator/indicators/latest                 │
+│     ├── operator_list ──▶ /api/operator/operators                           │
+│     ├── nl2sql ──▶ /api/operator/nl2sql/query                               │
+│     │                                                                      │
+│     ▼                                                                      │
+│  5. [数据获取] 调用 Java NL2SQL 服务                                          │
+│     │                                                                      │
+│     ├── 失败 ──▶ HTTP 500 + Exxxx (根据错误类型)                             │
+│     │                                                                      │
+│     ▼                                                                      │
+│  6. [格式化响应] 返回结构化数据                                               │
+│     │                                                                      │
+│     ▼                                                                      │
+│  7. 响应客户端                                                              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Agent 意图检测流程
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          Agent 意图检测流程                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  用户输入: "查询中国移动2024年1月的基站数据"                                   │
+│                                                                             │
+│                              │                                              │
+│                              ▼                                              │
+│                    ┌─────────────────┐                                      │
+│                    │   LLM 意图分析   │                                      │
+│                    │ process_natural │                                      │
+│                    │ _language_query  │                                      │
+│                    └────────┬────────┘                                      │
+│                             │                                               │
+│                             ▼                                               │
+│                    ┌─────────────────┐                                      │
+│                    │    解析结果     │                                      │
+│                    │  intent:        │                                      │
+│                    │   "site_data"   │                                      │
+│                    │  operator_name: │                                      │
+│                    │   "中国移动"    │                                      │
+│                    │  data_month:    │                                      │
+│                    │   "202401"      │                                      │
+│                    └────────┬────────┘                                      │
+│                             │                                               │
+│              ┌──────────────┼──────────────┐                                │
+│              │              │              │                                 │
+│              ▼              ▼              ▼                                 │
+│        ┌──────────┐  ┌──────────┐  ┌──────────┐                              │
+│        │site_data │  │latest_   │  │indicator │                              │
+│        │          │  │data      │  │_data     │                              │
+│        └──────────┘  └──────────┘  └──────────┘                              │
+│              │              │              │                                 │
+│              │              │              │                                 │
+│              ▼              ▼              ▼                                 │
+│        ┌─────────────────────────────────────────┐                           │
+│        │         获取站点小区数据                  │                           │
+│        │    agent.get_site_cells()              │                           │
+│        └─────────────────────────────────────────┘                           │
+│                             │                                               │
+│                             ▼                                               │
+│                    ┌─────────────────┐                                      │
+│                    │   格式化输出     │                                      │
+│                    │ (Markdown 表格) │                                      │
+│                    └─────────────────┘                                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## 请求/响应完整示例
+
+### 示例 1: Agent 自然语言查询
+
+**请求:**
+```bash
+curl -X POST http://localhost:8080/api/agent/run \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: test-key-123" \
+  -H "X-Locale: zh" \
+  -d '{"input": "中国移动2024年1月有多少基站？", "stream": false}'
+```
+
+**成功响应:**
+```json
+{
+  "content": "# 运营商站点信息\n\n## 中国移动\n\n### 数据月份: 202401\n\n**LTE 频段:**\n- LTE 700M: 120 站点, 350 小区\n- LTE 800M: 280 站点, 820 小区\n...\n- **LTE 合计**: 15000 站点, 45000 小区\n\n**NR 频段:**\n- NR 700M: 80 站点, 240 小区\n...\n"
+}
+```
+
+**错误响应 (E1001):**
+```json
+{
+  "code": "E1001",
+  "message": "意图检测失败",
+  "detail": "Invalid query format"
+}
+```
+
+---
+
+### 示例 2: 指标数据查询
+
+**请求:**
+```bash
+curl -X POST http://localhost:8080/api/operator/indicators/latest \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: test-key-123" \
+  -H "X-Locale: zh" \
+  -d '{"operatorName": "中国移动", "limit": 5}'
+```
+
+**成功响应:**
+```json
+{
+  "data": [
+    {
+      "dataMonth": "202401",
+      "operatorName": "中国移动",
+      "lteAvgDlRate": 45.6,
+      "lteAvgUlRate": 8.2,
+      "nrAvgDlRate": 128.5,
+      "nrAvgUlRate": 18.3,
+      "splitRatio": 35.2,
+      "totalUsers": 985600
+    },
+    {
+      "dataMonth": "202312",
+      "operatorName": "中国移动",
+      "lteAvgDlRate": 44.8,
+      "lteAvgUlRate": 8.0,
+      "nrAvgDlRate": 125.2,
+      "nrAvgUlRate": 17.9,
+      "splitRatio": 34.8,
+      "totalUsers": 968200
+    }
+  ]
+}
+```
+
+---
+
+### 示例 3: 站点小区查询
+
+**请求:**
+```bash
+curl -X POST http://localhost:8080/api/operator/site-cells \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: test-key-123" \
+  -H "X-Locale: zh" \
+  -d '{"operatorId": 1, "band": "LTE"}'
+```
+
+**成功响应:**
+```json
+{
+  "data": [
+    {
+      "dataMonth": "202401",
+      "operatorId": 1,
+      "operatorName": "中国移动",
+      "lte700MSite": 120,
+      "lte700MCell": 350,
+      "lte800MSite": 280,
+      "lte800MCell": 820,
+      "lte900MSite": 1500,
+      "lte900MCell": 4500,
+      "lte1800MSite": 3200,
+      "lte1800MCell": 9600,
+      "lte2100MSite": 2100,
+      "lte2100MCell": 6300,
+      "lte2600MSite": 1800,
+      "lte2600MCell": 5400,
+      "lteTotalSite": 15000,
+      "lteTotalCell": 45000,
+      "nr700MSite": 80,
+      "nr700MCell": 240,
+      "nr3500MSite": 1200,
+      "nr3500MCell": 3600,
+      "nrTotalSite": 5000,
+      "nrTotalCell": 15000
+    }
+  ]
+}
+```
+
+---
+
+### 示例 4: NL2SQL 自然语言查询
+
+**请求:**
+```bash
+curl -X POST http://localhost:8080/api/operator/nl2sql/query \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: test-key-123" \
+  -H "X-Locale: zh" \
+  -d '{"question": "2024年1月三大运营商的LTE基站数量对比"}'
+```
+
+**成功响应:**
+```json
+{
+  "data": [
+    {
+      "operatorName": "中国移动",
+      "lteTotalSite": 15000
+    },
+    {
+      "operatorName": "中国电信",
+      "lteTotalSite": 12000
+    },
+    {
+      "operatorName": "中国联通",
+      "lteTotalSite": 9800
+    }
+  ]
+}
+```
+
+---
+
+### 示例 5: SSE 流式响应
+
+**请求:**
+```bash
+curl -X POST http://localhost:8080/api/agent/stream \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: test-key-123" \
+  -H "X-Locale: zh" \
+  -d '{"input": "生成2024年1月的运营报告"}' \
+  --no-buffer
+```
+
+**SSE 响应流:**
+```
+data: {"type": "start"}
+
+data: {"type": "content", "content": "# 2024年1月运营报告\n\n"}
+
+data: {"type": "content", "content": "## 一、总体概况\n\n"}
+
+data: {"type": "content", "content": "本月全国基站总数: 36,800 个"}
+
+data: {"type": "content", "content": "\n\n## 二、分运营商数据\n\n"}
+
+data: {"type": "content", "content": "| 运营商 | 基站数 | 小区数 |"}
+
+data: {"type": "content", "content": "| 中国移动 | 15,000 | 45,000 |"}
+
+data: {"type": "content", "content": "| 中国电信 | 12,000 | 36,000 |"}
+
+data: {"type": "content", "content": "| 中国联通 | 9,800 | 29,400 |"}
+
+data: [DONE]
+```
+
+---
+
+### 示例 6: 认证错误
+
+**请求 (缺少 API Key):**
+```bash
+curl -X GET http://localhost:8080/api/capabilities
+```
+
+**响应 (HTTP 401):**
+```json
+{
+  "code": "E4001",
+  "message": "缺少API密钥",
+  "detail": "Provide X-API-Key header"
+}
+```
+
+**请求 (无效 API Key):**
+```bash
+curl -X GET http://localhost:8080/api/capabilities \
+  -H "X-API-Key: invalid-key"
+```
+
+**响应 (HTTP 403):**
+```json
+{
+  "code": "E4002",
+  "message": "无效的API密钥",
+  "detail": null
+}
+```
+
+---
+
+### 示例 7: 国际化支持
+
+**中文响应 (默认):**
+```bash
+curl -X POST http://localhost:8080/api/operator/site-cells \
+  -H "X-API-Key: test-key-123" \
+  -H "X-Locale: zh"
+```
+```json
+{
+  "code": "E2001",
+  "message": "获取站点数据失败",
+  "detail": "Connection refused"
+}
+```
+
+**英文响应:**
+```bash
+curl -X POST http://localhost:8080/api/operator/site-cells \
+  -H "X-API-Key: test-key-123" \
+  -H "X-Locale: en"
+```
+```json
+{
+  "code": "E2001",
+  "message": "Failed to get site data",
+  "detail": "Connection refused"
+}
+```
 
 ## 快速启动
 
