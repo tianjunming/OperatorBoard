@@ -1,0 +1,41 @@
+# Simulation Configuration
+
+simulation:
+  # Simulation API endpoint
+  simulation_api_url: "${SIMULATION_API_URL:http://localhost:8082/api/simulation}"
+
+  # Parameter ranges for different scenarios
+  parameter_ranges:
+    urban:
+      frequency_mhz: [3300, 3600]
+      tx_power_dbm: [40, 50]
+      antenna_height_m: [25, 50]
+      downtilt_deg: [4, 10]
+      cell_radius_m: [150, 300]
+
+    suburban:
+      frequency_mhz: [1800, 2600]
+      tx_power_dbm: [37, 46]
+      antenna_height_m: [20, 40]
+      downtilt_deg: [2, 6]
+      cell_radius_m: [300, 600]
+
+    rural:
+      frequency_mhz: [700, 2600]
+      tx_power_dbm: [43, 53]
+      antenna_height_m: [30, 80]
+      downtilt_deg: [1, 4]
+      cell_radius_m: [800, 3000]
+
+  # Network types
+  network_types:
+    - "4G"
+    - "5G"
+    - "5G_NR"
+    - "WiFi"
+
+  # Performance targets
+  performance_targets:
+    coverage_rate: 0.95
+    throughput_mbps: 100
+    interference_ratio: 0.1

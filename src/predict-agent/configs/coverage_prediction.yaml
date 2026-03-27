@@ -1,0 +1,23 @@
+# Coverage Prediction Configuration
+
+coverage_prediction:
+  # LLM endpoint for coverage Q&A
+  llm_endpoint: "${COVERAGE_LLM_ENDPOINT}"
+  llm_model: "${COVERAGE_LLM_MODEL:coverage-llm}"
+  api_key: "${COVERAGE_API_KEY:}"
+
+  # Vector store for RAG
+  vectorstore_path: "${COVERAGE_VECTORSTORE_PATH:}"
+
+  # Coverage topics
+  topics:
+    - name: "path_loss_models"
+      description: "Path loss prediction models (Okumura-Hata, COST231, etc.)"
+    - name: "channel_models"
+      description: "Channel modeling for different scenarios"
+    - name: "antenna_patterns"
+      description: "Antenna radiation patterns and configurations"
+    - name: "simulation_parameters"
+      description: "Simulation setup and parameter configurations"
+    - name: "5g_coverage"
+      description: "5G specific coverage prediction techniques"

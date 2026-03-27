@@ -1,0 +1,9 @@
+# Default configuration values for predict-agent
+
+defaults:
+  # LLM settings
+  llm_model: "coverage-llm"
+  llm_endpoint: "http://localhost:8081/v1/completions"
+  llm_timeout: 30
+  llm_max_tokens: 500
+  llm_temperature: 0.3
