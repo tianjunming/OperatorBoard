@@ -58,6 +58,26 @@ class BaseTool(LangChainBaseTool):
         """
         raise NotImplementedError(f"Tool {self.name} does not implement run()")
 
+    def _run(self, tool_input: Dict[str, Any]) -> Any:
+        """
+        Sync wrapper for async run.
+
+        Delegates to the async run method for tools that only implement async.
+        This enables compatibility with LangChain's sync tool interface.
+        """
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop, safe to use asyncio.run()
+            return asyncio.run(self.run(tool_input))
+
+        # Loop is running - schedule the coroutine and wait
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(asyncio.run, self.run(tool_input))
+            return future.result()
+
 
 class AsyncTool(BaseTool):
     """

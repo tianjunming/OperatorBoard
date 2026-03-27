@@ -6,10 +6,12 @@ A modular agent framework based on LangChain, supporting:
 - MCP (Model Context Protocol) service support
 - RAG (Retrieval-Augmented Generation) with vector stores
 - Reusable skill system
+- FastAPI server for agent deployment
 """
 
 __version__ = "0.1.0"
 
+from . import api
 from . import config
 from . import core
 from . import tools
@@ -19,6 +21,7 @@ from . import skills
 from . import utils
 
 __all__ = [
+    "api",
     "config",
     "core",
     "tools",

@@ -78,16 +78,6 @@ class CoveragePredictionTool(BaseTool):
         except Exception as e:
             return {"error": f"Coverage prediction query failed: {str(e)}"}
 
-    def _run(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
-        """Sync run implementation (delegates to async run)."""
-        import asyncio
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        return loop.run_until_complete(self.run(tool_input))
-
     def _build_coverage_prompt(self, query: str, topic: str) -> str:
         """Build prompt for coverage prediction Q&A."""
         return f"""You are a coverage prediction expert. Answer the following question about coverage prediction.
@@ -157,16 +147,6 @@ class CoverageSimulationTool(BaseTool):
             return self._analyze_results(tool_input.get("results", {}))
         else:
             return {"error": f"Unknown action: {action}"}
-
-    def _run(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
-        """Sync run implementation (delegates to async run)."""
-        import asyncio
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        return loop.run_until_complete(self.run(tool_input))
 
     def _validate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Validate simulation parameters."""

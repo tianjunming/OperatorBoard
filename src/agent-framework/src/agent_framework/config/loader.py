@@ -168,3 +168,32 @@ class ConfigLoader:
         """
         self._config_dir = Path(config_dir)
         self._configs.clear()
+
+    @staticmethod
+    def find_config_dir(module_path: str, config_dir_name: str = "configs") -> Path:
+        """
+        Find config directory relative to a module.
+
+        Walks up from the module's directory to find a config directory.
+
+        Args:
+            module_path: Path to module file (e.g., __file__)
+            config_dir_name: Name of config directory to find
+
+        Returns:
+            Path to config directory
+        """
+        module_file = Path(module_path)
+        current = module_file.parent
+
+        for _ in range(5):  # Max 5 levels up
+            config_dir = current / config_dir_name
+            if config_dir.exists() and config_dir.is_dir():
+                return config_dir
+            parent = current.parent
+            if parent == current:
+                break
+            current = parent
+
+        # Default to current directory / configs
+        return Path(config_dir_name)

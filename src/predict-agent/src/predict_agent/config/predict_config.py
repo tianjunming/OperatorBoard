@@ -1,10 +1,10 @@
 """Configuration loader for predict-agent."""
 
-import os
+from pathlib import Path
 from typing import Any, Dict, Optional
 import yaml
 
-from pathlib import Path
+from agent_framework.config import ConfigLoader
 
 
 class PredictAgentConfig:
@@ -18,9 +18,15 @@ class PredictAgentConfig:
             config_dir: Directory containing config files. Defaults to ./configs
         """
         if config_dir is None:
+            # Navigate from src/predict_agent/config/ to project root /configs
             self.config_dir = Path(__file__).parent.parent.parent.parent / "configs"
         else:
             self.config_dir = Path(config_dir)
+        self._loader = ConfigLoader(self.config_dir)
+
+    def _expand_env_vars(self, value: str) -> str:
+        """Expand environment variables in config values using ConfigLoader."""
+        return self._loader._substitute_env_vars(value)
 
     def load_defaults_config(self) -> Dict[str, Any]:
         """Load defaults configuration from defaults.yaml."""
@@ -82,21 +88,6 @@ class PredictAgentConfig:
         return {
             "simulation_api_url": "http://localhost:8082/api/simulation",
         }
-
-    def _expand_env_vars(self, value: str) -> str:
-        """Expand environment variables in config values."""
-        if not isinstance(value, str):
-            return value
-
-        import re
-        pattern = r'\$\{([^}:]+)(?::([^}]*))?\}'
-
-        def replacer(match):
-            env_var = match.group(1)
-            default = match.group(2) or ""
-            return os.environ.get(env_var, default)
-
-        return re.sub(pattern, replacer, value)
 
 
 def load_predict_config(config_dir: Optional[str] = None) -> PredictAgentConfig:
