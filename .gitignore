@@ -44,3 +44,9 @@ docs/views/output/*.docx
 # Maven wrapper
 mvnw
 mvnw.cmd
+
+# Local configuration (contains secrets - DO NOT COMMIT)
+config.local.yaml
+configs.local/
+*.local.yaml
+*.local.yml
