@@ -51,8 +51,6 @@
         <result property="nr3500MCell" column="nr_3500M_cell"/>
         <result property="nr4900MSite" column="nr_4900M_site"/>
         <result property="nr4900MCell" column="nr_4900M_cell"/>
-        <result property="nr2300MSite" column="nr_2300M_site"/>
-        <result property="nr2300MCell" column="nr_2300M_cell"/>
         <result property="lteTotalSite" column="lte_total_site"/>
         <result property="lteTotalCell" column="lte_total_cell"/>
         <result property="nrTotalSite" column="nr_total_site"/>
@@ -105,7 +103,6 @@
                s.nr_2600M_site, s.nr_2600M_cell,
                s.nr_3500M_site, s.nr_3500M_cell,
                s.nr_4900M_site, s.nr_4900M_cell,
-               s.nr_2300M_site, s.nr_2300M_cell,
                s.lte_total_site, s.lte_total_cell,
                s.nr_total_site, s.nr_total_cell,
                s.created_time, s.updated_time
@@ -131,7 +128,6 @@
                s.nr_2600M_site, s.nr_2600M_cell,
                s.nr_3500M_site, s.nr_3500M_cell,
                s.nr_4900M_site, s.nr_4900M_cell,
-               s.nr_2300M_site, s.nr_2300M_cell,
                s.lte_total_site, s.lte_total_cell,
                s.nr_total_site, s.nr_total_cell,
                s.created_time, s.updated_time
@@ -158,13 +154,16 @@
                s.nr_2600M_site, s.nr_2600M_cell,
                s.nr_3500M_site, s.nr_3500M_cell,
                s.nr_4900M_site, s.nr_4900M_cell,
-               s.nr_2300M_site, s.nr_2300M_cell,
                s.lte_total_site, s.lte_total_cell,
                s.nr_total_site, s.nr_total_cell,
                s.created_time, s.updated_time
         FROM site_info s
         WHERE s.operator_id = #{operatorId}
           AND s.data_month = #{dataMonth}
+    </select>
+
+    <select id="findDistinctDataMonths" resultType="string">
+        SELECT DISTINCT data_month FROM site_info ORDER BY data_month DESC
     </select>
 
 </mapper>

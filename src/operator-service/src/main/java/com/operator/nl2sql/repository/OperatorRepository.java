@@ -25,4 +25,6 @@ public interface OperatorRepository {
     SiteCellSummary findSiteCellSummaryByOperatorIdAndMonth(
             @Param("operatorId") Long operatorId,
             @Param("dataMonth") String dataMonth);
+
+    List<String> findDistinctDataMonths();
 }

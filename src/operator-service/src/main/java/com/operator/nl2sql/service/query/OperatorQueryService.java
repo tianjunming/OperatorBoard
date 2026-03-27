@@ -47,6 +47,10 @@ public class OperatorQueryService {
         return operatorRepository.findSiteCellSummaryByOperatorIdAndMonth(operatorId, dataMonth);
     }
 
+    public List<String> findDistinctDataMonths() {
+        return operatorRepository.findDistinctDataMonths();
+    }
+
     // ==================== SQL构建器方法 ====================
 
     public String buildAllOperators() {

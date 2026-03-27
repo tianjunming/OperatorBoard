@@ -24,7 +24,7 @@ mybatis:
 
 nl2sql:
   sqlcoder:
-    url: http://localhost:8081
+    url: ${SQLCODER_URL:http://localhost:8081}
     timeout: 60
   security:
     enabled: false

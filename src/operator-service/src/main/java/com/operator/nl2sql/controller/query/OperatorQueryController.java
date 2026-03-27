@@ -69,4 +69,10 @@ public class OperatorQueryController {
 
         return ResponseEntity.ok(siteSummary);
     }
+
+    @GetMapping("/times")
+    public ResponseEntity<List<String>> getAvailableTimes() {
+        List<String> timePoints = operatorQueryService.findDistinctDataMonths();
+        return ResponseEntity.ok(timePoints);
+    }
 }
