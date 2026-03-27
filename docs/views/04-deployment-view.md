@@ -82,7 +82,7 @@ services:
       context: ./src/operator-service
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8081:8081"
     environment:
       - DB_USERNAME=root
       - DB_PASSWORD=password
@@ -185,7 +185,7 @@ spec:
       - name: nl2sql-service
         image: nl2sql-service:latest
         ports:
-        - containerPort: 8080
+        - containerPort: 8081
         env:
         - name: DB_USERNAME
           value: "root"
@@ -211,7 +211,7 @@ spec:
     app: nl2sql-service
   ports:
   - port: 80
-    targetPort: 8080
+    targetPort: 8081
   type: LoadBalancer
 ```
 
@@ -273,7 +273,7 @@ spec:
 
 ```bash
 # 允许 Agent 到 Java NL2SQL 服务
-iptables -A FORWARD -s 10.0.2.0/24 -d 10.0.3.0/24 -p tcp --dport 8080 -j ACCEPT
+iptables -A FORWARD -s 10.0.2.0/24 -d 10.0.3.0/24 -p tcp --dport 8081 -j ACCEPT
 
 # 允许 Agent 到 Vector Store
 iptables -A FORWARD -s 10.0.2.0/24 -d 10.0.4.0/24 -p tcp --dport 8000 -j ACCEPT
@@ -298,7 +298,7 @@ export MAX_RESULT_ROWS=1000
 ```yaml
 # application.yml
 server:
-  port: 8080
+  port: 8081
 
 spring:
   application:
@@ -336,7 +336,7 @@ export AGENT_MODEL="claude-3-sonnet-20240229"
 export AGENT_REGISTRY_URL="http://agent-registry:8001"
 
 # Java NL2SQL 服务配置
-export JAVA_SERVICE_BASE_URL="http://java-service:8080"
+export JAVA_SERVICE_BASE_URL="http://java-service:8081"
 export JAVA_SERVICE_TIMEOUT=60
 
 # 向量存储配置
