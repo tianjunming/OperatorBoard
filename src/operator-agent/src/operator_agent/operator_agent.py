@@ -340,6 +340,7 @@ class OperatorAgent(BaseAgent):
 
         llm_endpoint = config.get("llm_endpoint", "http://localhost:8081/v1/completions")
         llm_model = config.get("llm_model", "sqlcoder")
+        api_key = config.get("api_key", "")
         timeout = config.get("timeout", 30)
         max_tokens = config.get("max_tokens", 200)
         temperature = config.get("temperature", 0.1)
@@ -383,22 +384,30 @@ class OperatorAgent(BaseAgent):
 
         try:
             async with httpx.AsyncClient(timeout=float(timeout)) as client:
+                headers = {"Content-Type": "application/json"}
+                if api_key:
+                    headers["Authorization"] = f"Bearer {api_key}"
+
+                # Use OpenAI-compatible format
                 response = await client.post(
                     llm_endpoint,
                     json={
                         "model": llm_model,
-                        "prompt": prompt,
+                        "messages": [{"role": "user", "content": prompt}],
                         "max_tokens": max_tokens,
                         "temperature": temperature,
                     },
-                    headers={"Content-Type": "application/json"},
+                    headers=headers,
                 )
 
                 if response.status_code != 200:
                     return {"error": f"LLM调用失败: {response.status_code}", "intent": "unknown"}
 
                 result = response.json()
-                llm_output = result.get("choices", [{}])[0].get("text", "").strip()
+                # OpenAI-compatible returns: {"choices": [{"message": {"content": "..."}}]}
+                llm_output = ""
+                if "choices" in result and len(result["choices"]) > 0:
+                    llm_output = result["choices"][0].get("message", {}).get("content", "").strip()
 
                 # Parse JSON from LLM output
                 try:

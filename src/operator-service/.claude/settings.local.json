@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn spring-boot:run)",
+      "Bash(./mvnw spring-boot:run)",
+      "Bash(cmd.exe /c \"cd /d D:\\\\develop\\\\OperatorBoard\\\\src\\\\operator-service && mvn spring-boot:run\" 2>&1)",
+      "Bash(powershell.exe -Command \"cd 'D:\\\\develop\\\\OperatorBoard\\\\src\\\\operator-service'; mvn spring-boot:run 2>&1\" 2>&1)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Users/Administrator/**)",
+      "Bash(chmod:*)",
+      "Bash(powershell -Command \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri ''https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.2.0/maven-wrapper-3.2.0.jar'' -OutFile ''.mvn/wrapper/maven-wrapper.jar''\")",
+      "Bash(git push:*)",
+      "Bash(find D:/develop/OperatorBoard/src/agent-app/src -name *.ts -o -name *.tsx -o -name *.js)",
+      "Bash(find D:/develop/OperatorBoard/src/operator-service/src -name *.java)",
+      "Bash(curl -s http://localhost:8080/api/v1/nl2sql/health)",
+      "Bash(where mvn:*)",
+      "Bash(cmd.exe /c \"mvnw.cmd spring-boot:run\")"
+    ]
+  }
+}
