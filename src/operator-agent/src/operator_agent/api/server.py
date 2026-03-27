@@ -384,13 +384,26 @@ async def agent_stream(request: AgentRunRequest, _: bool = Depends(verify_api_ke
     )
 
 
+def _filter_by_operator(site_cells: list, operators: list, operator_name: str) -> list:
+    """Filter site cells by operator name (fuzzy match)."""
+    if not operator_name:
+        return site_cells
+    op_id = None
+    for op in operators:
+        if isinstance(op, dict):
+            op_name = op.get("operatorName", "")
+            if op_name == operator_name or operator_name in op_name or op_name in operator_name:
+                op_id = op.get("id")
+                break
+    if op_id:
+        return [sc for sc in site_cells if isinstance(sc, dict) and sc.get("operatorId") == op_id]
+    return site_cells
+
+
 async def _process_agent_request(user_input: str, confirmed: bool = False) -> Dict[str, Any]:
     """
     Shared logic for processing agent requests.
     """
-    import asyncio
-    import json
-
     agent = await get_agent()
 
     try:
@@ -426,16 +439,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False) -> Di
             site_cells = site_cells if isinstance(site_cells, list) else []
 
             # Filter by operator if specified
-            if operator_name:
-                op_id = None
-                for op in operators:
-                    if isinstance(op, dict):
-                        op_name = op.get("operatorName", "")
-                        if op_name == operator_name or operator_name in op_name or op_name in operator_name:
-                            op_id = op.get("id")
-                            break
-                if op_id:
-                    site_cells = [sc for sc in site_cells if isinstance(sc, dict) and sc.get("operatorId") == op_id]
+            site_cells = _filter_by_operator(site_cells, operators, operator_name)
 
             if data_month:
                 site_cells = [sc for sc in site_cells if isinstance(sc, dict) and sc.get("dataMonth") == data_month]
@@ -450,16 +454,8 @@ async def _process_agent_request(user_input: str, confirmed: bool = False) -> Di
             site_cells = site_cells_result.get("data") if isinstance(site_cells_result, dict) else site_cells_result
             site_cells = site_cells if isinstance(site_cells, list) else []
 
-            if operator_name:
-                op_id = None
-                for op in operators:
-                    if isinstance(op, dict):
-                        op_name = op.get("operatorName", "")
-                        if op_name == operator_name or operator_name in op_name or op_name in operator_name:
-                            op_id = op.get("id")
-                            break
-                if op_id:
-                    site_cells = [sc for sc in site_cells if isinstance(sc, dict) and sc.get("operatorId") == op_id]
+            # Filter by operator if specified
+            site_cells = _filter_by_operator(site_cells, operators, operator_name)
 
             latest_month = None
             for sc in site_cells:
@@ -476,31 +472,31 @@ async def _process_agent_request(user_input: str, confirmed: bool = False) -> Di
             return {"content": "\n".join(lines) if lines[-1] else format_site_data(site_cells, operators, latest_only=True)}
 
         elif intent == "indicator_data":
-            result = await agent.get_latest_indicators(limit=limit)
-            if "error" in result:
-                return {"content": f"获取指标数据失败: {result['error']}"}
+            indicators_result = await agent.get_latest_indicators(limit=limit)
+            if "error" in indicators_result:
+                return {"content": f"获取指标数据失败: {indicators_result['error']}"}
 
-            data = result.get("data", result) if isinstance(result, dict) else result
+            data = indicators_result.get("data", indicators_result) if isinstance(indicators_result, dict) else indicators_result
             if not data:
                 return {"content": "未找到指标数据"}
 
             lines = ["# 运营商指标数据\n"]
-            for item in data[:limit] if isinstance(data, list) else [data]:
+            for item in (data[:limit] if isinstance(data, list) else [data]):
                 if isinstance(item, dict):
                     lines.append(f"- **{item.get('dataMonth', 'N/A')}** | LTE下行: {item.get('lteAvgDlRate', 'N/A')} Mbps | NR下行: {item.get('nrAvgDlRate', 'N/A')} Mbps | 分流比: {item.get('splitRatio', 'N/A')}%")
 
             return {"content": "\n".join(lines)}
 
         elif intent == "operator_list":
-            result = await agent.call_java_service(
+            operators_result = await agent.call_java_service(
                 service_name="nl2sql-service",
                 endpoint="/operators",
                 method="GET",
             )
-            if "error" in result:
-                return {"content": f"获取运营商列表失败: {result['error']}"}
+            if "error" in operators_result:
+                return {"content": f"获取运营商列表失败: {operators_result['error']}"}
 
-            operators = result.get("data") if isinstance(result, dict) else result
+            operators = operators_result.get("data") if isinstance(operators_result, dict) else operators_result
             operators = operators if isinstance(operators, list) else []
 
             if not operators:
@@ -518,11 +514,11 @@ async def _process_agent_request(user_input: str, confirmed: bool = False) -> Di
             return {"content": "\n".join(lines)}
 
         elif intent == "nl2sql":
-            result = await agent.query_nl2sql(natural_language_query=user_input)
-            if "error" in result:
-                return {"content": f"查询失败: {result['error']}"}
+            nl2sql_result = await agent.query_nl2sql(natural_language_query=user_input)
+            if "error" in nl2sql_result:
+                return {"content": f"查询失败: {nl2sql_result['error']}"}
 
-            data = result.get("data", []) if isinstance(result, dict) else result
+            data = nl2sql_result.get("data", []) if isinstance(nl2sql_result, dict) else nl2sql_result
             if not data:
                 return {"content": "未找到相关数据"}
 
@@ -539,11 +535,11 @@ async def _process_agent_request(user_input: str, confirmed: bool = False) -> Di
 
         else:
             # Fallback to NL2SQL
-            result = await agent.query_nl2sql(natural_language_query=user_input)
-            if "error" in result:
-                return {"content": f"查询失败: {result['error']}"}
+            nl2sql_result = await agent.query_nl2sql(natural_language_query=user_input)
+            if "error" in nl2sql_result:
+                return {"content": f"查询失败: {nl2sql_result['error']}"}
 
-            data = result.get("data", []) if isinstance(result, dict) else result
+            data = nl2sql_result.get("data", []) if isinstance(nl2sql_result, dict) else nl2sql_result
             if not data:
                 return {"content": "未找到相关数据"}
 
