@@ -66,7 +66,8 @@ export function useAgentStream({ onMessage, onStart, onComplete, onError, onRetr
   const abortControllerRef = useRef(null);
   const pendingConfirmRef = useRef(null);
 
-  const sendMessage = useCallback(async (message) => {
+  const sendMessage = useCallback(async (message, options = {}) => {
+    const { locale = 'zh' } = options;
     abortControllerRef.current = new AbortController();
 
     onStart?.();
@@ -79,6 +80,7 @@ export function useAgentStream({ onMessage, onStart, onComplete, onError, onRetr
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'X-Locale': locale,
           },
           body: JSON.stringify({
             input: message,

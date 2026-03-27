@@ -1,13 +1,14 @@
 const API_BASE = '/api';
 
 export async function sendMessage(message, options = {}) {
-  const { onChunk, onComplete, onError } = options;
+  const { onChunk, onComplete, onError, locale = 'zh' } = options;
 
   try {
     const response = await fetch(`${API_BASE}/agent/stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-Locale': locale,
       },
       body: JSON.stringify({
         input: message,

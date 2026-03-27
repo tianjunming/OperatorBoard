@@ -2,28 +2,37 @@ import React, { useState } from 'react';
 import ChatContainer from './components/ChatContainer.jsx';
 import OperatorDashboard from './components/OperatorDashboard';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
+import { useI18n } from './i18n';
 import './styles/Dashboard.css';
 
 function App() {
   const [view, setView] = useState('chat');
+  const { locale, toggleLocale, t } = useI18n();
 
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Operator Agent</h1>
-        <p className="subtitle">AI-Powered Telecom Operations Assistant</p>
+        <div className="header-top">
+          <div className="header-title">
+            <h1>{t('appTitle')}</h1>
+            <p className="subtitle">{t('appSubtitle')}</p>
+          </div>
+          <button className="lang-toggle" onClick={toggleLocale}>
+            {locale === 'zh' ? 'EN' : '中'}
+          </button>
+        </div>
         <nav className="app-nav">
           <button
             className={`nav-btn ${view === 'chat' ? 'active' : ''}`}
             onClick={() => setView('chat')}
           >
-            对话
+            {t('chat')}
           </button>
           <button
             className={`nav-btn ${view === 'dashboard' ? 'active' : ''}`}
             onClick={() => setView('dashboard')}
           >
-            数据看板
+            {t('dashboard')}
           </button>
         </nav>
       </header>

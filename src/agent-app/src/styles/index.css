@@ -93,6 +93,7 @@ body {
   display: flex;
   gap: 12px;
   margin-top: 12px;
+  justify-content: center;
 }
 
 .nav-btn {
@@ -113,4 +114,41 @@ body {
 .nav-btn.active {
   background: rgba(255, 255, 255, 0.2);
   border-color: white;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 100%;
+}
+
+.header-title {
+  text-align: left;
+  flex: 1;
+}
+
+.header-title h1 {
+  font-size: 1.8rem;
+}
+
+.header-title .subtitle {
+  text-align: left;
+}
+
+.lang-toggle {
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  background: transparent;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 50px;
+}
+
+.lang-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
 }

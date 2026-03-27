@@ -1,9 +1,11 @@
 import React, { useState, useRef } from 'react';
+import { useI18n } from '../i18n';
 import './ChatInput.css';
 
 function ChatInput({ onSend, disabled }) {
   const [input, setInput] = useState('');
   const textareaRef = useRef(null);
+  const { locale, t } = useI18n();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -40,7 +42,7 @@ function ChatInput({ onSend, disabled }) {
           value={input}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
+          placeholder={locale === 'zh' ? '输入您的查询... (Enter发送, Shift+Enter换行)' : 'Enter your query... (Enter to send, Shift+Enter for new line)'}
           disabled={disabled}
           rows={1}
         />
@@ -55,8 +57,8 @@ function ChatInput({ onSend, disabled }) {
         </button>
       </div>
       <div className="input-hints">
-        <span>Press Enter to send</span>
-        <span>Shift + Enter for new line</span>
+        <span>{locale === 'zh' ? 'Enter 发送' : 'Enter to send'}</span>
+        <span>{locale === 'zh' ? 'Shift + Enter 换行' : 'Shift + Enter for new line'}</span>
       </div>
     </form>
   );

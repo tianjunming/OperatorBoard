@@ -2,12 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import { useAgentStream } from '../hooks/useAgentStream';
+import { useI18n } from '../i18n';
 import './ChatContainer.css';
 
 function ChatContainer() {
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const messagesEndRef = useRef(null);
+  const { locale, t } = useI18n();
 
   const { sendMessage, isLoading, error } = useAgentStream({
     onMessage: (message) => {
@@ -56,7 +58,7 @@ function ChatContainer() {
   const handleSendMessage = async (text) => {
     const userMessage = { id: Date.now(), role: 'user', content: text };
     setMessages((prev) => [...prev, userMessage]);
-    await sendMessage(text);
+    await sendMessage(text, { locale });
   };
 
   const handleClear = () => {
@@ -68,29 +70,49 @@ function ChatContainer() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const welcomeMessages = locale === 'zh' ? {
+    title: '欢迎使用运营商智能助手',
+    subtitle: '询问关于电信运营、网络配置或运营商数据的任何问题。',
+    tryAsking: '可以尝试询问：',
+    examples: [
+      '北京联通的站点数量',
+      '最新指标数据',
+      '有哪些运营商',
+    ],
+  } : {
+    title: 'Welcome to Operator Agent',
+    subtitle: 'Ask me anything about telecom operations, network configurations, or operator data.',
+    tryAsking: 'Try asking:',
+    examples: [
+      'Get site count for China Unicom',
+      'Latest indicator data',
+      'List all operators',
+    ],
+  };
+
   return (
     <div className="chat-container">
       <div className="chat-header">
         <div className="connection-status">
           <span className={`status-dot ${isConnected ? 'connected' : ''}`} />
-          <span>{isConnected ? 'Connected' : 'Ready'}</span>
+          <span>{isConnected ? (locale === 'zh' ? '已连接' : 'Connected') : (locale === 'zh' ? '就绪' : 'Ready')}</span>
         </div>
         <button className="clear-btn" onClick={handleClear}>
-          Clear Chat
+          {locale === 'zh' ? '清空对话' : 'Clear Chat'}
         </button>
       </div>
 
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="welcome-message">
-            <h2>Welcome to Operator Agent</h2>
-            <p>Ask me anything about telecom operations, network configurations, or operator data.</p>
+            <h2>{welcomeMessages.title}</h2>
+            <p>{welcomeMessages.subtitle}</p>
             <div className="example-prompts">
-              <p>Try asking:</p>
+              <p>{welcomeMessages.tryAsking}</p>
               <ul>
-                <li>"Get network performance data for operator A"</li>
-                <li>"Show me 5G protocol configuration examples"</li>
-                <li>"Generate a summary report for all operators"</li>
+                {welcomeMessages.examples.map((ex, i) => (
+                  <li key={i}>"{ex}"</li>
+                ))}
               </ul>
             </div>
           </div>
@@ -102,7 +124,7 @@ function ChatContainer() {
 
         {isLoading && messages[messages.length - 1]?.role === 'user' && (
           <div className="typing-indicator">
-            <span>Agent is thinking...</span>
+            <span>{t('thinking')}</span>
             <div className="dots">
               <span></span>
               <span></span>
