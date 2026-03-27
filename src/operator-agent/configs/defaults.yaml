@@ -1,0 +1,10 @@
+# Default configuration values
+# These values can be referenced by other config files using YAML anchors
+
+defaults:
+  # LLM settings
+  llm_model: "M2-her"
+  llm_endpoint: "http://localhost:8081/v1/completions"
+  llm_timeout: 30
+  llm_max_tokens: 200
+  llm_temperature: 0.1

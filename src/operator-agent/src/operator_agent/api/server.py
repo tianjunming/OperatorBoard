@@ -429,7 +429,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
         # Use LLM to analyze the query intent
         intent_result = await agent.process_natural_language_query(user_input)
 
-        if "error" in intent_result:
+        if intent_result.get("error"):
             return get_error_response(ErrorCode.INTENT_DETECTION_FAILED, locale, intent_result["error"])
 
         intent = intent_result.get("intent", "unknown")
@@ -451,7 +451,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
         # Route based on LLM-detected intent
         if intent == "site_data":
             site_cells_result = await agent.get_site_cells()
-            if "error" in site_cells_result:
+            if site_cells_result.get("error"):
                 return get_error_response(ErrorCode.GET_SITE_CELLS_FAILED, locale, site_cells_result["error"])
 
             site_cells = site_cells_result.get("data") if isinstance(site_cells_result, dict) else site_cells_result
@@ -467,7 +467,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
 
         elif intent == "latest_data":
             site_cells_result = await agent.get_site_cells()
-            if "error" in site_cells_result:
+            if site_cells_result.get("error"):
                 return get_error_response(ErrorCode.GET_SITE_CELLS_FAILED, locale, site_cells_result["error"])
 
             site_cells = site_cells_result.get("data") if isinstance(site_cells_result, dict) else site_cells_result
@@ -492,7 +492,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
 
         elif intent == "indicator_data":
             indicators_result = await agent.get_latest_indicators(limit=limit)
-            if "error" in indicators_result:
+            if indicators_result.get("error"):
                 return get_error_response(ErrorCode.GET_INDICATORS_FAILED, locale, indicators_result["error"])
 
             data = indicators_result.get("data", indicators_result) if isinstance(indicators_result, dict) else indicators_result
@@ -512,7 +512,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
                 endpoint="/operators",
                 method="GET",
             )
-            if "error" in operators_result:
+            if operators_result.get("error"):
                 return get_error_response(ErrorCode.GET_OPERATORS_FAILED, locale, operators_result["error"])
 
             operators = operators_result.get("data") if isinstance(operators_result, dict) else operators_result
@@ -534,7 +534,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
 
         elif intent == "nl2sql":
             nl2sql_result = await agent.query_nl2sql(natural_language_query=user_input)
-            if "error" in nl2sql_result:
+            if nl2sql_result.get("error"):
                 return get_error_response(ErrorCode.NL2SQL_QUERY_FAILED, locale, nl2sql_result["error"])
 
             data = nl2sql_result.get("data", []) if isinstance(nl2sql_result, dict) else nl2sql_result
@@ -555,7 +555,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
         else:
             # Fallback to NL2SQL
             nl2sql_result = await agent.query_nl2sql(natural_language_query=user_input)
-            if "error" in nl2sql_result:
+            if nl2sql_result.get("error"):
                 return get_error_response(ErrorCode.NL2SQL_QUERY_FAILED, locale, nl2sql_result["error"])
 
             data = nl2sql_result.get("data", []) if isinstance(nl2sql_result, dict) else nl2sql_result

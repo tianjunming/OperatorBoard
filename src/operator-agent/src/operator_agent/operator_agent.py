@@ -53,7 +53,7 @@ class OperatorAgent(BaseAgent):
         return {
             "enabled": True,
             "llm_endpoint": "http://localhost:8081/v1/completions",
-            "llm_model": "sqlcoder",
+            "llm_model": "MiniMax-M2.1",
             "timeout": 30,
             "max_tokens": 200,
             "temperature": 0.1,
@@ -339,7 +339,7 @@ class OperatorAgent(BaseAgent):
             }
 
         llm_endpoint = config.get("llm_endpoint", "http://localhost:8081/v1/completions")
-        llm_model = config.get("llm_model", "sqlcoder")
+        llm_model = config.get("llm_model", "MiniMax-M2.1")
         api_key = config.get("api_key", "")
         timeout = config.get("timeout", 30)
         max_tokens = config.get("max_tokens", 200)
@@ -348,39 +348,44 @@ class OperatorAgent(BaseAgent):
 
         # Use default template if no template in config
         if not prompt_template:
-            prompt_template = """你是一个电信运营商数据查询助手。根据用户的自然语言查询，返回结构化的查询参数。
+            prompt_template = """You are a telecom operator data query assistant. Analyze the user's natural language query and return structured JSON parameters.
 
-## 可查询的数据类型：
-1. site_data - 运营商站点数据（站点数、小区数，按频段分类）
-2. indicator_data - 运营商指标数据（速率、PRB利用率等）
-3. operator_list - 运营商列表
-4. latest_data - 最新数据（最新月份的站点或指标数据）
-5. nl2sql - 自然语言SQL查询
+## Queryable data types:
+1. site_data - operator site data (site count, cell count by frequency band)
+2. indicator_data - operator indicator data (rates, PRB utilization, etc.)
+3. operator_list - operator list
+4. latest_data - latest month data (site or indicator data)
+5. nl2sql - natural language SQL query
 
-## 运营商名称映射（使用正式名称）：
-- "北京联通"、"上海联通"、"广州联通"等 → "中国联通"
-- "北京移动"、"上海移动"等 → "中国移动"
-- "北京电信"、"上海电信"等 → "中国电信"
+## Operator name mapping (use official names):
+- "Beijing Unicom", "Shanghai Unicom", "Guangzhou Unicom" -> "China Unicom"
+- "Beijing Mobile", "Shanghai Mobile" -> "China Mobile"
+- "Beijing Telecom", "Shanghai Telecom" -> "China Telecom"
 
-## Java服务API端点：
-- /operators - 获取运营商列表
-- /site-summary - 获取站点小区汇总数据
-- /indicators/latest - 获取最新指标数据
+## Java service API endpoints:
+- /operators - get operator list
+- /site-summary - get site cell summary data
+- /indicators/latest - get latest indicator data
 
-## 用户查询：{query}
+## User query: {query}
 
-请分析用户查询，返回JSON格式的查询参数：
+Analyze and return JSON parameters:
 {{
-    "intent": "数据意图类型",
-    "operator_name": "运营商正式名称（如中国联通、中国移动、中国电信）",
-    "band": "频段（如有，如700M、900M等）",
-    "data_month": "数据月份（如有，格式YYYY-MM）",
-    "limit": 结果数量限制（默认50）
+    "intent": "data intent type",
+    "operator_name": "operator official name (China Unicom, China Mobile, China Telecom)",
+    "band": "frequency band if any (700M, 900M, etc.)",
+    "data_month": "data month if any (YYYY-MM format)",
+    "limit": result limit (default 50)
 }}
 
-只返回JSON，不要有其他文字。"""
+Return JSON only, no other text."""
 
-        prompt = prompt_template.format(query=natural_language_query)
+        prompt = prompt_template.replace("{query}", natural_language_query)
+
+        print(f"[DEBUG] llm_endpoint: {llm_endpoint}")
+        print(f"[DEBUG] llm_model: {llm_model}")
+        print(f"[DEBUG] api_key present: {bool(api_key)}")
+        print(f"[DEBUG] prompt length: {len(prompt)}")
 
         try:
             async with httpx.AsyncClient(timeout=float(timeout)) as client:
@@ -408,6 +413,7 @@ class OperatorAgent(BaseAgent):
                 llm_output = ""
                 if "choices" in result and len(result["choices"]) > 0:
                     llm_output = result["choices"][0].get("message", {}).get("content", "").strip()
+
 
                 # Parse JSON from LLM output
                 try:

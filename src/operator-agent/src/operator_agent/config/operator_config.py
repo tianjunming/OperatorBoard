@@ -23,6 +23,21 @@ class OperatorAgentConfig:
         else:
             self.config_dir = Path(config_dir)
 
+    def load_defaults_config(self) -> Dict[str, Any]:
+        """Load defaults configuration from defaults.yaml."""
+        defaults_file = self.config_dir / "defaults.yaml"
+        if not defaults_file.exists():
+            return {}
+
+        with open(defaults_file, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+
+    def get_default_llm_model(self) -> str:
+        """Get default LLM model from defaults config."""
+        defaults = self.load_defaults_config()
+        defaults_dict = defaults.get("defaults", {})
+        return defaults_dict.get("llm_model", "MiniMax-M2.1")
+
     def load_tools_config(self) -> Dict[str, Any]:
         """Load tools configuration from tools.yaml."""
         tools_file = self.config_dir / "tools.yaml"
@@ -73,10 +88,12 @@ class OperatorAgentConfig:
             config = yaml.safe_load(f) or {}
 
         intent_config = config.get("intent_detection", {})
+        default_model = self.get_default_llm_model()
         return {
             "enabled": intent_config.get("enabled", True),
             "llm_endpoint": self._expand_env_vars(intent_config.get("llm_endpoint", "http://localhost:8081/v1/completions")),
-            "llm_model": intent_config.get("llm_model", "sqlcoder"),
+            "llm_model": self._expand_env_vars(intent_config.get("llm_model", default_model)) or default_model,
+            "api_key": self._expand_env_vars(intent_config.get("api_key", "")),
             "timeout": intent_config.get("timeout", 30),
             "max_tokens": intent_config.get("max_tokens", 200),
             "temperature": intent_config.get("temperature", 0.1),
@@ -88,7 +105,7 @@ class OperatorAgentConfig:
         return {
             "enabled": True,
             "llm_endpoint": "http://localhost:8081/v1/completions",
-            "llm_model": "sqlcoder",
+            "llm_model": "MiniMax-M2.1",
             "timeout": 30,
             "max_tokens": 200,
             "temperature": 0.1,
