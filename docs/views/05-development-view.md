@@ -19,15 +19,16 @@ D--claude-OperatorBoard/
 │   │   ├── pyproject.toml
 │   │   ├── configs/        # YAML 配置
 │   │   └── agent_framework/
-│   │       ├── core/       # 核心抽象
-│   │       ├── tools/      # 工具系统
-│   │       ├── skills/     # Skills 系统
-│   │       ├── mcp/        # MCP 协议
-│   │       ├── rag/        # RAG 系统
-│   │       ├── config/     # 配置加载
-│   │       └── utils/      # 工具函数
+│   │       ├── api/        # FastAPI 服务器基类
+│   │       ├── core/        # 核心抽象
+│   │       ├── tools/       # 工具系统
+│   │       ├── skills/       # Skills 系统
+│   │       ├── mcp/          # MCP 协议
+│   │       ├── rag/          # RAG 系统
+│   │       ├── config/       # 配置加载
+│   │       └── utils/        # 工具函数
 │   │
-│   ├── operator-agent/      # 业务实现
+│   ├── operator-agent/      # 业务实现 - 电信数据 Agent
 │   │   ├── pyproject.toml
 │   │   ├── configs/         # YAML 配置
 │   │   │   ├── defaults.yaml         # 公共默认配置
@@ -41,6 +42,19 @@ D--claude-OperatorBoard/
 │   │           ├── rag/      # 电信 RAG
 │   │           ├── mcp/      # Agent 数据获取
 │   │           └── skills/   # 数据处理
+│   │
+│   ├── predict-agent/       # 业务实现 - 覆盖预测 Agent
+│   │   ├── pyproject.toml
+│   │   ├── configs/         # YAML 配置
+│   │   │   ├── defaults.yaml            # 公共默认配置
+│   │   │   ├── coverage_prediction.yaml  # 覆盖预测 LLM 配置
+│   │   │   └── simulation.yaml          # 仿真参数配置
+│   │   └── predict_agent/
+│   │       ├── predict_agent.py
+│   │       ├── config/               # 配置加载器
+│   │       └── capabilities/  # 能力模块
+│   │           ├── tools/     # 覆盖预测工具
+│   │           └── skills/    # Q&A 和仿真调优技能
 │   │
 │   ├── operator-service/   # Java NL2SQL 服务 (MVC+CQRS)
 │   │   ├── pom.xml
@@ -83,13 +97,15 @@ D--claude-OperatorBoard/
 
 | 模块 | 职责 | 依赖 |
 |------|------|------|
+| agent-framework/api | BaseAgentServer, ErrorCode, APIError | 无 |
 | agent-framework/core | BaseAgent, Types, Exceptions | 无 |
-| agent-framework/tools | 工具注册、调用管理 | core |
+| agent-framework/tools | 工具注册、调用管理、BaseTool._run() | core |
 | agent-framework/skills | Skill 注册、执行 | core |
 | agent-framework/mcp | MCP 协议、客户端 | core |
 | agent-framework/rag | 向量存储、检索 | core |
-| agent-framework/config | 配置加载、Schema | core |
-| operator-agent/capabilities | 业务扩展 | agent_framework |
+| agent-framework/config | 配置加载、Schema, ConfigLoader.find_config_dir() | core |
+| operator-agent/capabilities | 业务扩展 (电信数据) | agent_framework |
+| predict-agent/capabilities | 业务扩展 (覆盖预测) | agent_framework |
 | operator-service/controller | REST API 路由 | service |
 | operator-service/service/command | NL2SQL 命令处理 | repository |
 | operator-service/service/query | 数据查询服务 | repository |
@@ -251,6 +267,13 @@ pip install -e ".[dev]"
 
 cd src/operator-agent
 pip install -e ".[dev]"
+
+cd src/predict-agent
+pip install -e ".[dev]"
+
+# 运行 Agent API 服务器
+python -m operator_agent.api.server  # operator-agent (端口 8080)
+python -m predict_agent.api.server    # predict-agent (端口 8083)
 
 # Java 项目 (NL2SQL Service)
 cd src/operator-service

@@ -4,10 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OperatorBoard is a multi-agent telecom operator data management system with NL2SQL capabilities. It consists of 4 main components:
+OperatorBoard is a multi-agent telecom operator data management system with NL2SQL capabilities. It consists of 5 main components:
 
-- **agent-framework**: Python core framework with tools, skills, RAG, and MCP
-- **operator-agent**: Python agent that integrates with Java NL2SQL service
+- **agent-framework**: Python core framework with tools, skills, RAG, MCP, and API server base classes
+- **operator-agent**: Python agent that integrates with Java NL2SQL service (port 8080)
+- **predict-agent**: Python agent for coverage prediction Q&A and simulation tuning (port 8083)
 - **operator-service**: Java Spring Boot NL2SQL microservice
 - **agent-app**: React frontend with data dashboard
 - **docs**: 4+1 architecture documentation
@@ -23,14 +24,16 @@ npm run server       # Start API proxy server
 npm run start:all    # Start both
 ```
 
-### Python Projects (agent-framework, operator-agent)
+### Python Projects
 ```bash
 # Install in development mode
-pip install -e ./agent-framework
-pip install -e ./operator-agent
+pip install -e ./src/agent-framework
+pip install -e ./src/operator-agent
+pip install -e ./src/predict-agent
 
-# Run operator-agent API server
-python -m operator_agent.api.server
+# Run API servers
+python -m operator_agent.api.server  # port 8080
+python -m predict_agent.api.server   # port 8083
 
 # Run tests
 pytest
@@ -52,9 +55,11 @@ mysql -u root -p < src/main/resources/schema.sql
 ## Architecture
 
 ```
-agent-app (React) → operator-agent (Python FastAPI) → operator-service (Java Spring Boot) → MySQL
-                                                      ↓
-                                                  SQLCoder (LLM)
+agent-app (React) → API Proxy → operator-agent (8080) → operator-service (8081) → MySQL
+                                              ↓                      ↓
+                                          SQLCoder LLM         SQLCoder LLM
+
+predict-agent (8083) → Coverage Prediction Q&A + Simulation Tuning
 ```
 
 ### Key Technologies
@@ -64,11 +69,19 @@ agent-app (React) → operator-agent (Python FastAPI) → operator-service (Java
 - **Database**: MySQL 8.0
 - **NL2SQL**: Self-hosted SQLCoder model
 
+### Agent Framework API Module
+- `agent_framework.api.BaseAgentServer` - FastAPI server base class with singleton agent management
+- `agent_framework.api.ErrorCode` - Standard error codes enum
+- `agent_framework.api.APIError` - API exception class
+- `agent_framework.api.get_error_response()` - Standard error response builder
+
 ### Configuration
 - Python config: `configs/*.yaml`
   - `defaults.yaml` - 公共默认配置 (LLM 模型等)
   - `intent_detection.yaml` - Intent Detection LLM 配置
   - `tools.yaml` - Java 服务工具配置
+  - `coverage_prediction.yaml` - 覆盖预测 LLM 配置
+  - `simulation.yaml` - 仿真参数配置
 - Java config: `src/main/resources/application.yml`
 - Environment variables: `DB_USERNAME`, `DB_PASSWORD`, `NL2SQL_SERVICE_URL`, `MINIMAX_API_KEY`, `INTENT_LLM_ENDPOINT`, `INTENT_LLM_MODEL`
 
@@ -81,6 +94,8 @@ agent-app (React) → operator-agent (Python FastAPI) → operator-service (Java
 
 ## Key Files
 - `operator-agent/src/operator_agent/api/server.py` - FastAPI endpoints for NL2SQL
+- `predict-agent/src/predict_agent/api/server.py` - FastAPI endpoints for coverage prediction
 - `operator-service/src/main/java/com/operator/nl2sql/` - Java NL2SQL implementation
 - `operator-service/src/main/resources/schema.sql` - Database schema with sample data
+- `agent-framework/src/agent_framework/api/` - Framework API base classes
 - `docs/views/` - Architecture documentation
