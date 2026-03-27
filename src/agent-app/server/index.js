@@ -3,7 +3,7 @@ import { URL } from 'url';
 
 const PORT = process.env.PORT || 8000;
 const OPERATOR_AGENT_URL = process.env.OPERATOR_AGENT_URL || 'http://localhost:8080';
-const NL2SQL_SERVICE_URL = process.env.NL2SQL_SERVICE_URL || 'http://localhost:8080';
+const NL2SQL_SERVICE_URL = process.env.NL2SQL_SERVICE_URL || 'http://localhost:8081';
 const OPERATOR_AGENT_API_KEY = process.env.OPERATOR_AGENT_API_KEYS || '';
 
 let pendingConfirmation = null;

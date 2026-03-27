@@ -25,7 +25,7 @@ app.add_middleware(
 )
 
 # Configuration
-NL2SQL_SERVICE_URL = os.getenv("NL2SQL_SERVICE_URL", "http://localhost:8080")
+NL2SQL_SERVICE_URL = os.getenv("NL2SQL_SERVICE_URL", "http://localhost:8081")
 
 # Global agent instance
 _agent: Optional[OperatorAgent] = None
