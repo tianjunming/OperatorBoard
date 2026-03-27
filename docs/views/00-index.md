@@ -76,7 +76,9 @@ operator-service 已从传统三层架构迁移到 MVC+CQRS 架构:
 
 operator-agent 新增 LLM-based 自然语言查询路由:
 
-- **Intent Detection**: 通过 LLM prompt 分析用户查询意图
+- **Intent Detection**: 通过 MiniMax M2-her LLM 分析用户查询意图
 - **支持的 Intent**: site_data, indicator_data, operator_list, latest_data, nl2sql
 - **运营商匹配**: 支持模糊匹配和名称映射 (北京联通→中国联通)
 - **数据来源**: 中国/欧洲 8 家运营商测试数据
+- **配置**: `configs/defaults.yaml` (默认模型), `configs/intent_detection.yaml` (详细配置)
+- **Note**: 使用英文 prompt 避免 MiniMax 中文编码问题

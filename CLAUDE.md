@@ -66,8 +66,18 @@ agent-app (React) → operator-agent (Python FastAPI) → operator-service (Java
 
 ### Configuration
 - Python config: `configs/*.yaml`
+  - `defaults.yaml` - 公共默认配置 (LLM 模型等)
+  - `intent_detection.yaml` - Intent Detection LLM 配置
+  - `tools.yaml` - Java 服务工具配置
 - Java config: `src/main/resources/application.yml`
-- Environment variables: `DB_USERNAME`, `DB_PASSWORD`, `NL2SQL_SERVICE_URL`
+- Environment variables: `DB_USERNAME`, `DB_PASSWORD`, `NL2SQL_SERVICE_URL`, `MINIMAX_API_KEY`, `INTENT_LLM_ENDPOINT`, `INTENT_LLM_MODEL`
+
+### Intent Detection (LLM-based)
+- **Model**: MiniMax M2-her (intent_detection.yaml 配置)
+- **Endpoint**: https://api.minimaxi.com/v1/text/chatcompletion_v2
+- **Supported Intents**: site_data, indicator_data, operator_list, latest_data, nl2sql
+- **Operator Mapping**: 北京联通/上海联通 → China Unicom, etc.
+- **Note**: 使用英文 prompt 避免 MiniMax 中文编码问题
 
 ## Key Files
 - `operator-agent/src/operator_agent/api/server.py` - FastAPI endpoints for NL2SQL

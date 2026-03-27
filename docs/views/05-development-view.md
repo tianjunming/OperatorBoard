@@ -29,8 +29,13 @@ D--claude-OperatorBoard/
 │   │
 │   ├── operator-agent/      # 业务实现
 │   │   ├── pyproject.toml
+│   │   ├── configs/         # YAML 配置
+│   │   │   ├── defaults.yaml         # 公共默认配置
+│   │   │   ├── intent_detection.yaml  # Intent Detection LLM 配置
+│   │   │   └── tools.yaml            # Java 服务工具配置
 │   │   └── operator_agent/
 │   │       ├── operator_agent.py
+│   │       ├── config/               # 配置加载器
 │   │       └── capabilities/  # 能力模块
 │   │           ├── tools/    # Java 服务调用
 │   │           ├── rag/      # 电信 RAG
