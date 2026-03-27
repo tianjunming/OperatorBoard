@@ -4,6 +4,8 @@ import os
 from fastapi import HTTPException, Security
 from fastapi.security import APIKeyHeader
 
+from .errors import ErrorCode, get_error_response
+
 # API Key header name
 API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
 
@@ -65,15 +67,17 @@ async def verify_api_key(api_key: str = Security(API_KEY_HEADER)) -> bool:
         return True
 
     if not api_key:
+        error_resp = get_error_response(ErrorCode.MISSING_API_KEY)
         raise HTTPException(
             status_code=401,
-            detail="API key missing. Provide X-API-Key header."
+            detail=error_resp
         )
 
     if not _api_key_auth.validate_key(api_key):
+        error_resp = get_error_response(ErrorCode.INVALID_API_KEY)
         raise HTTPException(
             status_code=403,
-            detail="Invalid API key"
+            detail=error_resp
         )
 
     return True

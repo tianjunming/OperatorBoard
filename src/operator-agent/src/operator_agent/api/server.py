@@ -4,7 +4,7 @@ import os
 import json
 import asyncio
 from typing import Optional, List, Dict, Any
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
@@ -12,8 +12,23 @@ import httpx
 from ..operator_agent import OperatorAgent, OperatorAgentFactory
 from ..config import load_operator_config
 from .auth import verify_api_key, get_allowed_origins
+from .errors import ErrorCode, get_error_response, get_locale_from_headers, SUPPORTED_LOCALES
 
 app = FastAPI(title="Operator Agent API", version="1.0.0")
+
+
+def get_locale(x_locale: str = Header(default="zh", alias="X-Locale")) -> str:
+    """Extract and validate locale from X-Locale header.
+
+    Args:
+        x_locale: Locale value from X-Locale header
+
+    Returns:
+        Valid locale string ('en' or 'zh')
+    """
+    if x_locale not in SUPPORTED_LOCALES:
+        return "zh"
+    return x_locale
 
 # CORS configuration - use specific origins instead of "*"
 ALLOWED_ORIGINS = get_allowed_origins()
@@ -113,7 +128,7 @@ async def get_capabilities(_: bool = Depends(verify_api_key)):
 
 
 @app.post("/api/operator/indicators/latest")
-async def get_latest_indicators(query: IndicatorQuery, _: bool = Depends(verify_api_key)):
+async def get_latest_indicators(query: IndicatorQuery, _: bool = Depends(verify_api_key), locale: str = Depends(get_locale)):
     """Get latest indicator data from NL2SQL service."""
     agent = await get_agent()
 
@@ -129,13 +144,13 @@ async def get_latest_indicators(query: IndicatorQuery, _: bool = Depends(verify_
     )
 
     if result.get("error"):
-        raise HTTPException(status_code=500, detail=result["error"])
+        raise HTTPException(status_code=500, detail=get_error_response(ErrorCode.GET_INDICATORS_FAILED, locale, result["error"]))
 
     return result
 
 
 @app.post("/api/operator/indicators/compare")
-async def compare_indicators(query: CompareQuery, _: bool = Depends(verify_api_key)):
+async def compare_indicators(query: CompareQuery, _: bool = Depends(verify_api_key), locale: str = Depends(get_locale)):
     """Compare indicators between two months."""
     agent = await get_agent()
 
@@ -155,13 +170,13 @@ async def compare_indicators(query: CompareQuery, _: bool = Depends(verify_api_k
     )
 
     if result.get("error"):
-        raise HTTPException(status_code=500, detail=result["error"])
+        raise HTTPException(status_code=500, detail=get_error_response(ErrorCode.GET_INDICATORS_FAILED, locale, result["error"]))
 
     return result
 
 
 @app.post("/api/operator/indicators/trend")
-async def get_indicator_trend(query: TrendQuery, _: bool = Depends(verify_api_key)):
+async def get_indicator_trend(query: TrendQuery, _: bool = Depends(verify_api_key), locale: str = Depends(get_locale)):
     """Get indicator trend data."""
     agent = await get_agent()
 
@@ -184,13 +199,13 @@ async def get_indicator_trend(query: TrendQuery, _: bool = Depends(verify_api_ke
     )
 
     if result.get("error"):
-        raise HTTPException(status_code=500, detail=result["error"])
+        raise HTTPException(status_code=500, detail=get_error_response(ErrorCode.GET_INDICATORS_FAILED, locale, result["error"]))
 
     return result
 
 
 @app.post("/api/operator/times")
-async def get_available_times(query: TimesQuery, _: bool = Depends(verify_api_key)):
+async def get_available_times(query: TimesQuery, _: bool = Depends(verify_api_key), locale: str = Depends(get_locale)):
     """Get available time points in the database."""
     agent = await get_agent()
 
@@ -208,13 +223,13 @@ async def get_available_times(query: TimesQuery, _: bool = Depends(verify_api_ke
     )
 
     if result.get("error"):
-        raise HTTPException(status_code=500, detail=result["error"])
+        raise HTTPException(status_code=500, detail=get_error_response(ErrorCode.GET_AVAILABLE_TIMES_FAILED, locale, result["error"]))
 
     return result
 
 
 @app.post("/api/operator/nl2sql/query")
-async def nl2sql_query(request: Dict[str, Any], _: bool = Depends(verify_api_key)):
+async def nl2sql_query(request: Dict[str, Any], _: bool = Depends(verify_api_key), locale: str = Depends(get_locale)):
     """Execute natural language query via NL2SQL."""
     agent = await get_agent()
 
@@ -226,13 +241,13 @@ async def nl2sql_query(request: Dict[str, Any], _: bool = Depends(verify_api_key
     )
 
     if result.get("error"):
-        raise HTTPException(status_code=500, detail=result["error"])
+        raise HTTPException(status_code=500, detail=get_error_response(ErrorCode.NL2SQL_QUERY_FAILED, locale, result["error"]))
 
     return result
 
 
 @app.post("/api/operator/site-cells")
-async def get_site_cells(query: SiteCellsQuery, _: bool = Depends(verify_api_key)):
+async def get_site_cells(query: SiteCellsQuery, _: bool = Depends(verify_api_key), locale: str = Depends(get_locale)):
     """Get site cell summary data."""
     agent = await get_agent()
 
@@ -250,7 +265,7 @@ async def get_site_cells(query: SiteCellsQuery, _: bool = Depends(verify_api_key
     )
 
     if result.get("error"):
-        raise HTTPException(status_code=500, detail=result["error"])
+        raise HTTPException(status_code=500, detail=get_error_response(ErrorCode.GET_SITE_CELLS_FAILED, locale, result["error"]))
 
     return result
 
@@ -331,16 +346,16 @@ def format_site_data(site_cells: list, operators: list, latest_only: bool = Fals
 
 
 @app.post("/api/agent/run")
-async def agent_run(request: AgentRunRequest, _: bool = Depends(verify_api_key)):
+async def agent_run(request: AgentRunRequest, _: bool = Depends(verify_api_key), locale: str = Depends(get_locale)):
     """
     Run the agent with user input (synchronous JSON response).
     """
-    result = await _process_agent_request(request.input, request.confirmed)
+    result = await _process_agent_request(request.input, request.confirmed, locale)
     return result
 
 
 @app.post("/api/agent/stream")
-async def agent_stream(request: AgentRunRequest, _: bool = Depends(verify_api_key)):
+async def agent_stream(request: AgentRunRequest, _: bool = Depends(verify_api_key), locale: str = Depends(get_locale)):
     """
     Run the agent with user input (SSE streaming response).
     """
@@ -352,10 +367,14 @@ async def agent_stream(request: AgentRunRequest, _: bool = Depends(verify_api_ke
             yield "data: {\"type\": \"start\"}\n\n"
 
             # Process request
-            result = await _process_agent_request(request.input, request.confirmed)
+            result = await _process_agent_request(request.input, request.confirmed, locale)
 
-            # Send result as SSE
-            if "error" in result:
+            # Send result as SSE - check for error code format first
+            if "code" in result and "message" in result:
+                # New error code format
+                yield f"data: {{\"type\": \"error\", \"code\": {json.dumps(result['code'])}, \"message\": {json.dumps(result['message'])}, \"detail\": {json.dumps(result.get('detail'))}}}\n\n"
+            elif "error" in result:
+                # Legacy error format
                 yield f"data: {{\"type\": \"error\", \"content\": {json.dumps(result['error'])}}}\n\n"
             elif "content" in result:
                 # Stream content word by word for better UX
@@ -400,7 +419,7 @@ def _filter_by_operator(site_cells: list, operators: list, operator_name: str) -
     return site_cells
 
 
-async def _process_agent_request(user_input: str, confirmed: bool = False) -> Dict[str, Any]:
+async def _process_agent_request(user_input: str, confirmed: bool = False, locale: str = "zh") -> Dict[str, Any]:
     """
     Shared logic for processing agent requests.
     """
@@ -411,7 +430,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False) -> Di
         intent_result = await agent.process_natural_language_query(user_input)
 
         if "error" in intent_result:
-            return {"content": f"Intent detection failed: {intent_result['error']}"}
+            return get_error_response(ErrorCode.INTENT_DETECTION_FAILED, locale, intent_result["error"])
 
         intent = intent_result.get("intent", "unknown")
         operator_name = intent_result.get("operator_name")
@@ -433,7 +452,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False) -> Di
         if intent == "site_data":
             site_cells_result = await agent.get_site_cells()
             if "error" in site_cells_result:
-                return {"content": f"获取站点数据失败: {site_cells_result['error']}"}
+                return get_error_response(ErrorCode.GET_SITE_CELLS_FAILED, locale, site_cells_result["error"])
 
             site_cells = site_cells_result.get("data") if isinstance(site_cells_result, dict) else site_cells_result
             site_cells = site_cells if isinstance(site_cells, list) else []
@@ -449,7 +468,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False) -> Di
         elif intent == "latest_data":
             site_cells_result = await agent.get_site_cells()
             if "error" in site_cells_result:
-                return {"content": f"获取站点数据失败: {site_cells_result['error']}"}
+                return get_error_response(ErrorCode.GET_SITE_CELLS_FAILED, locale, site_cells_result["error"])
 
             site_cells = site_cells_result.get("data") if isinstance(site_cells_result, dict) else site_cells_result
             site_cells = site_cells if isinstance(site_cells, list) else []
@@ -474,7 +493,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False) -> Di
         elif intent == "indicator_data":
             indicators_result = await agent.get_latest_indicators(limit=limit)
             if "error" in indicators_result:
-                return {"content": f"获取指标数据失败: {indicators_result['error']}"}
+                return get_error_response(ErrorCode.GET_INDICATORS_FAILED, locale, indicators_result["error"])
 
             data = indicators_result.get("data", indicators_result) if isinstance(indicators_result, dict) else indicators_result
             if not data:
@@ -494,7 +513,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False) -> Di
                 method="GET",
             )
             if "error" in operators_result:
-                return {"content": f"获取运营商列表失败: {operators_result['error']}"}
+                return get_error_response(ErrorCode.GET_OPERATORS_FAILED, locale, operators_result["error"])
 
             operators = operators_result.get("data") if isinstance(operators_result, dict) else operators_result
             operators = operators if isinstance(operators, list) else []
@@ -516,7 +535,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False) -> Di
         elif intent == "nl2sql":
             nl2sql_result = await agent.query_nl2sql(natural_language_query=user_input)
             if "error" in nl2sql_result:
-                return {"content": f"查询失败: {nl2sql_result['error']}"}
+                return get_error_response(ErrorCode.NL2SQL_QUERY_FAILED, locale, nl2sql_result["error"])
 
             data = nl2sql_result.get("data", []) if isinstance(nl2sql_result, dict) else nl2sql_result
             if not data:
@@ -537,7 +556,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False) -> Di
             # Fallback to NL2SQL
             nl2sql_result = await agent.query_nl2sql(natural_language_query=user_input)
             if "error" in nl2sql_result:
-                return {"content": f"查询失败: {nl2sql_result['error']}"}
+                return get_error_response(ErrorCode.NL2SQL_QUERY_FAILED, locale, nl2sql_result["error"])
 
             data = nl2sql_result.get("data", []) if isinstance(nl2sql_result, dict) else nl2sql_result
             if not data:
@@ -555,7 +574,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False) -> Di
             return {"content": "\n".join(lines)}
 
     except Exception as e:
-        return {"content": f"处理查询时出错: {str(e)}"}
+        return get_error_response(ErrorCode.INTERNAL_SERVER_ERROR, locale, str(e))
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8080):
