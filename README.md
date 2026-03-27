@@ -46,6 +46,245 @@
 | MySQL | 3306 | 数据库 |
 | SQLCoder | 8081 | LLM NL2SQL 模型 |
 
+## 配置说明
+
+### 环境变量配置
+
+#### operator-agent (Python FastAPI)
+
+| 环境变量 | 必填 | 默认值 | 说明 |
+|---------|------|--------|------|
+| `AGENT_CONFIG_DIR` | 否 | `./configs` | Agent 配置目录 |
+| `NL2SQL_SERVICE_URL` | 否 | `http://localhost:8081` | Java NL2SQL 服务地址 |
+| `OPERATOR_AGENT_API_KEYS` | 否 | (空) | API 密钥列表，逗号分隔 |
+| `ALLOWED_ORIGINS` | 否 | `localhost:3000,localhost:5173` | CORS 允许的源地址 |
+
+**示例:**
+```bash
+# Linux/macOS
+export OPERATOR_AGENT_API_KEYS="key1,key2,key3"
+export ALLOWED_ORIGINS="http://localhost:3000,http://example.com"
+export NL2SQL_SERVICE_URL="http://localhost:8081"
+
+# Windows (PowerShell)
+$env:OPERATOR_AGENT_API_KEYS="key1,key2,key3"
+$env:ALLOWED_ORIGINS="http://localhost:3000"
+$env:NL2SQL_SERVICE_URL="http://localhost:8081"
+```
+
+#### operator-agent 配置文件
+
+**`src/operator-agent/configs/tools.yaml`** - 工具配置
+
+```yaml
+tools:
+  nl2sql:
+    name: "nl2sql"
+    description: "NL2SQL service for operator data querying"
+    enabled: true
+    config:
+      service_name: "nl2sql-service"
+      base_url: "http://localhost:8081"
+      api_prefix: "/api/v1/nl2sql"
+      timeout: 60
+      api_key: "${NL2SQL_API_KEY:}"    # 可选 API 密钥
+```
+
+**`src/operator-agent/configs/intent_detection.yaml`** - 意图检测配置
+
+```yaml
+intent_detection:
+  enabled: true
+  llm_endpoint: "https://api.minimax.chat/v1/chat/completions"
+  llm_model: "MiniMax-Text-01"
+  api_key: "${MINIMAX_API_KEY}"        # 必填 - MiniMax API 密钥
+  timeout: 30
+  max_tokens: 200
+  temperature: 0.1
+```
+
+#### agent-framework 配置
+
+**`src/agent-framework/configs/agent.yaml`** - Agent 基础配置
+
+```yaml
+agent:
+  name: "OperatorAgent"
+  description: "A modular agent with tool, skill, and RAG capabilities"
+  model_name: "claude-3-sonnet-20240229"  # 或其他 Claude 模型
+  temperature: 0.7
+  max_tokens: 4096
+  system_prompt: |
+    You are a helpful AI assistant...
+
+  tools:
+    enabled: true
+    auto_load: true
+
+  skills:
+    enabled: true
+    auto_load: true
+
+  rag:
+    enabled: true
+    top_k: 5
+```
+
+**`src/agent-framework/configs/tools.yaml`** - 通用工具配置
+
+```yaml
+tools:
+  search:
+    name: "web_search"
+    description: "Search the web for information"
+    enabled: true
+    config:
+      max_results: 10
+      timeout: 30
+
+  calculator:
+    name: "calculator"
+    description: "Perform mathematical calculations"
+    enabled: true
+    config:
+      precision: 10
+
+  weather:
+    name: "weather"
+    description: "Get weather information"
+    enabled: true
+    config:
+      api_key: "${WEATHER_API_KEY}"    # 可选
+      unit: "celsius"
+```
+
+**`src/agent-framework/configs/mcp.yaml`** - MCP 服务器配置
+
+```yaml
+mcp:
+  servers:
+    filesystem:
+      name: "filesystem"
+      description: "File system operations"
+      command: "npx"
+      args:
+        - "-y"
+        - "@modelcontextprotocol/server-filesystem"
+        - "${MCP_FS_PATH:/tmp}"
+      enabled: true
+
+    github:
+      name: "github"
+      description: "GitHub API integration"
+      command: "npx"
+      args:
+        - "-y"
+        - "@modelcontextprotocol/server-github"
+      enabled: true
+      env:
+        GITHUB_TOKEN: "${GITHUB_TOKEN}"  # 可选
+
+  client:
+    timeout: 30
+    retry_attempts: 3
+    retry_delay: 1
+```
+
+#### operator-service (Java Spring Boot)
+
+**`src/operator-service/src/main/resources/application.yml`**
+
+```yaml
+server:
+  port: 8081
+
+spring:
+  application:
+    name: nl2sql-service
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/operator_db?useSSL=false&serverTimezone=UTC
+    username: ${DB_USERNAME}           # 必填 - 数据库用户名
+    password: ${DB_PASSWORD}           # 必填 - 数据库密码
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+
+nl2sql:
+  sqlcoder:
+    url: http://localhost:8081         # SQLCoder 服务地址
+    timeout: 60
+  security:
+    enabled: false
+    api-keys: ${NL2SQL_API_KEYS:}      # 可选 - API 密钥列表
+    allow-destructive-queries: false   # 是否允许危险操作 (DROP, DELETE)
+    max-result-rows: 1000              # 最大返回行数
+  schema:
+    refresh-cron: "0 0 * * * *"        # Schema 刷新 cron 表达式
+```
+
+### 数据库配置
+
+```bash
+# MySQL 数据库初始化
+mysql -u root -p < src/operator-service/src/main/resources/schema.sql
+```
+
+**环境变量:**
+| 环境变量 | 必填 | 说明 |
+|---------|------|------|
+| `DB_USERNAME` | 是 | MySQL 用户名 |
+| `DB_PASSWORD` | 是 | MySQL 密码 |
+
+### 前端配置 (agent-app)
+
+**`src/agent-app/.env`** (可选)
+
+```bash
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+### 配置优先级
+
+配置来源优先级 (从高到低):
+
+1. **环境变量** - 最高优先级
+2. **命令行参数**
+3. **配置文件** - `configs/*.yaml`, `application.yml`
+4. **默认配置** - 代码中的默认值
+
+### 完整启动配置示例
+
+```bash
+# 1. 设置环境变量
+export DB_USERNAME="root"
+export DB_PASSWORD="your_password"
+export MINIMAX_API_KEY="your_minimax_key"
+export OPERATOR_AGENT_API_KEYS="your-api-key"
+export NL2SQL_SERVICE_URL="http://localhost:8081"
+
+# 2. 启动 MySQL (确保数据库已初始化)
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS operator_db"
+mysql -u root -p operator_db < src/operator-service/src/main/resources/schema.sql
+
+# 3. 启动 Java NL2SQL 服务
+cd src/operator-service
+mvn spring-boot:run
+
+# 4. 启动 Python Agent
+cd src/operator-agent
+pip install -e ./src/agent-framework
+pip install -e .
+python -m operator_agent.api.server
+
+# 5. 启动前端
+cd src/agent-app
+npm install
+npm run dev
+```
+
 ## API 调用流程
 
 ```
