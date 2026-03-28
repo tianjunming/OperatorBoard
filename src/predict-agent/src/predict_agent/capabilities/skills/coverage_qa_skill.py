@@ -3,6 +3,7 @@
 from typing import Any, Dict, Optional
 
 from agent_framework.skills import BaseSkill
+from agent_framework.llm import LLMClient, LLMConfig
 
 
 class CoverageQASkill(BaseSkill):
@@ -21,6 +22,8 @@ class CoverageQASkill(BaseSkill):
         vectorstore_path: Optional[str] = None,
         llm_endpoint: Optional[str] = None,
         llm_model: str = "coverage-llm",
+        llm_api_key: Optional[str] = None,
+        llm_method: str = LLMClient.METHOD_POST,
         **kwargs
     ):
         """
@@ -30,6 +33,8 @@ class CoverageQASkill(BaseSkill):
             vectorstore_path: Path to coverage knowledge vector store
             llm_endpoint: LLM API endpoint for generation
             llm_model: LLM model name
+            llm_api_key: LLM API key
+            llm_method: LLM invocation method - "post" or "chatopenai"
         """
         super().__init__(
             name=self.name,
@@ -37,8 +42,13 @@ class CoverageQASkill(BaseSkill):
             **kwargs
         )
         self.vectorstore_path = vectorstore_path
-        self.llm_endpoint = llm_endpoint
-        self.llm_model = llm_model
+        self.llm_config = LLMConfig(
+            endpoint=llm_endpoint or "",
+            model=llm_model,
+            api_key=llm_api_key or "",
+        )
+        self._llm_client = LLMClient(self.llm_config)
+        self._llm_method = llm_method
         self._vectorstore = None
 
     async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -100,6 +110,16 @@ Question: {query}
 
 Answer:"""
 
-        # TODO: Implement actual LLM call
-        # For now, return a structured response
-        return f"基于覆盖预测理论，回答如下：\n\n问题：{query}\n\n参考答案：覆盖预测主要使用路径损耗模型（如Okumura-Hata、COST231等）来估算信号强度。关键参数包括发射功率、天线高度、工作频率和地形因素。建议根据具体场景选择合适的模型和参数配置。"
+        try:
+            if self._llm_method == LLMClient.METHOD_CHATOPENAI:
+                messages = [
+                    {"role": "system", "content": "You are a coverage prediction expert. Answer based on the provided context."},
+                    {"role": "user", "content": prompt}
+                ]
+                answer = await self._llm_client.invoke(messages=messages, method=LLMClient.METHOD_CHATOPENAI)
+            else:
+                answer = await self._llm_client.invoke(prompt=prompt, method=LLMClient.METHOD_POST)
+            return answer
+        except Exception as e:
+            # Fallback response if LLM call fails
+            return f"基于覆盖预测理论，回答如下：\n\n问题：{query}\n\n参考答案：覆盖预测主要使用路径损耗模型（如Okumura-Hata、COST231等）来估算信号强度。关键参数包括发射功率、天线高度、工作频率和地形因素。建议根据具体场景选择合适的模型和参数配置。\n\n(Note: LLM调用失败，使用默认回答。)"

@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Coverage Prediction Agent based on agent-framework"
 requires-python = ">=3.10"
 dependencies = [
-    "agent-framework @ file:../agent-framework",
+    "agent-framework @ file:../../src/agent-framework",
     "langchain>=0.3.0",
     "langchain-core>=0.3.0",
     "langchain-community>=0.3.0",

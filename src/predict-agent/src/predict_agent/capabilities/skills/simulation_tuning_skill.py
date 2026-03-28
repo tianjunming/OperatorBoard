@@ -3,6 +3,7 @@
 from typing import Any, Dict, List, Optional
 
 from agent_framework.skills import BaseSkill
+from agent_framework.llm import LLMClient, LLMConfig
 
 
 class SimulationTuningSkill(BaseSkill):
@@ -45,6 +46,8 @@ class SimulationTuningSkill(BaseSkill):
         self,
         llm_endpoint: Optional[str] = None,
         llm_model: str = "tuning-llm",
+        llm_api_key: Optional[str] = None,
+        llm_method: str = LLMClient.METHOD_POST,
         **kwargs
     ):
         """
@@ -53,6 +56,8 @@ class SimulationTuningSkill(BaseSkill):
         Args:
             llm_endpoint: LLM API endpoint for parameter optimization
             llm_model: LLM model name
+            llm_api_key: LLM API key
+            llm_method: LLM invocation method - "post" or "chatopenai"
         """
         super().__init__(
             name=self.name,
@@ -61,6 +66,13 @@ class SimulationTuningSkill(BaseSkill):
         )
         self.llm_endpoint = llm_endpoint
         self.llm_model = llm_model
+        self.llm_config = LLMConfig(
+            endpoint=llm_endpoint or "",
+            model=llm_model,
+            api_key=llm_api_key or "",
+        )
+        self._llm_client = LLMClient(self.llm_config)
+        self._llm_method = llm_method
 
     async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
