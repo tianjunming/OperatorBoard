@@ -329,10 +329,44 @@ class OperatorAgent(BaseAgent):
 
         # Check if intent detection is enabled
         if not config.get("enabled", True):
-            # Return default intent when disabled
+            # Fallback: use keyword-based intent detection
+            query_lower = natural_language_query.lower()
+            intent = "unknown"
+            operator_name = None
+
+            # Detect intent based on keywords
+            if "站点" in query_lower or "site" in query_lower:
+                intent = "site_data"
+            elif "指标" in query_lower or "indicator" in query_lower:
+                intent = "indicator_data"
+            elif "最新" in query_lower or "latest" in query_lower:
+                intent = "latest_data"
+            elif "运营商" in query_lower or "operator" in query_lower:
+                intent = "operator_list"
+
+            # Extract operator name from common variations
+            if "北京联通" in query_lower or "beijing unicom" in query_lower:
+                operator_name = "中国联通"
+            elif "上海联通" in query_lower or "shanghai unicom" in query_lower:
+                operator_name = "中国联通"
+            elif "北京移动" in query_lower or "beijing mobile" in query_lower:
+                operator_name = "中国移动"
+            elif "上海移动" in query_lower or "shanghai mobile" in query_lower:
+                operator_name = "中国移动"
+            elif "北京电信" in query_lower or "beijing telecom" in query_lower:
+                operator_name = "中国电信"
+            elif "上海电信" in query_lower or "shanghai telecom" in query_lower:
+                operator_name = "中国电信"
+            elif "联通" in query_lower or "unicom" in query_lower:
+                operator_name = "中国联通"
+            elif "移动" in query_lower or "mobile" in query_lower:
+                operator_name = "中国移动"
+            elif "电信" in query_lower or "telecom" in query_lower:
+                operator_name = "中国电信"
+
             return {
-                "intent": "unknown",
-                "operator_name": None,
+                "intent": intent,
+                "operator_name": operator_name,
                 "data_month": None,
                 "band": None,
                 "limit": 50,

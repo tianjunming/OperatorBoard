@@ -456,8 +456,8 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
             method="GET",
         )
         operators = []
-        if not isinstance(operators_result, dict) or "error" not in operators_result:
-            operators = operators_result.get("data") if isinstance(operators_result, dict) else operators_result
+        if isinstance(operators_result, dict) and operators_result.get("error") is None:
+            operators = operators_result.get("data", [])
             operators = operators if isinstance(operators, list) else []
 
         # Route based on LLM-detected intent
