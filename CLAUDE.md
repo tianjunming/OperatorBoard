@@ -96,7 +96,7 @@ get_error_response(GET_SITE_CELLS_FAILED, locale="zh", detail="timeout")
   - `coverage_prediction.yaml` - 覆盖预测 LLM 配置
   - `simulation.yaml` - 仿真参数配置
 - Java config: `src/main/resources/application.yml`
-- Environment variables: `DB_USERNAME`, `DB_PASSWORD`, `NL2SQL_SERVICE_URL`, `MINIMAX_API_KEY`, `INTENT_LLM_ENDPOINT`, `INTENT_LLM_MODEL`
+- Environment variables: `DB_USERNAME`, `DB_PASSWORD`, `NL2SQL_SERVICE_URL`, `INTENT_API_KEY`, `INTENT_LLM_ENDPOINT`, `INTENT_LLM_MODEL`
 
 ### Intent Detection (LLM-based)
 - **Model**: MiniMax M2-her (intent_detection.yaml 配置)

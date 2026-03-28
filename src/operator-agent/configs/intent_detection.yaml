@@ -6,7 +6,7 @@ intent_detection:
   # LLM endpoint for intent detection
   llm_endpoint: "https://api.minimaxi.com/v1/text/chatcompletion_v2"
   llm_model: "M2-her"
-  api_key: "${MINIMAX_API_KEY}"
+  api_key: "${INTENT_API_KEY}"
   timeout: 30
   max_tokens: 200
   temperature: 0.1

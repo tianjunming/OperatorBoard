@@ -95,9 +95,9 @@ tools:
 ```yaml
 intent_detection:
   enabled: true
-  llm_endpoint: "https://api.minimax.chat/v1/chat/completions"
-  llm_model: "MiniMax-Text-01"
-  api_key: "${MINIMAX_API_KEY}"        # 必填 - MiniMax API 密钥
+  llm_endpoint: "https://api.minimaxi.com/v1/text/chatcompletion_v2"
+  llm_model: "M2-her"
+  api_key: "${INTENT_API_KEY}"        # 必填 - Intent Detection API 密钥
   timeout: 30
   max_tokens: 200
   temperature: 0.1
@@ -261,7 +261,7 @@ VITE_API_BASE_URL=http://localhost:8000
 # 1. 设置环境变量
 export DB_USERNAME="root"
 export DB_PASSWORD="your_password"
-export MINIMAX_API_KEY="your_minimax_key"
+export INTENT_API_KEY="your_intent_detection_key"
 export OPERATOR_AGENT_API_KEYS="your-api-key"
 export NL2SQL_SERVICE_URL="http://localhost:8081"
 
