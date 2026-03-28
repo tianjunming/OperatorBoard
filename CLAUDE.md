@@ -71,9 +71,22 @@ predict-agent (8083) → Coverage Prediction Q&A + Simulation Tuning
 
 ### Agent Framework API Module
 - `agent_framework.api.BaseAgentServer` - FastAPI server base class with singleton agent management
-- `agent_framework.api.ErrorCode` - Standard error codes enum
-- `agent_framework.api.APIError` - API exception class
+- `agent_framework.api.ErrorCode` - Immutable error code object with i18n support
+- `agent_framework.api.AgentAPIError` - API exception class with error code and detail
 - `agent_framework.api.get_error_response()` - Standard error response builder
+
+### ErrorCode System
+```python
+# ErrorCode is a frozen dataclass with:
+# - code: str (e.g., "E1101")
+# - message_en/message_zh: localized messages
+# - category: ErrorCategory enum
+# - status_code: HTTP status
+
+# Usage
+raise AgentAPIError(INTENT_DETECTION_FAILED, detail="API timeout")
+get_error_response(GET_SITE_CELLS_FAILED, locale="zh", detail="timeout")
+```
 
 ### Configuration
 - Python config: `configs/*.yaml`

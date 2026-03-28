@@ -111,6 +111,88 @@ D--claude-OperatorBoard/
 | operator-service/service/query | 数据查询服务 | repository |
 | operator-service/repository | MyBatis Mapper 接口 | entity |
 
+### 2.3 ErrorCode 系统
+
+统一错误码系统位于 `agent_framework/api/errors.py`。
+
+#### ErrorCode 对象定义
+
+```python
+@dataclass(frozen=True)
+class ErrorCode:
+    """不可变的错误码对象，支持国际化"""
+    code: str                    # 错误码，如 "E1101"
+    message_en: str             # 英文错误消息
+    message_zh: str             # 中文错误消息
+    category: ErrorCategory     # 错误分类
+    status_code: int            # HTTP 状态码
+```
+
+#### AgentAPIError 异常
+
+```python
+class AgentAPIError(Exception):
+    def __init__(self, error_code: ErrorCode, detail: str = None, locale: str = "zh"):
+        self.error_code = error_code
+        self.detail = detail
+        self.locale = locale
+
+# 使用示例
+raise AgentAPIError(INTENT_DETECTION_FAILED, detail="API timeout")
+```
+
+#### 错误码范围
+
+| 范围 | 分类 | 说明 |
+|------|------|------|
+| E0001-E0099 | GENERAL | 通用错误 |
+| E1001-E1099 | AGENT | Agent 相关错误 |
+| E1101-E1199 | INTENT | 意图检测错误 |
+| E1201-E1299 | TOOL/SKILL | 工具/技能错误 |
+| E2001-E2099 | CONFIG | 配置错误 |
+| E2101-E2199 | RAG | RAG 错误 |
+| E3001-E3099 | DATA | 数据获取错误 |
+| E3101-E3199 | NL2SQL | NL2SQL 查询错误 |
+| E4001-E4099 | EXTERNAL | 外部服务错误 |
+| E5001-E5099 | AUTH | 认证授权错误 |
+
+#### 常用错误码
+
+| 错误码 | 名称 | 说明 |
+|--------|------|------|
+| E0001 | UNKNOWN_ERROR | 未知错误 |
+| E0002 | INVALID_REQUEST | 无效请求 |
+| E0003 | INTERNAL_ERROR | 内部错误 |
+| E1101 | INTENT_DETECTION_FAILED | 意图检测失败 |
+| E3001 | GET_SITE_CELLS_FAILED | 获取站点数据失败 |
+| E3002 | GET_INDICATORS_FAILED | 获取指标数据失败 |
+| E3101 | NL2SQL_QUERY_FAILED | NL2SQL 查询失败 |
+| E5001 | MISSING_API_KEY | 缺少 API 密钥 |
+| E5002 | INVALID_API_KEY | 无效的 API 密钥 |
+
+#### 国际化支持
+
+```python
+# 获取错误消息
+error.get_message("zh")  # 中文
+error.get_message("en")  # 英文
+
+# 创建错误响应
+get_error_response(INTENT_DETECTION_FAILED, locale="zh", detail="超时")
+# 返回: {"code": "E1101", "message": "意图检测失败", "category": "INTENT", "detail": "超时"}
+```
+
+#### 统一响应格式
+
+```python
+{
+    "code": "E1101",
+    "message": "意图检测失败",
+    "category": "INTENT",
+    "detail": "API 超时"
+}
+```
+
 ## 3. 依赖管理
 
 ### 3.1 Agent Framework 依赖
