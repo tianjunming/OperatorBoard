@@ -193,6 +193,95 @@ get_error_response(INTENT_DETECTION_FAILED, locale="zh", detail="超时")
 }
 ```
 
+### 2.4 LLM Client 配置
+
+LLM 客户端模块 `agent_framework.llm` 支持两种调用方式：
+
+#### 调用方式
+
+| 方式 | 值 | 说明 |
+|------|-----|------|
+| METHOD_POST | `post` | 直接 HTTP POST 调用 |
+| METHOD_CHATOPENAI | `chatopenai` | OpenAI SDK 方式调用 |
+
+#### LLMConfig 配置
+
+```python
+class LLMConfig:
+    def __init__(
+        self,
+        endpoint: str = None,      # LLM API 端点
+        model: str = "gpt-3.5-turbo",
+        api_key: str = None,
+        timeout: int = 60,          # 超时时间（秒）
+        max_tokens: int = 2000,
+        temperature: float = 0.1,
+    )
+```
+
+#### 使用示例
+
+```python
+from agent_framework.llm import LLMClient, LLMConfig
+
+# 方式一：POST 调用
+config = LLMConfig(
+    endpoint="https://api.minimaxi.com/v1/text/chatcompletion_v2",
+    model="M2-her",
+    api_key="your-api-key",
+    timeout=60,
+)
+client = LLMClient(config)
+result = await client.invoke(prompt="Hello", method=LLMClient.METHOD_POST)
+
+# 方式二：ChatOpenAI 调用
+config = LLMConfig(
+    endpoint="https://api.minimaxi.com/v1",
+    model="M2-her",
+    api_key="your-api-key",
+)
+client = LLMClient(config)
+result = await client.invoke(
+    messages=[{"role": "user", "content": "Hello"}],
+    method=LLMClient.METHOD_CHATOPENAI
+)
+
+# 方式三：chat() 便捷方法（自动选择）
+result = await client.chat(prompt="Hello", system="You are a helpful assistant")
+```
+
+#### YAML 配置
+
+```yaml
+# predict-agent/configs/coverage_prediction.yaml
+coverage_prediction:
+  llm_endpoint: "${COVERAGE_LLM_ENDPOINT}"
+  llm_model: "${COVERAGE_LLM_MODEL:coverage-llm}"
+  api_key: "${COVERAGE_API_KEY:}"
+  llm_method: "${COVERAGE_LLM_METHOD:post}"  # post 或 chatopenai
+
+# predict-agent/configs/simulation.yaml
+simulation:
+  llm_endpoint: "${SIMULATION_LLM_ENDPOINT}"
+  llm_model: "${SIMULATION_LLM_MODEL:simulation-llm}"
+  api_key: "${SIMULATION_API_KEY:}"
+  llm_method: "${SIMULATION_LLM_METHOD:post}"
+```
+
+#### 超时配置
+
+```python
+# httpx.Timeout(connect, read, write, pool)
+timeout = httpx.Timeout(connect=10.0, read=60.0, write=60.0, pool=5.0)
+```
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| connect | 连接超时 | 10s |
+| read | 读取超时 | 60s |
+| write | 写入超时 | 60s |
+| pool | 池超时 | 5s |
+
 ## 3. 依赖管理
 
 ### 3.1 Agent Framework 依赖
