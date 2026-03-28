@@ -6,6 +6,9 @@ coverage_prediction:
   llm_model: "${COVERAGE_LLM_MODEL:coverage-llm}"
   api_key: "${COVERAGE_API_KEY:}"
 
+  # LLM invocation method: "post" or "chatopenai"
+  llm_method: "${COVERAGE_LLM_METHOD:post}"
+
   # Vector store for RAG
   vectorstore_path: "${COVERAGE_VECTORSTORE_PATH:}"
 

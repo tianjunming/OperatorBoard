@@ -4,6 +4,12 @@ simulation:
   # Simulation API endpoint
   simulation_api_url: "${SIMULATION_API_URL:http://localhost:8082/api/simulation}"
 
+  # LLM settings for parameter optimization
+  llm_endpoint: "${SIMULATION_LLM_ENDPOINT}"
+  llm_model: "${SIMULATION_LLM_MODEL:simulation-llm}"
+  api_key: "${SIMULATION_API_KEY:}"
+  llm_method: "${SIMULATION_LLM_METHOD:post}"
+
   # Parameter ranges for different scenarios
   parameter_ranges:
     urban:

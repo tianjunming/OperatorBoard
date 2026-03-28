@@ -57,6 +57,7 @@ class PredictAgentConfig:
             "llm_endpoint": self._expand_env_vars(coverage_config.get("llm_endpoint", "")),
             "llm_model": self._expand_env_vars(coverage_config.get("llm_model", "coverage-llm")),
             "api_key": self._expand_env_vars(coverage_config.get("api_key", "")),
+            "llm_method": self._expand_env_vars(coverage_config.get("llm_method", "post")),
             "vectorstore_path": coverage_config.get("vectorstore_path", ""),
         }
 
@@ -72,6 +73,10 @@ class PredictAgentConfig:
         sim_config = config.get("simulation", {})
         return {
             "simulation_api_url": self._expand_env_vars(sim_config.get("simulation_api_url", "")),
+            "llm_endpoint": self._expand_env_vars(sim_config.get("llm_endpoint", "")),
+            "llm_model": self._expand_env_vars(sim_config.get("llm_model", "simulation-llm")),
+            "api_key": self._expand_env_vars(sim_config.get("api_key", "")),
+            "llm_method": self._expand_env_vars(sim_config.get("llm_method", "post")),
         }
 
     def _default_coverage_config(self) -> Dict[str, Any]:
@@ -80,6 +85,7 @@ class PredictAgentConfig:
             "llm_endpoint": "http://localhost:8081/v1/completions",
             "llm_model": "coverage-llm",
             "api_key": "",
+            "llm_method": "post",
             "vectorstore_path": "",
         }
 
@@ -87,6 +93,10 @@ class PredictAgentConfig:
         """Return default simulation config."""
         return {
             "simulation_api_url": "http://localhost:8082/api/simulation",
+            "llm_endpoint": "",
+            "llm_model": "simulation-llm",
+            "api_key": "",
+            "llm_method": "post",
         }
 
 

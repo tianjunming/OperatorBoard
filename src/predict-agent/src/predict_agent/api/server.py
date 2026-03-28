@@ -62,11 +62,15 @@ async def get_agent() -> PredictAgent:
             vectorstore_path=coverage_config.get("vectorstore_path"),
             llm_endpoint=coverage_config.get("llm_endpoint"),
             llm_model=coverage_config.get("llm_model"),
+            llm_api_key=coverage_config.get("api_key"),
+            llm_method=coverage_config.get("llm_method", "post"),
         )
 
         simulation_tuning_skill = SimulationTuningSkill(
-            llm_endpoint=coverage_config.get("llm_endpoint"),
-            llm_model=coverage_config.get("llm_model"),
+            llm_endpoint=simulation_config.get("llm_endpoint"),
+            llm_model=simulation_config.get("llm_model"),
+            llm_api_key=simulation_config.get("api_key"),
+            llm_method=simulation_config.get("llm_method", "post"),
         )
 
         # Create agent
