@@ -109,7 +109,11 @@ class LLMClient:
             "temperature": kwargs.get("temperature", self.config.temperature),
         }
 
-        async with httpx.AsyncClient(timeout=float(self.config.timeout)) as client:
+        # Use httpx Timeout for proper timeout handling
+        # connect=10s, read/write=configured timeout
+        timeout = httpx.Timeout(connect=10.0, read=float(self.config.timeout), write=60.0, pool=5.0)
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(
                 self.config.endpoint,
                 json=body,
@@ -145,11 +149,12 @@ class LLMClient:
         if not messages:
             raise ToolError("messages is required for ChatOpenAI method")
 
-        # Create OpenAI client
+        # Create OpenAI client with proper timeout
+        timeout = httpx.Timeout(connect=10.0, read=float(self.config.timeout))
         client = AsyncOpenAI(
             api_key=self.config.api_key,
             base_url=self.config.endpoint if self.config.endpoint else None,
-            timeout=float(self.config.timeout),
+            timeout=timeout,
         )
 
         max_tokens = kwargs.get("max_tokens", self.config.max_tokens)
