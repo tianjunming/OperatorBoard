@@ -309,7 +309,7 @@ const server = http.createServer(async (req, res) => {
 
     try {
       const queryStr = new URLSearchParams(query).toString();
-      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/query/operators${queryStr ? '?' + queryStr : ''}`);
+      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/nl2sql/operators${queryStr ? '?' + queryStr : ''}`);
       const data = await response.json();
       sendJSON(res, 200, data);
     } catch (error) {
@@ -321,7 +321,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname.startsWith('/api/query/operators/') && req.method === 'GET') {
     const id = url.pathname.split('/').pop();
     try {
-      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/query/operators/${id}`);
+      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/nl2sql/operators/${id}`);
       const data = await response.json();
       sendJSON(res, 200, data);
     } catch (error) {
@@ -338,7 +338,7 @@ const server = http.createServer(async (req, res) => {
 
     try {
       const queryStr = new URLSearchParams(query).toString();
-      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/query/site-summary${queryStr ? '?' + queryStr : ''}`);
+      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/nl2sql/site-summary${queryStr ? '?' + queryStr : ''}`);
       const data = await response.json();
       sendJSON(res, 200, data);
     } catch (error) {
@@ -355,7 +355,7 @@ const server = http.createServer(async (req, res) => {
 
     try {
       const queryStr = new URLSearchParams(query).toString();
-      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/query/indicators/latest${queryStr ? '?' + queryStr : ''}`);
+      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/nl2sql/indicators/latest${queryStr ? '?' + queryStr : ''}`);
       const data = await response.json();
       sendJSON(res, 200, data);
     } catch (error) {
@@ -373,7 +373,7 @@ const server = http.createServer(async (req, res) => {
 
     try {
       const queryStr = new URLSearchParams(query).toString();
-      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/query/indicators/history${queryStr ? '?' + queryStr : ''}`);
+      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/nl2sql/indicators/history${queryStr ? '?' + queryStr : ''}`);
       const data = await response.json();
       sendJSON(res, 200, data);
     } catch (error) {
@@ -392,7 +392,7 @@ const server = http.createServer(async (req, res) => {
 
     try {
       const queryStr = new URLSearchParams(query).toString();
-      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/query/indicators/trend${queryStr ? '?' + queryStr : ''}`);
+      const response = await fetch(`${NL2SQL_SERVICE_URL}/api/v1/nl2sql/indicators/trend${queryStr ? '?' + queryStr : ''}`);
       const data = await response.json();
       sendJSON(res, 200, data);
     } catch (error) {

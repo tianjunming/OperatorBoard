@@ -112,6 +112,10 @@ class JavaMicroserviceTool(BaseTool):
                 headers=request_headers,
             )
 
+            # Explicitly set encoding to UTF-8 before parsing JSON
+            # This ensures proper handling of Chinese characters on Windows
+            response.encoding = "utf-8"
+
             return {
                 "service": self.service_name,
                 "endpoint": endpoint,

@@ -12,7 +12,19 @@ import httpx
 from ..operator_agent import OperatorAgent, OperatorAgentFactory
 from ..config import load_operator_config
 from .auth import verify_api_key, get_allowed_origins
-from .errors import ErrorCode, get_error_response, get_locale_from_headers, SUPPORTED_LOCALES
+from .errors import (
+    ErrorCode,
+    get_error_response,
+    get_locale_from_headers,
+    SUPPORTED_LOCALES,
+    GET_SITE_CELLS_FAILED,
+    GET_INDICATORS_FAILED,
+    GET_OPERATORS_FAILED,
+    GET_AVAILABLE_TIMES_FAILED,
+    NL2SQL_QUERY_FAILED,
+    INTERNAL_ERROR,
+    INTENT_DETECTION_FAILED,
+)
 
 app = FastAPI(title="Operator Agent API", version="1.0.0")
 
@@ -144,7 +156,7 @@ async def get_latest_indicators(query: IndicatorQuery, _: bool = Depends(verify_
     )
 
     if result.get("error"):
-        raise HTTPException(status_code=500, detail=get_error_response(ErrorCode.GET_INDICATORS_FAILED, locale, result["error"]))
+        raise HTTPException(status_code=500, detail=get_error_response(GET_INDICATORS_FAILED, locale, result["error"]))
 
     return result
 
@@ -170,7 +182,7 @@ async def compare_indicators(query: CompareQuery, _: bool = Depends(verify_api_k
     )
 
     if result.get("error"):
-        raise HTTPException(status_code=500, detail=get_error_response(ErrorCode.GET_INDICATORS_FAILED, locale, result["error"]))
+        raise HTTPException(status_code=500, detail=get_error_response(GET_INDICATORS_FAILED, locale, result["error"]))
 
     return result
 
@@ -199,7 +211,7 @@ async def get_indicator_trend(query: TrendQuery, _: bool = Depends(verify_api_ke
     )
 
     if result.get("error"):
-        raise HTTPException(status_code=500, detail=get_error_response(ErrorCode.GET_INDICATORS_FAILED, locale, result["error"]))
+        raise HTTPException(status_code=500, detail=get_error_response(GET_INDICATORS_FAILED, locale, result["error"]))
 
     return result
 
@@ -223,7 +235,7 @@ async def get_available_times(query: TimesQuery, _: bool = Depends(verify_api_ke
     )
 
     if result.get("error"):
-        raise HTTPException(status_code=500, detail=get_error_response(ErrorCode.GET_AVAILABLE_TIMES_FAILED, locale, result["error"]))
+        raise HTTPException(status_code=500, detail=get_error_response(GET_AVAILABLE_TIMES_FAILED, locale, result["error"]))
 
     return result
 
@@ -241,7 +253,7 @@ async def nl2sql_query(request: Dict[str, Any], _: bool = Depends(verify_api_key
     )
 
     if result.get("error"):
-        raise HTTPException(status_code=500, detail=get_error_response(ErrorCode.NL2SQL_QUERY_FAILED, locale, result["error"]))
+        raise HTTPException(status_code=500, detail=get_error_response(NL2SQL_QUERY_FAILED, locale, result["error"]))
 
     return result
 
@@ -265,7 +277,7 @@ async def get_site_cells(query: SiteCellsQuery, _: bool = Depends(verify_api_key
     )
 
     if result.get("error"):
-        raise HTTPException(status_code=500, detail=get_error_response(ErrorCode.GET_SITE_CELLS_FAILED, locale, result["error"]))
+        raise HTTPException(status_code=500, detail=get_error_response(GET_SITE_CELLS_FAILED, locale, result["error"]))
 
     return result
 
@@ -430,7 +442,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
         intent_result = await agent.process_natural_language_query(user_input)
 
         if intent_result.get("error"):
-            return get_error_response(ErrorCode.INTENT_DETECTION_FAILED, locale, intent_result["error"])
+            return get_error_response(INTENT_DETECTION_FAILED, locale, intent_result["error"])
 
         intent = intent_result.get("intent", "unknown")
         operator_name = intent_result.get("operator_name")
@@ -452,7 +464,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
         if intent == "site_data":
             site_cells_result = await agent.get_site_cells()
             if site_cells_result.get("error"):
-                return get_error_response(ErrorCode.GET_SITE_CELLS_FAILED, locale, site_cells_result["error"])
+                return get_error_response(GET_SITE_CELLS_FAILED, locale, site_cells_result["error"])
 
             site_cells = site_cells_result.get("data") if isinstance(site_cells_result, dict) else site_cells_result
             site_cells = site_cells if isinstance(site_cells, list) else []
@@ -468,7 +480,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
         elif intent == "latest_data":
             site_cells_result = await agent.get_site_cells()
             if site_cells_result.get("error"):
-                return get_error_response(ErrorCode.GET_SITE_CELLS_FAILED, locale, site_cells_result["error"])
+                return get_error_response(GET_SITE_CELLS_FAILED, locale, site_cells_result["error"])
 
             site_cells = site_cells_result.get("data") if isinstance(site_cells_result, dict) else site_cells_result
             site_cells = site_cells if isinstance(site_cells, list) else []
@@ -493,7 +505,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
         elif intent == "indicator_data":
             indicators_result = await agent.get_latest_indicators(limit=limit)
             if indicators_result.get("error"):
-                return get_error_response(ErrorCode.GET_INDICATORS_FAILED, locale, indicators_result["error"])
+                return get_error_response(GET_INDICATORS_FAILED, locale, indicators_result["error"])
 
             data = indicators_result.get("data", indicators_result) if isinstance(indicators_result, dict) else indicators_result
             if not data:
@@ -513,7 +525,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
                 method="GET",
             )
             if operators_result.get("error"):
-                return get_error_response(ErrorCode.GET_OPERATORS_FAILED, locale, operators_result["error"])
+                return get_error_response(GET_OPERATORS_FAILED, locale, operators_result["error"])
 
             operators = operators_result.get("data") if isinstance(operators_result, dict) else operators_result
             operators = operators if isinstance(operators, list) else []
@@ -535,7 +547,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
         elif intent == "nl2sql":
             nl2sql_result = await agent.query_nl2sql(natural_language_query=user_input)
             if nl2sql_result.get("error"):
-                return get_error_response(ErrorCode.NL2SQL_QUERY_FAILED, locale, nl2sql_result["error"])
+                return get_error_response(NL2SQL_QUERY_FAILED, locale, nl2sql_result["error"])
 
             data = nl2sql_result.get("data", []) if isinstance(nl2sql_result, dict) else nl2sql_result
             if not data:
@@ -556,7 +568,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
             # Fallback to NL2SQL
             nl2sql_result = await agent.query_nl2sql(natural_language_query=user_input)
             if nl2sql_result.get("error"):
-                return get_error_response(ErrorCode.NL2SQL_QUERY_FAILED, locale, nl2sql_result["error"])
+                return get_error_response(NL2SQL_QUERY_FAILED, locale, nl2sql_result["error"])
 
             data = nl2sql_result.get("data", []) if isinstance(nl2sql_result, dict) else nl2sql_result
             if not data:
@@ -574,7 +586,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
             return {"content": "\n".join(lines)}
 
     except Exception as e:
-        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
+        return get_error_response(INTERNAL_ERROR, locale, str(e))
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8080):
