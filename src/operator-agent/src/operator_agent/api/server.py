@@ -574,7 +574,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
             return {"content": "\n".join(lines)}
 
     except Exception as e:
-        return get_error_response(ErrorCode.INTERNAL_SERVER_ERROR, locale, str(e))
+        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8080):

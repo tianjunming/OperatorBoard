@@ -1,106 +1,107 @@
-"""Error code definitions and localization for operator-agent API."""
+"""Error code definitions for operator-agent API.
 
-from enum import Enum
-from dataclasses import dataclass
-from typing import Optional
+This module re-exports the unified error system from agent_framework.
+For new code, use:
+    from agent_framework.api.errors import ErrorCode, AgentAPIError, get_error_response
+"""
 
+# Re-export from agent_framework for backward compatibility
+from agent_framework.api.errors import (
+    ErrorCode,
+    ErrorCategory,
+    AgentAPIError,
+    APIError,
+    get_error_response,
+    UNKNOWN_ERROR,
+    INVALID_REQUEST,
+    INTERNAL_ERROR,
+    INTENT_DETECTION_FAILED,
+    INTENT_INVALID_QUERY,
+    TOOL_NOT_FOUND,
+    TOOL_EXECUTION_FAILED,
+    SKILL_NOT_FOUND,
+    SKILL_EXECUTION_FAILED,
+    CONFIG_NOT_FOUND,
+    CONFIG_LOAD_FAILED,
+    INVALID_CONFIG,
+    RAG_NOT_INITIALIZED,
+    RAG_RETRIEVAL_FAILED,
+    GET_SITE_CELLS_FAILED,
+    GET_INDICATORS_FAILED,
+    GET_OPERATORS_FAILED,
+    GET_AVAILABLE_TIMES_FAILED,
+    NL2SQL_QUERY_FAILED,
+    SQL_EXECUTION_FAILED,
+    SQL_INVALID_QUERY,
+    EXTERNAL_SERVICE_ERROR,
+    SERVICE_TIMEOUT,
+    SERVICE_UNAVAILABLE,
+    MISSING_API_KEY,
+    INVALID_API_KEY,
+    AUTH_FAILED,
+)
+
+# For backward compatibility - re-export legacy error codes
+# These map to the new unified ErrorCode objects
+from agent_framework.api.errors import (
+    AGENT_NOT_INITIALIZED,
+    AGENT_EXECUTION_FAILED,
+)
+
+__all__ = [
+    # Core classes
+    "ErrorCode",
+    "ErrorCategory",
+    "AgentAPIError",
+    "APIError",
+    "get_error_response",
+    # General
+    "UNKNOWN_ERROR",
+    "INVALID_REQUEST",
+    "INTERNAL_ERROR",
+    # Agent
+    "AGENT_NOT_INITIALIZED",
+    "AGENT_EXECUTION_FAILED",
+    # Intent
+    "INTENT_DETECTION_FAILED",
+    "INTENT_INVALID_QUERY",
+    # Tool/Skill
+    "TOOL_NOT_FOUND",
+    "TOOL_EXECUTION_FAILED",
+    "SKILL_NOT_FOUND",
+    "SKILL_EXECUTION_FAILED",
+    # Config
+    "CONFIG_NOT_FOUND",
+    "CONFIG_LOAD_FAILED",
+    "INVALID_CONFIG",
+    # RAG
+    "RAG_NOT_INITIALIZED",
+    "RAG_RETRIEVAL_FAILED",
+    # Data
+    "GET_SITE_CELLS_FAILED",
+    "GET_INDICATORS_FAILED",
+    "GET_OPERATORS_FAILED",
+    "GET_AVAILABLE_TIMES_FAILED",
+    # NL2SQL
+    "NL2SQL_QUERY_FAILED",
+    "SQL_EXECUTION_FAILED",
+    "SQL_INVALID_QUERY",
+    # External
+    "EXTERNAL_SERVICE_ERROR",
+    "SERVICE_TIMEOUT",
+    "SERVICE_UNAVAILABLE",
+    # Auth
+    "MISSING_API_KEY",
+    "INVALID_API_KEY",
+    "AUTH_FAILED",
+    # Locale helpers
+    "get_locale_from_headers",
+    "SUPPORTED_LOCALES",
+]
+
+
+# Locale configuration
 SUPPORTED_LOCALES = ("en", "zh")
-
-
-class ErrorCode(Enum):
-    """Error codes for operator-agent API.
-
-    Format: E####
-    - E1xxx: Intent detection errors
-    - E2xxx: Data fetching errors (site cells, indicators, operators)
-    - E3xxx: NL2SQL query errors
-    - E4xxx: Authentication/Authorization errors
-    - E5xxx: Internal server errors
-    """
-
-    # Intent detection errors
-    INTENT_DETECTION_FAILED = ("E1001", "Intent detection failed", "意图检测失败")
-
-    # Data fetching errors
-    GET_SITE_CELLS_FAILED = ("E2001", "Failed to get site data", "获取站点数据失败")
-    GET_INDICATORS_FAILED = ("E2002", "Failed to get indicator data", "获取指标数据失败")
-    GET_OPERATORS_FAILED = ("E2003", "Failed to get operator list", "获取运营商列表失败")
-    GET_AVAILABLE_TIMES_FAILED = ("E2004", "Failed to get available times", "获取可用时间失败")
-
-    # NL2SQL errors
-    NL2SQL_QUERY_FAILED = ("E3001", "NL2SQL query failed", "NL2SQL查询失败")
-    SQL_EXECUTION_FAILED = ("E3002", "SQL execution failed", "SQL执行失败")
-
-    # Auth errors
-    MISSING_API_KEY = ("E4001", "API key missing", "缺少API密钥")
-    INVALID_API_KEY = ("E4002", "Invalid API key", "无效的API密钥")
-
-    # Internal errors
-    INTERNAL_SERVER_ERROR = ("E5001", "Internal server error", "内部服务器错误")
-
-    @property
-    def code(self) -> str:
-        """Get the error code string."""
-        return self.value[0]
-
-    @property
-    def message_en(self) -> str:
-        """Get the English error message."""
-        return self.value[1]
-
-    @property
-    def message_zh(self) -> str:
-        """Get the Chinese error message."""
-        return self.value[2]
-
-    def get_message(self, locale: str = "zh") -> str:
-        """Get the localized error message.
-
-        Args:
-            locale: Language code ('en' for English, 'zh' for Chinese)
-
-        Returns:
-            Localized error message
-        """
-        if locale == "en":
-            return self.message_en
-        return self.message_zh
-
-
-@dataclass
-class ErrorResponse:
-    """Structured error response."""
-
-    code: str
-    message: str
-    detail: Optional[str] = None
-
-    def to_dict(self) -> dict:
-        """Convert to dictionary for JSON serialization."""
-        result = {"code": self.code, "message": self.message}
-        if self.detail:
-            result["detail"] = self.detail
-        return result
-
-
-def get_error_response(
-    code: ErrorCode, locale: str = "zh", detail: Optional[str] = None
-) -> dict:
-    """Get error response dict with localized message.
-
-    Args:
-        code: The error code enum value
-        locale: Language code ('en' for English, 'zh' for Chinese), defaults to 'zh'
-        detail: Optional additional detail message
-
-    Returns:
-        Dictionary with code, message, and optional detail fields
-    """
-    message = code.get_message(locale)
-    resp = {"code": code.code, "message": message}
-    if detail:
-        resp["detail"] = detail
-    return resp
 
 
 def get_locale_from_headers(headers: dict) -> str:
