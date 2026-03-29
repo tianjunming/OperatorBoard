@@ -7,6 +7,7 @@ from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStore as LangChainVectorStore
 
 from ..core.exceptions import VectorStoreError
+from .loaders import BaseLoader
 
 
 def _get_chroma_vectorstore():
@@ -259,3 +260,118 @@ class VectorStoreManager:
             self._stores[store_name] = store
         except Exception as e:
             raise VectorStoreError(f"Failed to load vector store: {e}") from e
+
+    def add_loader_documents(
+        self,
+        store_name: str,
+        loader: BaseLoader,
+        **kwargs
+    ) -> int:
+        """
+        从加载器添加文档到向量存储.
+
+        Args:
+            store_name: 向量存储名称
+            loader: BaseLoader 实例
+            **kwargs: 额外参数传递给 loader.load()
+        Returns:
+            添加的文档数量
+        """
+        if store_name not in self._stores:
+            raise VectorStoreError(f"Vector store '{store_name}' not found")
+
+        documents = loader.load()
+        if documents:
+            self._stores[store_name].add_documents(documents, **kwargs)
+        return len(documents)
+
+    async def aadd_loader_documents(
+        self,
+        store_name: str,
+        loader: BaseLoader,
+        **kwargs
+    ) -> int:
+        """异步版本 add_loader_documents"""
+        if store_name not in self._stores:
+            raise VectorStoreError(f"Vector store '{store_name}' not found")
+
+        documents = loader.load()
+        if documents:
+            await self._stores[store_name].aadd_documents(documents, **kwargs)
+        return len(documents)
+
+    def create_from_loader(
+        self,
+        store_name: str,
+        loader: BaseLoader,
+        embeddings: Any,
+        persist_directory: Optional[str] = None,
+        collection_name: str = "default",
+        **kwargs
+    ) -> LangChainVectorStore:
+        """
+        从加载器创建向量存储.
+
+        Args:
+            store_name: 存储名称
+            loader: BaseLoader 实例
+            embeddings: Embeddings 函数
+            persist_directory: 持久化目录
+            collection_name: 集合名称
+        Returns:
+            创建的向量存储
+        """
+        ChromaVectorStore = _get_chroma_vectorstore()
+
+        documents = loader.load()
+
+        if persist_directory:
+            store = ChromaVectorStore.from_documents(
+                documents=documents,
+                embedding=embeddings,
+                persist_directory=persist_directory,
+                collection_name=collection_name,
+            )
+        else:
+            store = ChromaVectorStore.from_documents(
+                documents=documents,
+                embedding=embeddings,
+                collection_name=collection_name,
+            )
+
+        self._stores[store_name] = store
+        return store
+
+    def create_hybrid(
+        self,
+        store_name: str,
+        loaders: List[BaseLoader],
+        embeddings: Any,
+        weights: Optional[Dict[str, float]] = None,
+        persist_directory: Optional[str] = None,
+        collection_name: str = "default",
+        **kwargs
+    ) -> LangChainVectorStore:
+        """
+        从多个加载器创建混合向量存储.
+
+        Args:
+            store_name: 存储名称
+            loaders: 加载器列表
+            embeddings: Embeddings 函数
+            weights: 权重字典
+            persist_directory: 持久化目录
+        Returns:
+            创建的向量存储
+        """
+        from .loaders import HybridLoader
+
+        hybrid_loader = HybridLoader(loaders, weights)
+        return self.create_from_loader(
+            store_name=store_name,
+            loader=hybrid_loader,
+            embeddings=embeddings,
+            persist_directory=persist_directory,
+            collection_name=collection_name,
+            **kwargs
+        )

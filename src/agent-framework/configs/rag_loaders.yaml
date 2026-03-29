@@ -1,0 +1,103 @@
+# RAG 语料加载器配置
+rag_loaders:
+  # 目录加载器
+  directory_sources:
+    - name: "telecom_docs"
+      type: "directory"
+      path: "./data/telecom_knowledge"
+      recursive: true
+      glob_patterns:
+        - "**/*.txt"
+        - "**/*.md"
+        - "**/*.json"
+      exclude_patterns:
+        - "*.tmp"
+        - "__pycache__"
+        - ".git"
+        - "*.pyc"
+      chunk_size: 1000
+      chunk_overlap: 200
+      enabled: true
+
+    - name: "protocol_docs"
+      type: "directory"
+      path: "./data/protocols"
+      recursive: true
+      glob_patterns:
+        - "**/*.md"
+        - "**/*.txt"
+      exclude_patterns:
+        - "*.tmp"
+      chunk_size: 800
+      chunk_overlap: 100
+      enabled: false
+
+  # 数据库加载器
+  database_sources:
+    - name: "operator_data"
+      type: "database"
+      enabled: false
+      connection:
+        host: "${DB_HOST:localhost}"
+        port: 3306
+        user: "${DB_USERNAME}"
+        password: "${DB_PASSWORD}"
+        database: "operator_db"
+      query_template: |
+        SELECT title, content, category, created_at
+        FROM knowledge_base
+        WHERE deleted_at IS NULL
+        AND updated_at > '{last_update}'
+      params:
+        last_update: "2024-01-01"
+      metadata_columns:
+        - category
+        - created_at
+      refresh_interval: 3600
+
+    - name: "equipment_db"
+      type: "database"
+      enabled: false
+      connection:
+        host: "${DB_HOST:localhost}"
+        port: 3306
+        user: "${DB_USERNAME}"
+        password: "${DB_PASSWORD}"
+        database: "equipment_db"
+      query_template: |
+        SELECT equipment_name as name, description as content,
+               equipment_type, manufacturer
+        FROM equipment_catalog
+        WHERE status = 'active'
+      metadata_columns:
+        - equipment_type
+        - manufacturer
+      refresh_interval: 7200
+
+  # 混合加载器
+  hybrid_sources:
+    - name: "combined_knowledge"
+      type: "hybrid"
+      sources:
+        - "telecom_docs"
+        - "operator_data"
+      weights:
+        telecom_docs: 0.7
+        operator_data: 0.3
+      priority:
+        - "telecom_docs"
+        - "operator_data"
+      deduplicate: true
+      enabled: false
+
+# 默认向量存储配置
+vectorstore:
+  default_type: "chroma"
+  persist_directory: "./data/vectorstore"
+  collection_name: "default"
+
+# Embeddings 配置
+embeddings:
+  provider: "openai"
+  model: "text-embedding-3-small"
+  api_key: "${OPENAI_API_KEY:}"
