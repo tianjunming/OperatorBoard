@@ -174,6 +174,21 @@ class RAGRetriever:
 - `retrieve_by_documents()` - 以文本文档为查询
 - `get_relevant_documents()` - LangChain 兼容接口
 
+**语料加载器 (RAG Loaders):**
+
+| 组件 | 说明 |
+|------|------|
+| `BaseLoader` | 语料加载器抽象基类 |
+| `DirectoryLoader` | 目录扫描，支持 txt/md/json/csv/pdf/docx，自动分块 |
+| `DatabaseLoader` | MySQL 查询，支持刷新间隔和行转换函数 |
+| `HybridLoader` | 组合多加载器，支持权重配置和去重 |
+| `DocumentLoaderManager` | 统一加载器管理，支持 YAML 配置 |
+
+**VectorStoreManager 扩展方法:**
+- `create_from_loader()`: 从加载器创建向量存储
+- `create_hybrid()`: 从多加载器创建混合向量存储
+- `add_loader_documents()`: 从加载器添加文档
+
 ### 2.5 MCP 协议
 
 **JSON-RPC 2.0 实现:**

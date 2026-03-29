@@ -18,6 +18,7 @@ D--claude-OperatorBoard/
 │   ├── agent-framework/     # 核心框架
 │   │   ├── pyproject.toml
 │   │   ├── configs/        # YAML 配置
+│   │   │   └── rag_loaders.yaml  # RAG 语料加载器配置
 │   │   └── agent_framework/
 │   │       ├── api/        # FastAPI 服务器基类
 │   │       ├── core/        # 核心抽象
@@ -25,6 +26,7 @@ D--claude-OperatorBoard/
 │   │       ├── skills/       # Skills 系统
 │   │       ├── mcp/          # MCP 协议
 │   │       ├── rag/          # RAG 系统
+│   │       │   └── loaders/  # 语料加载器 (DirectoryLoader, DatabaseLoader, HybridLoader)
 │   │       ├── config/       # 配置加载
 │   │       └── utils/        # 工具函数
 │   │
