@@ -1,57 +1,135 @@
-.chat-input-container {
-  padding: 16px 20px;
+/* ChatInput Styles - 深度优化版 */
+
+.chat-input-wrapper {
+  position: relative;
+  padding: 12px 15px;
   background: white;
   border-top: 1px solid #eee;
+  flex-shrink: 0;
 }
 
-.input-wrapper {
+.chat-input-wrapper.focused {
+  background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
+}
+
+.input-decoration {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #667eea, #764ba2, #667eea);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.input-decoration.top {
+  top: 0;
+}
+
+.input-decoration.bottom {
+  bottom: 0;
+}
+
+.chat-input-wrapper.focused .input-decoration {
+  opacity: 1;
+}
+
+.chat-input-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.input-main {
   display: flex;
-  gap: 12px;
   align-items: flex-end;
-  background: #f5f7fa;
-  border-radius: 24px;
-  padding: 8px 8px 8px 20px;
-  transition: box-shadow 0.2s;
+  gap: 9px;
+  background: #f8f9fa;
+  border-radius: 15px;
+  padding: 6px 6px 6px 15px;
+  transition: all 0.3s;
+  border: 2px solid transparent;
 }
 
-.input-wrapper:focus-within {
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+.chat-input-wrapper.focused .input-main {
+  background: white;
+  box-shadow: 0 3px 15px rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.2);
 }
 
 .chat-input {
   flex: 1;
   border: none;
   background: transparent;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 11px;
+  line-height: 1.6;
   resize: none;
   outline: none;
   color: #333;
-  max-height: 150px;
-  min-height: 24px;
+  max-height: 113px;
+  min-height: 18px;
+  padding: 5px 0;
+  font-family: inherit;
 }
 
 .chat-input::placeholder {
-  color: #999;
+  color: #aaa;
+  font-size: 10px;
 }
 
 .chat-input:disabled {
   opacity: 0.6;
 }
 
+.input-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.action-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-radius: 9px;
+  font-size: 8px;
+  color: #667eea;
+  font-weight: 500;
+  animation: hintFadeIn 0.3s ease-out;
+}
+
+@keyframes hintFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .send-button {
-  width: 40px;
-  height: 40px;
+  width: 33px;
+  height: 33px;
   border: none;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: #e0e0e0;
+  color: #999;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s, opacity 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
+}
+
+.send-button.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 3px 11px rgba(102, 126, 234, 0.4);
 }
 
 .send-button:hover:not(:disabled) {
@@ -63,20 +141,49 @@
 }
 
 .send-button:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.send-button svg {
-  width: 18px;
-  height: 18px;
-}
-
-.input-hints {
+.input-footer {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-top: 8px;
-  padding: 0 12px;
-  font-size: 11px;
-  color: #999;
+  padding: 0 9px;
+}
+
+.input-hint {
+  font-size: 8px;
+  color: #bbb;
+}
+
+.char-count {
+  font-size: 8px;
+  color: #ccc;
+  font-family: 'Monaco', 'Consolas', monospace;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 640px) {
+  .chat-input-wrapper {
+    padding: 9px 10px;
+  }
+
+  .input-main {
+    padding: 5px 5px 5px 12px;
+    border-radius: 12px;
+  }
+
+  .input-footer {
+    display: none;
+  }
+
+  .action-hint {
+    display: none;
+  }
+
+  .send-button {
+    width: 30px;
+    height: 30px;
+  }
 }
