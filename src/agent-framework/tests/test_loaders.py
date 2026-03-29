@@ -122,9 +122,9 @@ class TestDirectoryLoader:
 
     def test_glob_pattern_filtering(self):
         """Test glob pattern filtering."""
-        Path(self.temp_dir) / "test.txt"
-        Path(self.temp_dir) / "test.md"
-        Path(self.temp_dir) / "other.txt"
+        (Path(self.temp_dir) / "test.txt").write_text("txt content", encoding="utf-8")
+        (Path(self.temp_dir) / "test.md").write_text("# markdown", encoding="utf-8")
+        (Path(self.temp_dir) / "other.txt").write_text("other content", encoding="utf-8")
 
         loader = DirectoryLoader(
             self.temp_dir,
@@ -138,8 +138,8 @@ class TestDirectoryLoader:
 
     def test_exclude_patterns(self):
         """Test exclude patterns."""
-        Path(self.temp_dir) / "test.txt"
-        Path(self.temp_dir) / "exclude.tmp"
+        (Path(self.temp_dir) / "test.txt").write_text("content", encoding="utf-8")
+        (Path(self.temp_dir) / "exclude.tmp").write_text("tmp content", encoding="utf-8")
         (Path(self.temp_dir) / "subdir").mkdir()
         (Path(self.temp_dir) / "subdir" / "nested.txt").write_text("nested", encoding="utf-8")
 
@@ -520,6 +520,7 @@ class TestDocumentLoaderManager:
         mock_loader.source = "test"
         mock_loader.is_cached = True
         mock_loader.load.return_value = []
+        mock_loader.invalidate_cache = MagicMock()
 
         manager = DocumentLoaderManager()
         manager.register_loader("test", mock_loader)

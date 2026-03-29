@@ -76,6 +76,15 @@ class DirectoryLoader(BaseLoader):
         for pattern in self._exclude_patterns:
             if file_path.match(pattern):
                 return False
+
+        if not self._recursive:
+            try:
+                file_path.relative_to(self._directory)
+                if file_path.parent != self._directory:
+                    return False
+            except ValueError:
+                return False
+
         return True
 
     def _extract_file_metadata(self, file_path: Path) -> Dict[str, Any]:
