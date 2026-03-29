@@ -71,6 +71,7 @@ class VectorStoreManager:
         self,
         name: str,
         embedding_function: Any,
+        documents: Optional[List[Document]] = None,
     ):
         """
         Create a FAISS vector store.
@@ -78,14 +79,22 @@ class VectorStoreManager:
         Args:
             name: Store name
             embedding_function: Embeddings to use
+            documents: Documents to add to the store (required for FAISS creation)
         Returns:
             FAISS vector store
         """
         FAISSVectorStore = _get_faiss_vectorstore()
         try:
-            store = FAISSVectorStore(embedding_function=embedding_function)
+            if documents is None:
+                raise VectorStoreError("FAISS requires documents to be provided")
+            store = FAISSVectorStore.from_documents(
+                documents=documents,
+                embedding=embedding_function,
+            )
             self._stores[name] = store
             return store
+        except VectorStoreError:
+            raise
         except Exception as e:
             raise VectorStoreError(f"Failed to create FAISS store: {e}") from e
 

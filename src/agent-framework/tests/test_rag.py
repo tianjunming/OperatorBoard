@@ -60,10 +60,11 @@ class TestVectorStoreManager:
         """Test creating a FAISS vector store."""
         manager = VectorStoreManager()
         mock_embeddings = MagicMock()
-        mock_embeddings.embed_documents.return_value = [[1.0, 2.0]]
-        mock_embeddings.embed_query.return_value = [1.0, 2.0]
+        mock_embeddings.embed_documents.return_value = [[1.0, 2.0] * 128]
+        mock_embeddings.embed_query.return_value = [1.0, 2.0] * 128
 
-        store = manager.create_faiss("test", mock_embeddings)
+        documents = [Document(page_content="test content", metadata={})]
+        store = manager.create_faiss("test", mock_embeddings, documents)
         assert store is not None
         assert "test" in manager.list_stores()
 
@@ -71,7 +72,11 @@ class TestVectorStoreManager:
         """Test getting a vector store."""
         manager = VectorStoreManager()
         mock_embeddings = MagicMock()
-        store = manager.create_faiss("test", mock_embeddings)
+        mock_embeddings.embed_documents.return_value = [[1.0, 2.0] * 128]
+        mock_embeddings.embed_query.return_value = [1.0, 2.0] * 128
+
+        documents = [Document(page_content="test content", metadata={})]
+        store = manager.create_faiss("test", mock_embeddings, documents)
 
         retrieved = manager.get_store("test")
         assert retrieved == store
@@ -85,7 +90,11 @@ class TestVectorStoreManager:
         """Test deleting a vector store."""
         manager = VectorStoreManager()
         mock_embeddings = MagicMock()
-        manager.create_faiss("test", mock_embeddings)
+        mock_embeddings.embed_documents.return_value = [[1.0, 2.0] * 128]
+        mock_embeddings.embed_query.return_value = [1.0, 2.0] * 128
+
+        documents = [Document(page_content="test content", metadata={})]
+        manager.create_faiss("test", mock_embeddings, documents)
         manager.delete_store("test")
         assert "test" not in manager.list_stores()
 
@@ -115,7 +124,11 @@ class TestRAGRetriever:
         """Test setting default store."""
         vector_manager = VectorStoreManager()
         mock_embeddings = MagicMock()
-        vector_manager.create_faiss("test", mock_embeddings)
+        mock_embeddings.embed_documents.return_value = [[1.0, 2.0] * 128]
+        mock_embeddings.embed_query.return_value = [1.0, 2.0] * 128
+
+        documents = [Document(page_content="test content", metadata={})]
+        vector_manager.create_faiss("test", mock_embeddings, documents)
 
         retriever = RAGRetriever(vector_manager)
         retriever.set_default_store("test")
@@ -123,8 +136,9 @@ class TestRAGRetriever:
 
     def test_set_invalid_default_store(self):
         """Test setting invalid default store raises error."""
+        from agent_framework.core.exceptions import RAGError
         vector_manager = VectorStoreManager()
         retriever = RAGRetriever(vector_manager)
 
-        with pytest.raises(VectorStoreError):
+        with pytest.raises(RAGError):
             retriever.set_default_store("nonexistent")
