@@ -95,8 +95,18 @@ get_error_response(GET_SITE_CELLS_FAILED, locale="zh", detail="timeout")
   - `tools.yaml` - Java 服务工具配置
   - `coverage_prediction.yaml` - 覆盖预测 LLM 配置
   - `simulation.yaml` - 仿真参数配置
+  - `rag_loaders.yaml` - RAG 语料加载器配置
 - Java config: `src/main/resources/application.yml`
 - Environment variables: `DB_USERNAME`, `DB_PASSWORD`, `NL2SQL_SERVICE_URL`, `INTENT_API_KEY`, `INTENT_LLM_ENDPOINT`, `INTENT_LLM_MODEL`
+
+### RAG Module (语料加载器)
+- `agent_framework.rag.loaders.BaseLoader` - 语料加载器抽象基类
+- `agent_framework.rag.loaders.DirectoryLoader` - 目录扫描加载器 (txt/md/json/csv/pdf/docx)
+- `agent_framework.rag.loaders.DatabaseLoader` - MySQL 数据库加载器
+- `agent_framework.rag.loaders.HybridLoader` - 混合加载器 (多数据源组合)
+- `agent_framework.rag.loaders.DocumentLoaderManager` - 统一加载器管理器
+- `agent_framework.rag.VectorStoreManager` - 向量存储管理器 (扩展支持加载器)
+- **配置**: `configs/rag_loaders.yaml` - 目录/数据库/混合加载器配置
 
 ### Intent Detection (LLM-based)
 - **Model**: MiniMax M2-her (intent_detection.yaml 配置)

@@ -152,6 +152,27 @@
 - **Pinecone**: 云服务，有成本
 - **Milvus**: 功能强但部署复杂
 
+### 3.5 RAG 语料加载器
+
+agent-framework 新增 RAG 语料加载器模块，支持从多种数据源加载语料:
+
+| 组件 | 技术选型 | 说明 |
+|------|----------|------|
+| DirectoryLoader | Python | 递归扫描目录，支持 txt/md/json/csv/pdf/docx，自动分块 |
+| DatabaseLoader | mysql-connector-python | MySQL 查询，支持刷新间隔和行转换函数 |
+| HybridLoader | Python | 组合多加载器，支持权重配置和去重 |
+| DocumentLoaderManager | Python + YAML | 统一管理器，支持 YAML 配置加载 |
+
+**VectorStoreManager 扩展方法**:
+- `create_from_loader()`: 从加载器创建向量存储
+- `create_hybrid()`: 从多加载器创建混合向量存储
+- `add_loader_documents()`: 从加载器添加文档
+
+**依赖更新**:
+- `pypdf>=4.0.0` - PDF 解析
+- `docx2txt>=0.8` - DOCX 解析
+- `mysql-connector-python>=8.0.0` - MySQL 连接
+
 ## 4. NL2SQL 实现方案
 
 ### 4.1 方案对比
