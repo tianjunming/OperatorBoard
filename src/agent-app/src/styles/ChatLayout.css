@@ -1,0 +1,23 @@
+.chat-layout {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.chat-layout .chat-sidebar {
+  transition: width 0.3s ease, transform 0.3s ease;
+}
+
+.chat-layout .chat-sidebar.collapsed {
+  width: 0;
+  transform: translateX(-100%);
+}
+
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}

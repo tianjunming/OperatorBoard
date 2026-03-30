@@ -4,6 +4,7 @@ import { URL } from 'url';
 const PORT = process.env.PORT || 8000;
 const OPERATOR_AGENT_URL = process.env.OPERATOR_AGENT_URL || 'http://localhost:8080';
 const NL2SQL_SERVICE_URL = process.env.NL2SQL_SERVICE_URL || 'http://localhost:8081';
+const AUTH_AGENT_URL = process.env.AUTH_AGENT_URL || 'http://localhost:8084';
 const OPERATOR_AGENT_API_KEY = process.env.OPERATOR_AGENT_API_KEYS || '';
 
 let pendingConfirmation = null;
@@ -36,8 +37,8 @@ function sendJSON(res, statusCode, data) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   });
   res.end(JSON.stringify(data));
 }
@@ -106,8 +107,8 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     });
     res.end();
     return;
@@ -176,6 +177,106 @@ const server = http.createServer(async (req, res) => {
         mcp: true,
         rag: true,
       });
+    }
+    return;
+  }
+
+  // Auth Agent API - proxy to auth-agent (8084)
+  if (url.pathname.startsWith('/api/auth/') && ['GET', 'POST', 'PUT', 'DELETE'].includes(req.method)) {
+    const authPath = url.pathname.replace('/api/auth/', '');
+    try {
+      const response = await fetch(`${AUTH_AGENT_URL}/auth/${authPath}${url.search}`, {
+        method: req.method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(req.headers.authorization ? { 'Authorization': req.headers.authorization } : {}),
+        },
+        body: ['POST', 'PUT'].includes(req.method) ? JSON.stringify(await parseBody(req)) : undefined,
+      });
+      const data = await response.json();
+      sendJSON(res, response.status, data);
+    } catch (error) {
+      sendJSON(res, 500, { error: error.message });
+    }
+    return;
+  }
+
+  // User Management API - proxy to auth-agent (8084)
+  if (url.pathname.startsWith('/api/users') && ['GET', 'POST', 'PUT', 'DELETE'].includes(req.method)) {
+    const userPath = url.pathname.replace('/api/', '');
+    try {
+      const response = await fetch(`${AUTH_AGENT_URL}/${userPath}${url.search}`, {
+        method: req.method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(req.headers.authorization ? { 'Authorization': req.headers.authorization } : {}),
+        },
+        body: ['POST', 'PUT'].includes(req.method) ? JSON.stringify(await parseBody(req)) : undefined,
+      });
+      const data = await response.json();
+      sendJSON(res, response.status, data);
+    } catch (error) {
+      sendJSON(res, 500, { error: error.message });
+    }
+    return;
+  }
+
+  // Role Management API - proxy to auth-agent (8084)
+  if (url.pathname.startsWith('/api/roles') && ['GET', 'POST', 'PUT', 'DELETE'].includes(req.method)) {
+    const rolePath = url.pathname.replace('/api/', '');
+    try {
+      const response = await fetch(`${AUTH_AGENT_URL}/${rolePath}${url.search}`, {
+        method: req.method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(req.headers.authorization ? { 'Authorization': req.headers.authorization } : {}),
+        },
+        body: ['POST', 'PUT'].includes(req.method) ? JSON.stringify(await parseBody(req)) : undefined,
+      });
+      const data = await response.json();
+      sendJSON(res, response.status, data);
+    } catch (error) {
+      sendJSON(res, 500, { error: error.message });
+    }
+    return;
+  }
+
+  // Permission Management API - proxy to auth-agent (8084)
+  if (url.pathname.startsWith('/api/permissions') && ['GET', 'POST', 'PUT', 'DELETE'].includes(req.method)) {
+    const permPath = url.pathname.replace('/api/', '');
+    try {
+      const response = await fetch(`${AUTH_AGENT_URL}/${permPath}${url.search}`, {
+        method: req.method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(req.headers.authorization ? { 'Authorization': req.headers.authorization } : {}),
+        },
+        body: ['POST', 'PUT'].includes(req.method) ? JSON.stringify(await parseBody(req)) : undefined,
+      });
+      const data = await response.json();
+      sendJSON(res, response.status, data);
+    } catch (error) {
+      sendJSON(res, 500, { error: error.message });
+    }
+    return;
+  }
+
+  // Chat API - proxy to auth-agent (8084)
+  if (url.pathname.startsWith('/api/chat/') && ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    const chatPath = url.pathname.replace('/api/', '');
+    try {
+      const response = await fetch(`${AUTH_AGENT_URL}/${chatPath}${url.search}`, {
+        method: req.method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(req.headers.authorization ? { 'Authorization': req.headers.authorization } : {}),
+        },
+        body: ['POST', 'PUT', 'PATCH'].includes(req.method) ? JSON.stringify(await parseBody(req)) : undefined,
+      });
+      const data = await response.json();
+      sendJSON(res, response.status, data);
+    } catch (error) {
+      sendJSON(res, 500, { error: error.message });
     }
     return;
   }
@@ -407,6 +508,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`Agent API Server running on port ${PORT}`);
   console.log(`Proxying to Operator Agent at ${OPERATOR_AGENT_URL}`);
+  console.log(`Proxying to Auth Agent at ${AUTH_AGENT_URL}`);
 });
 
 export default server;

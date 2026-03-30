@@ -1,3 +1,9 @@
+-- 权限管理表
+SOURCE auth_schema.sql;
+
+-- 聊天历史表
+SOURCE chat_schema.sql;
+
 -- 运营商信息表
 SET FOREIGN_KEY_CHECKS=0;
 DROP TABLE IF EXISTS operator_info;

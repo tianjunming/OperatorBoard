@@ -2,12 +2,20 @@ import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { useI18n } from '../i18n';
 import './ChatMessage.css';
 
-function ChatMessage({ message }) {
+function ChatMessage({ message, onResend }) {
   const { role, content, isError } = message;
+  const { locale } = useI18n();
 
-  const isStreaming = !message.complete && role === 'assistant' && content === '';
+  const isStreaming = !message.complete && role === 'assistant';
+
+  const handleClick = () => {
+    if (role === 'user' && onResend && content) {
+      onResend(content);
+    }
+  };
 
   const processedContent = useMemo(() => {
     if (!content) return '';
@@ -16,7 +24,7 @@ function ChatMessage({ message }) {
 
   if (role === 'user') {
     return (
-      <div className="chat-message user-message">
+      <div className="chat-message user-message" onClick={handleClick} style={{ cursor: onResend ? 'pointer' : 'default' }}>
         <div className="message-avatar user-avatar">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
@@ -24,6 +32,7 @@ function ChatMessage({ message }) {
         </div>
         <div className="message-content">
           <div className="message-text">{content}</div>
+          {onResend && <div className="message-hint">{locale === 'zh' ? '点击重新发送' : 'Click to resend'}</div>}
         </div>
       </div>
     );

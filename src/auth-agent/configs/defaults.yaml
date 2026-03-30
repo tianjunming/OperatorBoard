@@ -1,0 +1,14 @@
+# 数据库配置
+database:
+  host: "localhost"
+  port: 3306
+  username: "root"
+  password: ""
+  database: "operatorboard"
+
+# JWT配置
+jwt:
+  secret_key: "your-secret-key-change-in-production"
+  algorithm: "HS256"
+  access_token_expire_minutes: 15
+  refresh_token_expire_days: 7

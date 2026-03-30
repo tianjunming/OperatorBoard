@@ -1,13 +1,27 @@
 import React, { useState } from 'react';
 import ChatContainer from './components/ChatContainer.jsx';
 import OperatorDashboard from './components/OperatorDashboard';
+import AdminDashboard from './components/AdminDashboard';
+import AuthLogin from './components/AuthLogin';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
-import { useI18n } from './i18n';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { ChatProvider } from './context/ChatContext';
+import { I18nProvider, useI18n } from './i18n';
 import './styles/Dashboard.css';
 
-function App() {
+function AppContent() {
+  const { isAuthenticated, isSuperuser } = useAuth();
   const [view, setView] = useState('chat');
   const { locale, toggleLocale, t } = useI18n();
+
+  const handleNavigate = (newView) => {
+    // Check permissions for admin view
+    if (newView === 'admin' && !isSuperuser) {
+      alert('You do not have permission to access the admin panel.');
+      return;
+    }
+    setView(newView);
+  };
 
   return (
     <div className="app">
@@ -24,21 +38,33 @@ function App() {
         <nav className="app-nav">
           <button
             className={`nav-btn ${view === 'chat' ? 'active' : ''}`}
-            onClick={() => setView('chat')}
+            onClick={() => handleNavigate('chat')}
           >
             {t('chat')}
           </button>
           <button
             className={`nav-btn ${view === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setView('dashboard')}
+            onClick={() => handleNavigate('dashboard')}
           >
             {t('dashboard')}
           </button>
+          {isSuperuser && (
+            <button
+              className={`nav-btn ${view === 'admin' ? 'active' : ''}`}
+              onClick={() => handleNavigate('admin')}
+            >
+              {t('admin')}
+            </button>
+          )}
         </nav>
       </header>
       <main className="app-main">
         <ErrorBoundary name="Dashboard">
-          {view === 'chat' ? (
+          {view === 'login' ? (
+            <AuthLogin />
+          ) : view === 'admin' ? (
+            <AdminDashboard />
+          ) : view === 'chat' ? (
             <ErrorBoundary name="Chat">
               <ChatContainer />
             </ErrorBoundary>
@@ -48,6 +74,18 @@ function App() {
         </ErrorBoundary>
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <I18nProvider>
+      <AuthProvider>
+        <ChatProvider>
+          <AppContent />
+        </ChatProvider>
+      </AuthProvider>
+    </I18nProvider>
   );
 }
 

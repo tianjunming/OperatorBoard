@@ -567,3 +567,16 @@
     padding: 9px;
   }
 }
+
+/* ===== User Message Click to Resend ===== */
+.user-message:hover .message-hint {
+  opacity: 1;
+}
+
+.message-hint {
+  font-size: 11px;
+  color: #888;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
