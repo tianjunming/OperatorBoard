@@ -44,6 +44,10 @@ class OperatorAgent(BaseAgent):
         # Intent detection config
         self._intent_detection_config = intent_detection_config or self._default_intent_detection_config()
 
+        # Operator cache for dynamic mapping
+        self._operators_cache: List[Dict[str, Any]] = []
+        self._operator_mapping_cache: Dict[str, str] = {}  # alias -> official name
+
         # Execution tracking
         self._tool_results: Dict[str, Any] = {}
         self._execution_history: List[Dict[str, Any]] = []
@@ -59,6 +63,138 @@ class OperatorAgent(BaseAgent):
             "temperature": 0.1,
             "prompt_template": "",
         }
+
+    async def _fetch_operators(self) -> List[Dict[str, Any]]:
+        """
+        Fetch operators from the NL2SQL service and build dynamic mapping.
+
+        Returns:
+            List of operator dictionaries
+        """
+        if self._operators_cache:
+            return self._operators_cache
+
+        try:
+            result = await self.call_java_service(
+                service_name="nl2sql-service",
+                endpoint="/operators",
+                method="GET",
+            )
+
+            if result.get("error"):
+                self._log(f"Failed to fetch operators: {result.get('error')}")
+                return []
+
+            operators = result.get("data", [])
+            if isinstance(operators, list):
+                self._operators_cache = operators
+                self._build_operator_mapping(operators)
+                self._log(f"Fetched {len(operators)} operators")
+            return operators
+        except Exception as e:
+            self._log(f"Error fetching operators: {e}")
+            return []
+
+    def _build_operator_mapping(self, operators: List[Dict[str, Any]]) -> None:
+        """
+        Build dynamic operator alias mapping from operator data.
+
+        Args:
+            operators: List of operator dictionaries
+        """
+        self._operator_mapping_cache = {}
+
+        for op in operators:
+            if not isinstance(op, dict):
+                continue
+
+            official_name = op.get("operatorName", "")
+            country = op.get("country", "")
+            region = op.get("region", "")
+            network_type = op.get("networkType", "")
+
+            if not official_name:
+                continue
+
+            # Add official name as-is (case insensitive)
+            self._operator_mapping_cache[official_name.lower()] = official_name
+
+            # Add country-specific aliases
+            if country and region:
+                # For Chinese operators, the database contains national-level data
+                # where each operator is associated with a primary region:
+                # - China Mobile = Beijing region
+                # - China Unicom = Shanghai region
+                # - China Telecom = Guangzhou region
+                # We do NOT create "city+operator" combination mappings
+                # as they don't correspond to actual database records
+                if country in ("中国", "China"):
+                    if "移动" in official_name or "Mobile" in official_name:
+                        # Add official name
+                        self._operator_mapping_cache["中国移动".lower()] = official_name
+                        self._operator_mapping_cache["移动".lower()] = official_name
+                        self._operator_mapping_cache["mobile".lower()] = official_name
+                    if "联通" in official_name or "Unicom" in official_name:
+                        # Add official name
+                        self._operator_mapping_cache["中国联通".lower()] = official_name
+                        self._operator_mapping_cache["联通".lower()] = official_name
+                        self._operator_mapping_cache["unicom".lower()] = official_name
+                    if "电信" in official_name or "Telecom" in official_name:
+                        # Add official name
+                        self._operator_mapping_cache["中国电信".lower()] = official_name
+                        self._operator_mapping_cache["电信".lower()] = official_name
+                        self._operator_mapping_cache["telecom".lower()] = official_name
+                # For global operators: "Deutsche Telekom" -> "Germany Deutsche Telekom"
+                else:
+                    # Add country name as alias
+                    self._operator_mapping_cache[f"{country} {official_name}".lower()] = official_name
+                    # Add short names
+                    if "Vodafone" in official_name:
+                        self._operator_mapping_cache["vodafone".lower()] = official_name
+                    if "Orange" in official_name:
+                        self._operator_mapping_cache["orange".lower()] = official_name
+                    if "Telefonica" in official_name:
+                        self._operator_mapping_cache["telefonica".lower()] = official_name
+                    if "Deutsche Telekom" in official_name or "Telekom" in official_name:
+                        self._operator_mapping_cache["telekom".lower()] = official_name
+                        self._operator_mapping_cache["deutsche telekom".lower()] = official_name
+                    if "BT Group" in official_name or "BT" in official_name:
+                        self._operator_mapping_cache["bt".lower()] = official_name
+                        self._operator_mapping_cache["bt group".lower()] = official_name
+                    if "T-Mobile" in official_name:
+                        self._operator_mapping_cache["t-mobile".lower()] = official_name
+
+    def _get_operator_from_query(self, query: str) -> Optional[str]:
+        """
+        Extract operator name from query using dynamic mapping.
+
+        Args:
+            query: User query string
+        Returns:
+            Official operator name if found, None otherwise
+        """
+        query_lower = query.lower()
+
+        # Sort aliases by length (longest first) to prefer more specific matches
+        sorted_aliases = sorted(self._operator_mapping_cache.items(), key=lambda x: len(x[0]), reverse=True)
+
+        # First check for matches in the mapping (longer aliases first)
+        for alias, official_name in sorted_aliases:
+            if alias in query_lower:
+                return official_name
+
+        # If no mapping match, try direct match with cached operators
+        if not self._operators_cache:
+            return None
+
+        for op in self._operators_cache:
+            if not isinstance(op, dict):
+                continue
+            op_name = op.get("operatorName", "").lower()
+            if op_name in query_lower:
+                return op.get("operatorName")
+
+        return None
 
     async def initialize(self) -> None:
         """Initialize the agent and all its components."""
@@ -344,25 +480,9 @@ class OperatorAgent(BaseAgent):
             elif "运营商" in query_lower or "operator" in query_lower:
                 intent = "operator_list"
 
-            # Extract operator name from common variations
-            if "北京联通" in query_lower or "beijing unicom" in query_lower:
-                operator_name = "中国联通"
-            elif "上海联通" in query_lower or "shanghai unicom" in query_lower:
-                operator_name = "中国联通"
-            elif "北京移动" in query_lower or "beijing mobile" in query_lower:
-                operator_name = "中国移动"
-            elif "上海移动" in query_lower or "shanghai mobile" in query_lower:
-                operator_name = "中国移动"
-            elif "北京电信" in query_lower or "beijing telecom" in query_lower:
-                operator_name = "中国电信"
-            elif "上海电信" in query_lower or "shanghai telecom" in query_lower:
-                operator_name = "中国电信"
-            elif "联通" in query_lower or "unicom" in query_lower:
-                operator_name = "中国联通"
-            elif "移动" in query_lower or "mobile" in query_lower:
-                operator_name = "中国移动"
-            elif "电信" in query_lower or "telecom" in query_lower:
-                operator_name = "中国电信"
+            # Extract operator name using dynamic mapping
+            await self._fetch_operators()
+            operator_name = self._get_operator_from_query(natural_language_query)
 
             return {
                 "intent": intent,
@@ -380,6 +500,17 @@ class OperatorAgent(BaseAgent):
         temperature = config.get("temperature", 0.1)
         prompt_template = config.get("prompt_template", "")
 
+        # Fetch dynamic operators for the prompt
+        await self._fetch_operators()
+        operators = self._operators_cache
+
+        # Build operator examples for the prompt
+        operator_examples = ""
+        if operators:
+            example_names = [op.get("operatorName", "") for op in operators[:10] if isinstance(op, dict)]
+            if example_names:
+                operator_examples = "Examples: " + ", ".join(example_names[:5]) + "."
+
         # Use default template if no template in config
         if not prompt_template:
             prompt_template = """You are a telecom operator data query assistant. Analyze the user's natural language query and return structured JSON parameters.
@@ -391,10 +522,8 @@ class OperatorAgent(BaseAgent):
 4. latest_data - latest month data (site or indicator data)
 5. nl2sql - natural language SQL query
 
-## Operator name mapping (use official names):
-- "Beijing Unicom", "Shanghai Unicom", "Guangzhou Unicom" -> "China Unicom"
-- "Beijing Mobile", "Shanghai Mobile" -> "China Mobile"
-- "Beijing Telecom", "Shanghai Telecom" -> "China Telecom"
+## Operator name mapping (use official names from the database):
+{operator_examples}
 
 ## Java service API endpoints:
 - /operators - get operator list
@@ -406,7 +535,7 @@ class OperatorAgent(BaseAgent):
 Analyze and return JSON parameters:
 {{
     "intent": "data intent type",
-    "operator_name": "operator official name (China Unicom, China Mobile, China Telecom)",
+    "operator_name": "operator official name",
     "band": "frequency band if any (700M, 900M, etc.)",
     "data_month": "data month if any (YYYY-MM format)",
     "limit": result limit (default 50)
@@ -414,7 +543,7 @@ Analyze and return JSON parameters:
 
 Return JSON only, no other text."""
 
-        prompt = prompt_template.replace("{query}", natural_language_query)
+        prompt = prompt_template.replace("{query}", natural_language_query).replace("{operator_examples}", operator_examples)
 
         print(f"[DEBUG] llm_endpoint: {llm_endpoint}")
         print(f"[DEBUG] llm_model: {llm_model}")

@@ -282,18 +282,21 @@ async def get_site_cells(query: SiteCellsQuery, _: bool = Depends(verify_api_key
     return result
 
 
-def format_site_data(site_cells: list, operators: list, latest_only: bool = False) -> str:
-    """Format site cell data into markdown table format."""
+def format_site_data_with_chart(site_cells: list, operators: list, latest_only: bool = False) -> Dict[str, Any]:
+    """Format site cell data into markdown table format with chart data."""
     if not site_cells:
-        return "未找到站点数据"
+        return {"content": "未找到站点数据", "chart": None}
 
     lines = ["# 运营商站点信息\n"]
+    chart_data = []
 
-    # Get operator names
+    # Get operator names and regions
     operator_map = {}
+    operator_region_map = {}
     for op in operators:
         if isinstance(op, dict):
             operator_map[op.get("id")] = op.get("operatorName", "Unknown")
+            operator_region_map[op.get("id")] = op.get("region", "")
 
     # Group by operator
     operator_ids = set()
@@ -303,7 +306,9 @@ def format_site_data(site_cells: list, operators: list, latest_only: bool = Fals
 
     for op_id in sorted(operator_ids):
         op_name = operator_map.get(op_id, f"运营商{op_id}")
-        lines.append(f"\n## {op_name}\n")
+        region = operator_region_map.get(op_id, "")
+        region_info = f" (数据区域: {region})" if region else ""
+        lines.append(f"\n## {op_name}{region_info}\n")
 
         # Filter site cells for this operator
         op_cells = [sc for sc in site_cells if isinstance(sc, dict) and sc.get("operatorId") == op_id]
@@ -333,6 +338,7 @@ def format_site_data(site_cells: list, operators: list, latest_only: bool = Fals
             for band, sites, cells in lte_bands:
                 if sites or cells:
                     lines.append(f"- LTE {band}: {sites} 站点, {cells} 小区")
+                    chart_data.append({"频段": f"LTE {band}", "站点": sites, "小区": cells})
             lines.append(f"- **LTE 合计**: {cell.get('lteTotalSite', 0)} 站点, {cell.get('lteTotalCell', 0)} 小区")
 
             # NR bands
@@ -352,9 +358,27 @@ def format_site_data(site_cells: list, operators: list, latest_only: bool = Fals
             for band, sites, cells in nr_bands:
                 if sites or cells:
                     lines.append(f"- NR {band}: {sites} 站点, {cells} 小区")
+                    chart_data.append({"频段": f"NR {band}", "站点": sites, "小区": cells})
             lines.append(f"- **NR 合计**: {cell.get('nrTotalSite', 0)} 站点, {cell.get('nrTotalCell', 0)} 小区")
 
-    return "\n".join(lines)
+    # Build chart config if we have data
+    chart = None
+    if chart_data:
+        chart = {
+            "type": "bar",
+            "column": "频段",
+            "data": chart_data,
+            "keys": ["站点", "小区"],
+            "colors": ["#10b981", "#4f46e5"]
+        }
+
+    return {"content": "\n".join(lines), "chart": chart}
+
+
+def format_site_data(site_cells: list, operators: list, latest_only: bool = False) -> str:
+    """Format site cell data into markdown table format (legacy)."""
+    result = format_site_data_with_chart(site_cells, operators, latest_only)
+    return result["content"]
 
 
 @app.post("/api/agent/run")
@@ -395,6 +419,9 @@ async def agent_stream(request: AgentRunRequest, _: bool = Depends(verify_api_ke
                     chunk = content[i:i+50]
                     yield f"data: {{\"type\": \"content\", \"content\": {json.dumps(chunk)}}}\n\n"
                     await asyncio.sleep(0.01)  # Small delay for streaming effect
+                # Send chart data if available
+                if result.get("chart"):
+                    yield f"data: {{\"type\": \"chart\", \"chart\": {json.dumps(result['chart'])} }}\n\n"
             else:
                 yield f"data: {{\"type\": \"content\", \"content\": {json.dumps(str(result))}}}\n\n"
 
@@ -475,7 +502,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
             if data_month:
                 site_cells = [sc for sc in site_cells if isinstance(sc, dict) and sc.get("dataMonth") == data_month]
 
-            return {"content": format_site_data(site_cells, operators, latest_only=False)}
+            return format_site_data_with_chart(site_cells, operators, latest_only=False)
 
         elif intent == "latest_data":
             site_cells_result = await agent.get_site_cells()
@@ -498,9 +525,13 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
             if latest_month:
                 site_cells = [sc for sc in site_cells if isinstance(sc, dict) and sc.get("dataMonth") == latest_month]
 
+            # Use format_site_data_with_chart for chart support
+            chart_result = format_site_data_with_chart(site_cells, operators, latest_only=True)
             lines = [f"# 运营商最新数据 (数据月份: {latest_month})\n"]
-            lines.append(format_site_data(site_cells, operators, latest_only=True).split("\n", 1)[1] if len(format_site_data(site_cells, operators, latest_only=True).split("\n", 1)) > 1 else "")
-            return {"content": "\n".join(lines) if lines[-1] else format_site_data(site_cells, operators, latest_only=True)}
+            content_lines = chart_result["content"].split("\n", 1)
+            if len(content_lines) > 1:
+                lines.append(content_lines[1])
+            return {"content": "\n".join(lines) if lines[-1] else chart_result["content"], "chart": chart_result.get("chart")}
 
         elif intent == "indicator_data":
             indicators_result = await agent.get_latest_indicators(limit=limit)

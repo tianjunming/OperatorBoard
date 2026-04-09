@@ -23,10 +23,19 @@ intent_detection:
     4. latest_data - latest month data (site or indicator data)
     5. nl2sql - natural language SQL query
 
-    ## Operator name mapping (use official names):
-    - "Beijing Unicom", "Shanghai Unicom", "Guangzhou Unicom" -> "China Unicom"
-    - "Beijing Mobile", "Shanghai Mobile" -> "China Mobile"
-    - "Beijing Telecom", "Shanghai Telecom" -> "China Telecom"
+    ## Operator name mapping (use official names from database):
+    - "Beijing Mobile", "北京移动" -> "China Mobile" (China Mobile's data is for Beijing region)
+    - "Shanghai Unicom", "北京联通" -> "China Unicom" (China Unicom's data is for Shanghai region) - NOTE: there is no Beijing-specific Unicom data in the database
+    - "Guangzhou Telecom", "北京电信" -> "China Telecom" (China Telecom's data is for Guangzhou region)
+
+    ## Important:
+    The database only contains national-level operator data with region associations:
+    - China Mobile = Beijing region
+    - China Unicom = Shanghai region
+    - China Telecom = Guangzhou region
+
+    If user queries about an operator for a city that doesn't match the database association (e.g., "Beijing Unicom"),
+    either return the data for the correct national operator or indicate the data is not available for that city.
 
     ## Java service API endpoints:
     - /operators - get operator list

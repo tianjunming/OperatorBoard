@@ -171,7 +171,7 @@ class ChatMessage(Base):
     content = Column(Text)
     complete = Column(Boolean, default=True)
     is_error = Column(Boolean, default=False)
-    metadata = Column(JSON)
+    msg_metadata = Column("metadata", JSON)
     created_at = Column(DateTime, default=datetime.now)
 
     # Relationships
@@ -186,7 +186,7 @@ class ChatMessage(Base):
             "content": self.content,
             "complete": self.complete,
             "is_error": self.is_error,
-            "metadata": self.metadata,
+            "metadata": self.msg_metadata,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -204,7 +204,7 @@ class Database:
         database = db_config.get("database", "operatorboard")
 
         self.engine = create_engine(
-            f"mysql+pymysql://{username}:{password}@{host}:{port}/{database}",
+            f"mysql+pymysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4",
             pool_pre_ping=True,
             pool_recycle=3600,
         )
