@@ -13,6 +13,11 @@ const translations = {
     retry: '重试',
     noData: '暂无数据',
     loading: '加载中...',
+    // Action buttons
+    copy: '复制',
+    copied: '已复制',
+    regenerate: '重新生成',
+    resend: '重新发送',
     // Dashboard
     operator: '运营商',
     siteCount: '站点数',
@@ -20,6 +25,7 @@ const translations = {
     lteBand: 'LTE频段',
     nrBand: 'NR频段',
     dataMonth: '数据月份',
+    admin: '系统管理',
     // Error messages
     connectionError: '连接失败，请检查网络',
     serverError: '服务器错误',
@@ -36,6 +42,11 @@ const translations = {
     retry: 'Retry',
     noData: 'No data',
     loading: 'Loading...',
+    // Action buttons
+    copy: 'Copy',
+    copied: 'Copied',
+    regenerate: 'Regenerate',
+    resend: 'Resend',
     // Dashboard
     operator: 'Operator',
     siteCount: 'Sites',
@@ -43,6 +54,7 @@ const translations = {
     lteBand: 'LTE Band',
     nrBand: 'NR Band',
     dataMonth: 'Data Month',
+    admin: 'Admin',
     // Error messages
     connectionError: 'Connection failed',
     serverError: 'Server error',

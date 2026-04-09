@@ -1,14 +1,13 @@
-import React, { useState, useRef } from 'react';
-import { useI18n } from '../i18n';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Send, Square, Loader2 } from 'lucide-react';
 import './ChatInput.css';
 
-function ChatInput({ onSend, disabled }) {
+function ChatInput({ onSend, disabled, placeholder }) {
   const [input, setInput] = useState('');
   const textareaRef = useRef(null);
-  const { locale, t } = useI18n();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = useCallback((e) => {
+    e?.preventDefault();
     if (input.trim() && !disabled) {
       onSend(input.trim());
       setInput('');
@@ -16,52 +15,69 @@ function ChatInput({ onSend, disabled }) {
         textareaRef.current.style.height = 'auto';
       }
     }
-  };
+  }, [input, disabled, onSend]);
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      handleSubmit();
     }
-  };
+  }, [handleSubmit]);
 
-  const handleInputChange = (e) => {
+  const handleChange = (e) => {
     setInput(e.target.value);
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 150) + 'px';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
     }
   };
 
+  const canSend = input.trim().length > 0 && !disabled;
+
   return (
-    <form className="chat-input-container" onSubmit={handleSubmit}>
-      <div className="input-wrapper">
+    <form className="chat-input-wrapper" onSubmit={handleSubmit}>
+      <div className={`chat-input-main ${disabled ? 'disabled' : ''}`}>
         <textarea
           ref={textareaRef}
-          className="chat-input"
+          className="chat-input-field"
           value={input}
-          onChange={handleInputChange}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={locale === 'zh' ? '输入您的查询... (Enter发送, Shift+Enter换行)' : 'Enter your query... (Enter to send, Shift+Enter for new line)'}
+          placeholder={placeholder || '输入您的查询...'}
           disabled={disabled}
           rows={1}
+          autoFocus
         />
-        <button
-          type="submit"
-          className="send-button"
-          disabled={disabled || !input.trim()}
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-          </svg>
-        </button>
+
+        <div className="chat-input-actions">
+          <span className="char-count">
+            {input.length > 0 && `${input.length}`}
+          </span>
+
+          <button
+            type="submit"
+            className={`send-btn ${canSend ? 'active' : ''}`}
+            disabled={!canSend}
+          >
+            {disabled ? (
+              <Loader2 size={18} className="spin" />
+            ) : (
+              <Send size={18} />
+            )}
+          </button>
+        </div>
       </div>
-      <div className="input-hints">
-        <span>{locale === 'zh' ? 'Enter 发送' : 'Enter to send'}</span>
-        <span>{locale === 'zh' ? 'Shift + Enter 换行' : 'Shift + Enter for new line'}</span>
+
+      <div className="chat-input-footer">
+        <span className="input-hint">
+          <kbd>Enter</kbd> 发送
+        </span>
+        <span className="input-hint">
+          <kbd>Shift + Enter</kbd> 换行
+        </span>
       </div>
     </form>
   );
 }
 
-export default ChatInput;
+export default React.memo(ChatInput);

@@ -20,10 +20,12 @@ function getAgentHeaders() {
 
 function parseBody(req) {
   return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', chunk => { body += chunk; });
+    const chunks = [];
+    req.on('data', chunk => { chunks.push(chunk); });
     req.on('end', () => {
       try {
+        const buffer = Buffer.concat(chunks);
+        const body = buffer.toString('utf8');
         resolve(body ? JSON.parse(body) : {});
       } catch {
         resolve({});
@@ -51,7 +53,7 @@ function sendSSEText(res, text) {
   res.write(`data: ${text}\n`);
 }
 
-async function proxyToAgentStream(agentInput, onChunk) {
+async function proxyToAgentStream(agentInput, onChunk, onChart) {
   const response = await fetch(`${OPERATOR_AGENT_URL}/api/agent/stream`, {
     method: 'POST',
     headers: getAgentHeaders(),
@@ -85,11 +87,15 @@ async function proxyToAgentStream(agentInput, onChunk) {
             const parsed = JSON.parse(data);
             if (parsed.type === 'content' && parsed.content) {
               onChunk?.(parsed.content);
+            } else if (parsed.type === 'chart' && parsed.chart) {
+              onChart?.(parsed.chart);
             } else if (parsed.type === 'error') {
               throw new Error(parsed.content);
             }
           } catch (e) {
-            if (e.message !== 'JSON.parse error') {
+            // Ignore JSON parse errors (expected with streaming partial data)
+            // Re-throw other errors
+            if (!(e instanceof SyntaxError)) {
               throw e;
             }
           }
@@ -130,6 +136,9 @@ const server = http.createServer(async (req, res) => {
         { input: userInput, stream: true },
         (chunk) => {
           res.write(`data: ${JSON.stringify({ content: chunk })}\n`);
+        },
+        (chart) => {
+          res.write(`data: ${JSON.stringify({ type: 'chart', chart })}\n`);
         }
       );
 
@@ -264,18 +273,44 @@ const server = http.createServer(async (req, res) => {
   // Chat API - proxy to auth-agent (8084)
   if (url.pathname.startsWith('/api/chat/') && ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
     const chatPath = url.pathname.replace('/api/', '');
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    console.log(`[Proxy] Chat API: ${req.method} ${url.pathname}`);
+    console.log(`[Proxy] Auth header: ${authHeader ? authHeader.substring(0, 50) + '...' : 'none'}`);
     try {
+      const rawBody = await parseBody(req);
+      console.log(`[Proxy] Parsed body:`, JSON.stringify(rawBody));
+      const body = ['POST', 'PUT', 'PATCH'].includes(req.method) ? JSON.stringify(rawBody) : undefined;
+      console.log(`[Proxy] Forwarding to auth-agent:`, `${AUTH_AGENT_URL}/${chatPath}`);
+      console.log(`[Proxy] Body:`, body);
+
       const response = await fetch(`${AUTH_AGENT_URL}/${chatPath}${url.search}`, {
         method: req.method,
         headers: {
           'Content-Type': 'application/json',
-          ...(req.headers.authorization ? { 'Authorization': req.headers.authorization } : {}),
+          ...(authHeader ? { 'Authorization': authHeader } : {}),
         },
-        body: ['POST', 'PUT', 'PATCH'].includes(req.method) ? JSON.stringify(await parseBody(req)) : undefined,
+        body,
       });
-      const data = await response.json();
+
+      // Get raw response text first
+      const responseText = await response.text();
+      console.log(`[Proxy] Raw response status: ${response.status}, body:`, responseText.substring(0, 300));
+
+      // Try to parse response as JSON
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        // If not JSON, use the text as error
+        console.error(`[Proxy] Non-JSON response, forwarding as error`);
+        sendJSON(res, response.status, { error: responseText || `HTTP ${response.status}` });
+        return;
+      }
+
+      console.log(`[Proxy] Response data:`, JSON.stringify(data).substring(0, 100));
       sendJSON(res, response.status, data);
     } catch (error) {
+      console.error(`[Proxy] Chat API error:`, error);
       sendJSON(res, 500, { error: error.message });
     }
     return;

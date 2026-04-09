@@ -1,0 +1,175 @@
+/* ============================================
+   CSS Variables System - Operator Agent
+   Design Tokens for consistent theming
+   ============================================ */
+
+:root {
+  /* ===== Color System - Light Mode ===== */
+  --color-primary: #667eea;
+  --color-primary-hover: #5a6fd6;
+  --color-primary-light: rgba(102, 126, 234, 0.1);
+  --color-secondary: #764ba2;
+  --color-secondary-hover: #6a4190;
+
+  /* Background Colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #f1f3f5;
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-active: rgba(0, 0, 0, 0.08);
+
+  /* Text Colors */
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a4a6a;
+  --text-tertiary: #8888a0;
+  --text-muted: #aaaabc;
+  --text-inverse: #ffffff;
+
+  /* Border Colors */
+  --border-light: #e8e8ec;
+  --border-default: #dddde8;
+  --border-strong: #cccce0;
+
+  /* Status Colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+
+  /* Gradient Colors */
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-hover: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
+  --gradient-accent: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+
+  /* ===== Spacing System ===== */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+
+  /* ===== Typography ===== */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
+
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-lg: 17px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* ===== Border Radius ===== */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* ===== Shadows ===== */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-glow: 0 0 20px rgba(102, 126, 234, 0.3);
+
+  /* ===== Layout ===== */
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 0px;
+  --header-height: 56px;
+  --input-height: 56px;
+
+  /* ===== Transitions ===== */
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 300ms ease;
+  --transition-bounce: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ===== Z-Index ===== */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal-backdrop: 300;
+  --z-modal: 400;
+  --z-tooltip: 500;
+  --z-toast: 600;
+
+  /* ===== Scrollbar ===== */
+  --scrollbar-width: 6px;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: #d1d1e0;
+  --scrollbar-thumb-hover: #b0b0c8;
+}
+
+/* ===== Dark Mode ===== */
+[data-theme="dark"] {
+  --bg-primary: #0f0f1a;
+  --bg-secondary: #1a1a2e;
+  --bg-tertiary: #252540;
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(255, 255, 255, 0.1);
+
+  --text-primary: #f0f0f5;
+  --text-secondary: #b0b0c8;
+  --text-tertiary: #8888a0;
+  --text-muted: #666680;
+
+  --border-light: #2a2a45;
+  --border-default: #3a3a58;
+  --border-strong: #4a4a68;
+
+  --color-primary: #7c8ff5;
+  --color-primary-hover: #8899f7;
+  --color-primary-light: rgba(124, 143, 245, 0.15);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+
+  --scrollbar-thumb: #4a4a68;
+  --scrollbar-thumb-hover: #5a5a80;
+}
+
+/* ===== System Theme Detection ===== */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-primary: #0f0f1a;
+    --bg-secondary: #1a1a2e;
+    --bg-tertiary: #252540;
+    --bg-hover: rgba(255, 255, 255, 0.06);
+    --bg-active: rgba(255, 255, 255, 0.1);
+
+    --text-primary: #f0f0f5;
+    --text-secondary: #b0b0c8;
+    --text-tertiary: #8888a0;
+    --text-muted: #666680;
+
+    --border-light: #2a2a45;
+    --border-default: #3a3a58;
+    --border-strong: #4a4a68;
+
+    --color-primary: #7c8ff5;
+    --color-primary-hover: #8899f7;
+    --color-primary-light: rgba(124, 143, 245, 0.15);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+
+    --scrollbar-thumb: #4a4a68;
+    --scrollbar-thumb-hover: #5a5a80;
+  }
+}

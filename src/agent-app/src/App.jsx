@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import ChatContainer from './components/ChatContainer.jsx';
+import React, { useState, useEffect } from 'react';
+import Layout from './components/Layout';
+import ChatView from './components/ChatView';
 import OperatorDashboard from './components/OperatorDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import AuthLogin from './components/AuthLogin';
-import ErrorBoundary from './components/ErrorBoundary.jsx';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ChatProvider } from './context/ChatContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { I18nProvider, useI18n } from './i18n';
-import './styles/Dashboard.css';
+import './styles/global.css';
 
 function AppContent() {
   const { isAuthenticated, isSuperuser } = useAuth();
@@ -15,76 +17,73 @@ function AppContent() {
   const { locale, toggleLocale, t } = useI18n();
 
   const handleNavigate = (newView) => {
-    // Check permissions for admin view
     if (newView === 'admin' && !isSuperuser) {
-      alert('You do not have permission to access the admin panel.');
+      alert('您没有权限访问管理面板。');
       return;
     }
     setView(newView);
   };
 
+  if (!isAuthenticated) {
+    return <AuthLogin />;
+  }
+
   return (
-    <div className="app">
-      <header className="app-header">
-        <div className="header-top">
-          <div className="header-title">
-            <h1>{t('appTitle')}</h1>
-            <p className="subtitle">{t('appSubtitle')}</p>
-          </div>
-          <button className="lang-toggle" onClick={toggleLocale}>
-            {locale === 'zh' ? 'EN' : '中'}
-          </button>
-        </div>
-        <nav className="app-nav">
-          <button
-            className={`nav-btn ${view === 'chat' ? 'active' : ''}`}
-            onClick={() => handleNavigate('chat')}
-          >
-            {t('chat')}
-          </button>
-          <button
-            className={`nav-btn ${view === 'dashboard' ? 'active' : ''}`}
-            onClick={() => handleNavigate('dashboard')}
-          >
-            {t('dashboard')}
-          </button>
-          {isSuperuser && (
-            <button
-              className={`nav-btn ${view === 'admin' ? 'active' : ''}`}
-              onClick={() => handleNavigate('admin')}
-            >
-              {t('admin')}
-            </button>
-          )}
-        </nav>
-      </header>
-      <main className="app-main">
-        <ErrorBoundary name="Dashboard">
-          {view === 'login' ? (
-            <AuthLogin />
-          ) : view === 'admin' ? (
-            <AdminDashboard />
-          ) : view === 'chat' ? (
-            <ErrorBoundary name="Chat">
-              <ChatContainer />
-            </ErrorBoundary>
-          ) : (
+    <Layout>
+      <div className="app-content">
+        {view === 'chat' && (
+          <ErrorBoundary name="Chat">
+            <ChatView />
+          </ErrorBoundary>
+        )}
+        {view === 'dashboard' && (
+          <ErrorBoundary name="Dashboard">
             <OperatorDashboard />
-          )}
-        </ErrorBoundary>
-      </main>
-    </div>
+          </ErrorBoundary>
+        )}
+        {view === 'admin' && isSuperuser && (
+          <ErrorBoundary name="Admin">
+            <AdminDashboard />
+          </ErrorBoundary>
+        )}
+      </div>
+
+      <nav className="app-nav">
+        <button
+          className={`nav-btn ${view === 'chat' ? 'active' : ''}`}
+          onClick={() => handleNavigate('chat')}
+        >
+          {t('chat')}
+        </button>
+        <button
+          className={`nav-btn ${view === 'dashboard' ? 'active' : ''}`}
+          onClick={() => handleNavigate('dashboard')}
+        >
+          {t('dashboard')}
+        </button>
+        {isSuperuser && (
+          <button
+            className={`nav-btn ${view === 'admin' ? 'active' : ''}`}
+            onClick={() => handleNavigate('admin')}
+          >
+            {t('admin')}
+          </button>
+        )}
+      </nav>
+    </Layout>
   );
 }
 
 function App() {
   return (
     <I18nProvider>
-      <AuthProvider>
-        <ChatProvider>
-          <AppContent />
-        </ChatProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ChatProvider>
+            <AppContent />
+          </ChatProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </I18nProvider>
   );
 }

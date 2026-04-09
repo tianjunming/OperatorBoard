@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Plus, Search, Trash2, ChevronLeft, MessageSquare } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { useAuth } from '../context/AuthContext';
-import './ChatSidebar.css';
+import './Sidebar.css';
 
-function ChatSidebar() {
+function Sidebar({ collapsed }) {
   const {
     sessions,
     currentSession,
@@ -12,12 +13,13 @@ function ChatSidebar() {
     loadSession,
     deleteSession,
     createSession,
-    clearCurrentSession,
   } = useChat();
   const { isAuthenticated } = useAuth();
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+  const listRef = useRef(null);
 
-  // Load sessions on mount if authenticated
   useEffect(() => {
     if (isAuthenticated) {
       loadSessions();
@@ -51,7 +53,6 @@ function ChatSidebar() {
       }
     } else {
       setConfirmDelete(sessionId);
-      // Auto-reset after 3 seconds
       setTimeout(() => setConfirmDelete(null), 3000);
     }
   };
@@ -62,46 +63,63 @@ function ChatSidebar() {
     const now = new Date();
     const diff = now - date;
 
-    // Less than 1 minute
-    if (diff < 60000) {
-      return '刚刚';
-    }
-    // Less than 1 hour
-    if (diff < 3600000) {
-      return `${Math.floor(diff / 60000)}分钟前`;
-    }
-    // Less than 24 hours
-    if (diff < 86400000) {
-      return `${Math.floor(diff / 3600000)}小时前`;
-    }
-    // More than 24 hours, show date
+    if (diff < 60000) return '刚刚';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
     return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
   };
 
+  const filteredSessions = sessions.filter((session) =>
+    (session.title || '新对话').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (collapsed) {
+    return null;
+  }
+
   return (
-    <div className="chat-sidebar">
+    <aside className="sidebar">
       <div className="sidebar-header">
         <button className="new-chat-btn" onClick={handleNewChat}>
-          <span className="new-chat-icon">+</span>
-          新对话
+          <Plus size={18} />
+          <span>新对话</span>
         </button>
       </div>
 
-      <div className="session-list">
+      <div className="sidebar-search">
+        <Search size={16} className="search-icon" />
+        <input
+          type="text"
+          className="search-input"
+          placeholder="搜索对话..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
+      <div className="session-list" ref={listRef}>
         {loading && sessions.length === 0 ? (
-          <div className="session-loading">加载中...</div>
-        ) : sessions.length === 0 ? (
+          <div className="session-loading">
+            <div className="skeleton" style={{ height: 60, marginBottom: 8 }} />
+            <div className="skeleton" style={{ height: 60, marginBottom: 8 }} />
+            <div className="skeleton" style={{ height: 60 }} />
+          </div>
+        ) : filteredSessions.length === 0 ? (
           <div className="session-empty">
-            <p>暂无历史对话</p>
-            <p>开始新对话吧</p>
+            <MessageSquare size={32} className="empty-icon" />
+            <p>{searchQuery ? '未找到匹配的对话' : '暂无历史对话'}</p>
+            <p className="empty-hint">{searchQuery ? '尝试其他关键词' : '开始新对话吧'}</p>
           </div>
         ) : (
-          sessions.map((session) => (
+          filteredSessions.map((session) => (
             <div
               key={session.id}
               className={`session-item ${currentSession?.id === session.id ? 'active' : ''}`}
               onClick={() => handleSelectSession(session)}
             >
+              <div className="session-icon">
+                <MessageSquare size={16} />
+              </div>
               <div className="session-content">
                 <span className="session-title">{session.title || '新对话'}</span>
                 <span className="session-time">{formatTime(session.updated_at)}</span>
@@ -111,14 +129,18 @@ function ChatSidebar() {
                 onClick={(e) => handleDeleteSession(e, session.id)}
                 title={confirmDelete === session.id ? '点击确认删除' : '删除会话'}
               >
-                {confirmDelete === session.id ? '✓' : '×'}
+                <Trash2 size={14} />
               </button>
             </div>
           ))
         )}
       </div>
-    </div>
+
+      <div className="sidebar-footer">
+        <span className="footer-hint">快捷键: Ctrl+Alt+N 新对话</span>
+      </div>
+    </aside>
   );
 }
 
-export default ChatSidebar;
+export default Sidebar;

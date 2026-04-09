@@ -26,6 +26,8 @@ export function ChatProvider({ children }) {
   // Create a new session
   const createSession = useCallback(async (title = '新对话') => {
     setLoading(true);
+    console.log('[ChatContext] createSession: Starting with title:', title);
+    console.log('[ChatContext] createSession: Headers:', getHeaders());
     try {
       const response = await fetch(`${API_BASE}/chat/sessions`, {
         method: 'POST',
@@ -33,17 +35,22 @@ export function ChatProvider({ children }) {
         body: JSON.stringify({ title }),
       });
 
+      console.log('[ChatContext] createSession: Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to create session');
+        const errorText = await response.text();
+        console.error('[ChatContext] createSession: Error response:', errorText);
+        throw new Error('Failed to create session: ' + response.status);
       }
 
       const session = await response.json();
+      console.log('[ChatContext] createSession: Success, session:', session.id);
       setSessions((prev) => [session, ...prev]);
       setCurrentSession(session);
       setMessages([]);
       return session;
     } catch (error) {
-      console.error('Create session error:', error);
+      console.error('[ChatContext] createSession: Caught error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -149,14 +156,31 @@ export function ChatProvider({ children }) {
 
   // Save a message to the current session
   const saveMessage = useCallback(async (role, content, metadata = {}) => {
+    console.log('[ChatContext] saveMessage called:', { role, content: content?.substring(0, 50), currentSession: !!currentSession });
     let session = currentSession;
 
     if (!session) {
-      // Auto-create session if none exists
-      session = await createSession();
+      console.log('[ChatContext] No session, attempting to create one...');
+      try {
+        session = await createSession();
+        console.log('[ChatContext] Session created:', session?.id);
+      } catch (createErr) {
+        console.error('[ChatContext] Failed to create session, trying to load existing sessions:', createErr);
+        // Try to load existing sessions as fallback
+        const existingSessions = await loadSessions();
+        if (existingSessions && existingSessions.length > 0) {
+          console.log('[ChatContext] Using existing session:', existingSessions[0].id);
+          session = existingSessions[0];
+          setCurrentSession(session);
+        } else {
+          console.error('[ChatContext] No sessions available, cannot save message');
+          throw new Error('无法创建或加载会话，请刷新页面后重试。');
+        }
+      }
     }
 
     try {
+      console.log('[ChatContext] Saving message to API, session_id:', session.id, 'role:', role);
       const response = await fetch(`${API_BASE}/chat/messages`, {
         method: 'POST',
         headers: getHeaders(),
@@ -170,11 +194,18 @@ export function ChatProvider({ children }) {
         }),
       });
 
+      console.log('[ChatContext] API response status:', response.status);
+
       if (!response.ok) {
         throw new Error('Failed to save message');
       }
 
       const message = await response.json();
+      console.log('[ChatContext] Message saved:', message?.id, 'role:', message?.role);
+
+      // Update context messages state to keep localMessages in sync
+      setMessages((prev) => [...prev, message]);
+      console.log('[ChatContext] messages state updated, new length:', (messages.length || 0) + 1);
 
       // Update session title if this is the first user message
       if (role === 'user' && messages.length === 0 && session.title === '新对话') {
@@ -184,10 +215,10 @@ export function ChatProvider({ children }) {
 
       return message;
     } catch (error) {
-      console.error('Save message error:', error);
+      console.error('[ChatContext] Save message error:', error);
       throw error;
     }
-  }, [currentSession, messages, createSession, updateSessionTitle]);
+  }, [currentSession, messages, createSession, updateSessionTitle, loadSessions]);
 
   // Clear current session (start new conversation)
   const clearCurrentSession = useCallback(() => {
