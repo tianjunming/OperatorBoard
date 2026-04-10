@@ -80,10 +80,10 @@
         <result property="lteAvgPrb" column="lte_avg_prb"/>
         <result property="nrAvgDlRate" column="nr_avg_dl_rate"/>
         <result property="nrAvgPrb" column="nr_avg_prb"/>
-        <result property="splitRatio" column="split_ratio"/>
-        <result property="dwellRatio" column="dwell_ratio"/>
+        <result property="trafficRatio" column="traffic_ratio"/>
+        <result property="trafficCampratio" column="traffic_campratio"/>
         <result property="terminalPenetration" column="terminal_penetration"/>
-        <result property="durationDwellRatio" column="duration_dwell_ratio"/>
+        <result property="durationCampratio" column="duration_campratio"/>
         <result property="fallbackRatio" column="fallback_ratio"/>
         <result property="createdTime" column="created_time"/>
         <result property="updatedTime" column="updated_time"/>

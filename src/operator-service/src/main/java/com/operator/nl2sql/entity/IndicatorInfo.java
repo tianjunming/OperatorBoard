@@ -102,10 +102,10 @@ public class IndicatorInfo {
     private BigDecimal lteAvgPrb;
     private BigDecimal nrAvgDlRate;
     private BigDecimal nrAvgPrb;
-    private BigDecimal splitRatio;
-    private BigDecimal dwellRatio;
+    private BigDecimal trafficRatio;
+    private BigDecimal trafficCampratio;
     private BigDecimal terminalPenetration;
-    private BigDecimal durationDwellRatio;
+    private BigDecimal durationCampratio;
     private BigDecimal fallbackRatio;
 
     private LocalDateTime createdTime;

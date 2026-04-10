@@ -72,11 +72,14 @@ CREATE TABLE site_info (
     -- NR 4900M 频段
     nr_4900M_site INT DEFAULT 0 COMMENT 'NR 4900M 物理站点数',
     nr_4900M_cell INT DEFAULT 0 COMMENT 'NR 4900M 物理小区数',
+    -- NR 2300M 频段
+    nr_2300M_site INT DEFAULT 0 COMMENT 'NR 2300M 物理站点数',
+    nr_2300M_cell INT DEFAULT 0 COMMENT 'NR 2300M 物理小区数',
     -- 汇总字段
-    lte_total_site INT GENERATED ALWAYS AS (lte_700M_site + lte_800M_site + lte_900M_site + lte_1400M_site + lte_1800M_site + lte_2100M_site + lte_2600M_site) STORED COMMENT 'LTE物理站点总数',
+    lte_total_site INT DEFAULT 0 COMMENT 'LTE物理站点总数',
     lte_total_cell INT GENERATED ALWAYS AS (lte_700M_cell + lte_800M_cell + lte_900M_cell + lte_1400M_cell + lte_1800M_cell + lte_2100M_cell + lte_2600M_cell) STORED COMMENT 'LTE物理小区总数',
-    nr_total_site INT GENERATED ALWAYS AS (nr_700M_site + nr_800M_site + nr_900M_site + nr_1400M_site + nr_1800M_site + nr_2100M_site + nr_2600M_site + nr_3500M_site + nr_4900M_site) STORED COMMENT 'NR物理站点总数',
-    nr_total_cell INT GENERATED ALWAYS AS (nr_700M_cell + nr_800M_cell + nr_900M_cell + nr_1400M_cell + nr_1800M_cell + nr_2100M_cell + nr_2600M_cell + nr_3500M_cell + nr_4900M_cell) STORED COMMENT 'NR物理小区总数',
+    nr_total_site INT DEFAULT 0 COMMENT 'NR物理站点总数',
+    nr_total_cell INT GENERATED ALWAYS AS (nr_700M_cell + nr_800M_cell + nr_900M_cell + nr_1400M_cell + nr_1800M_cell + nr_2100M_cell + nr_2600M_cell + nr_3500M_cell + nr_4900M_cell + nr_2300M_cell) STORED COMMENT 'NR物理小区总数',
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     FOREIGN KEY (operator_id) REFERENCES operator_info(id),
@@ -169,15 +172,21 @@ CREATE TABLE indicator_info (
     nr_4900M_ul_rate DECIMAL(10,2) COMMENT 'NR 4900M 上行速率 (Mbps)',
     nr_4900M_dl_prb DECIMAL(5,2) COMMENT 'NR 4900M 下行PRB利用率 (%)',
     nr_4900M_ul_prb DECIMAL(5,2) COMMENT 'NR 4900M 上行PRB利用率 (%)',
-    -- 汇总指标
+    -- NR 2300M 频段指标
+    nr_2300M_dl_rate DECIMAL(10,2) COMMENT 'NR 2300M 下行速率 (Mbps)',
+    nr_2300M_ul_rate DECIMAL(10,2) COMMENT 'NR 2300M 上行速率 (Mbps)',
+    nr_2300M_dl_prb DECIMAL(5,2) COMMENT 'NR 2300M 下行PRB利用率 (%)',
+    nr_2300M_ul_prb DECIMAL(5,2) COMMENT 'NR 2300M 上行PRB利用率 (%)',
+
     lte_avg_dl_rate DECIMAL(10,2) COMMENT 'LTE 平均下行速率 (Mbps)',
     lte_avg_prb DECIMAL(5,2) COMMENT 'LTE 平均PRB利用率 (%)',
     nr_avg_dl_rate DECIMAL(10,2) COMMENT 'NR 平均下行速率 (Mbps)',
     nr_avg_prb DECIMAL(5,2) COMMENT 'NR 平均PRB利用率 (%)',
-    split_ratio DECIMAL(5,2) COMMENT '分流比 (%)',
-    dwell_ratio DECIMAL(5,2) COMMENT '驻留比 (%)',
+    
+    traffic_ratio DECIMAL(5,2) COMMENT '分流比 (%)',
+    traffic_campratio DECIMAL(5,2) COMMENT '流量驻留比 (%)',
     terminal_penetration DECIMAL(5,2) COMMENT '终端渗透率 (%)',
-    duration_dwell_ratio DECIMAL(5,2) COMMENT '时长驻留比 (%)',
+    duration_campratio DECIMAL(5,2) COMMENT '时长驻留比 (%)',
     fallback_ratio DECIMAL(5,2) COMMENT '回流比 (%)',
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -199,37 +208,37 @@ INSERT INTO operator_info (operator_name, country, region, network_type) VALUES
 ('BT Group', 'UK', 'UK', '5G');
 
 -- 站点数据 (2026-03)
-INSERT INTO site_info (operator_id, data_month, lte_700M_site, lte_700M_cell, lte_800M_site, lte_800M_cell, lte_900M_site, lte_900M_cell, lte_1400M_site, lte_1400M_cell, lte_1800M_site, lte_1800M_cell, lte_2100M_site, lte_2100M_cell, lte_2600M_site, lte_2600M_cell, nr_700M_site, nr_700M_cell, nr_800M_site, nr_800M_cell, nr_900M_site, nr_900M_cell, nr_1400M_site, nr_1400M_cell, nr_1800M_site, nr_1800M_cell, nr_2100M_site, nr_2100M_cell, nr_2600M_site, nr_2600M_cell, nr_3500M_site, nr_3500M_cell, nr_4900M_site, nr_4900M_cell) VALUES
-(1, '2026-03', 45, 120, 30, 80, 150, 450, 20, 60, 35, 80, 50, 150, 80, 200, 30, 80, 20, 50, 100, 300, 15, 40, 25, 55, 35, 100, 60, 150, 35, 85, 20, 40),
-(2, '2026-03', 35, 90, 25, 60, 120, 320, 15, 45, 30, 150, 40, 100, 70, 180, 25, 65, 18, 45, 85, 220, 12, 35, 22, 100, 30, 75, 55, 140, 28, 65, 15, 25),
-(3, '2026-03', 40, 100, 28, 70, 140, 380, 18, 55, 32, 120, 45, 80, 65, 150, 28, 72, 20, 52, 95, 260, 14, 42, 24, 85, 32, 65, 50, 120, 25, 55, 10, 18);
+INSERT INTO site_info (operator_id, data_month, lte_700M_site, lte_700M_cell, lte_800M_site, lte_800M_cell, lte_900M_site, lte_900M_cell, lte_1400M_site, lte_1400M_cell, lte_1800M_site, lte_1800M_cell, lte_2100M_site, lte_2100M_cell, lte_2600M_site, lte_2600M_cell, nr_700M_site, nr_700M_cell, nr_800M_site, nr_800M_cell, nr_900M_site, nr_900M_cell, nr_1400M_site, nr_1400M_cell, nr_1800M_site, nr_1800M_cell, nr_2100M_site, nr_2100M_cell, nr_2600M_site, nr_2600M_cell, nr_3500M_site, nr_3500M_cell, nr_4900M_site, nr_4900M_cell, nr_2300M_site, nr_2300M_cell) VALUES
+(1, '2026-03', 45, 120, 30, 80, 150, 450, 20, 60, 35, 80, 50, 150, 80, 200, 30, 80, 20, 50, 100, 300, 15, 40, 25, 55, 35, 100, 60, 150, 35, 85, 20, 40, 12, 30),
+(2, '2026-03', 35, 90, 25, 60, 120, 320, 15, 45, 30, 150, 40, 100, 70, 180, 25, 65, 18, 45, 85, 220, 12, 35, 22, 100, 30, 75, 55, 140, 28, 65, 15, 25, 10, 25),
+(3, '2026-03', 40, 100, 28, 70, 140, 380, 18, 55, 32, 120, 45, 80, 65, 150, 28, 72, 20, 52, 95, 260, 14, 42, 24, 85, 32, 65, 50, 120, 25, 55, 10, 18, 8, 20);
 
 -- 站点数据 (2026-02)
-INSERT INTO site_info (operator_id, data_month, lte_700M_site, lte_700M_cell, lte_800M_site, lte_800M_cell, lte_900M_site, lte_900M_cell, lte_1400M_site, lte_1400M_cell, lte_1800M_site, lte_1800M_cell, lte_2100M_site, lte_2100M_cell, lte_2600M_site, lte_2600M_cell, nr_700M_site, nr_700M_cell, nr_800M_site, nr_800M_cell, nr_900M_site, nr_900M_cell, nr_1400M_site, nr_1400M_cell, nr_1800M_site, nr_1800M_cell, nr_2100M_site, nr_2100M_cell, nr_2600M_site, nr_2600M_cell, nr_3500M_site, nr_3500M_cell, nr_4900M_site, nr_4900M_cell) VALUES
-(1, '2026-02', 42, 115, 28, 75, 145, 440, 18, 55, 32, 75, 48, 145, 75, 190, 28, 75, 18, 48, 95, 290, 12, 38, 22, 50, 32, 95, 55, 140, 30, 78, 18, 38),
-(2, '2026-02', 32, 85, 22, 55, 115, 310, 12, 40, 28, 140, 38, 95, 65, 170, 22, 60, 15, 42, 80, 210, 10, 32, 20, 95, 28, 70, 50, 130, 25, 60, 12, 22),
-(3, '2026-02', 38, 95, 25, 65, 135, 370, 15, 50, 30, 115, 42, 75, 60, 145, 25, 68, 18, 48, 90, 250, 12, 38, 22, 80, 30, 60, 45, 115, 22, 50, 8, 15);
+INSERT INTO site_info (operator_id, data_month, lte_700M_site, lte_700M_cell, lte_800M_site, lte_800M_cell, lte_900M_site, lte_900M_cell, lte_1400M_site, lte_1400M_cell, lte_1800M_site, lte_1800M_cell, lte_2100M_site, lte_2100M_cell, lte_2600M_site, lte_2600M_cell, nr_700M_site, nr_700M_cell, nr_800M_site, nr_800M_cell, nr_900M_site, nr_900M_cell, nr_1400M_site, nr_1400M_cell, nr_1800M_site, nr_1800M_cell, nr_2100M_site, nr_2100M_cell, nr_2600M_site, nr_2600M_cell, nr_3500M_site, nr_3500M_cell, nr_4900M_site, nr_4900M_cell, nr_2300M_site, nr_2300M_cell) VALUES
+(1, '2026-02', 42, 115, 28, 75, 145, 440, 18, 55, 32, 75, 48, 145, 75, 190, 28, 75, 18, 48, 95, 290, 12, 38, 22, 50, 32, 95, 55, 140, 30, 78, 18, 38, 10, 28),
+(2, '2026-02', 32, 85, 22, 55, 115, 310, 12, 40, 28, 140, 38, 95, 65, 170, 22, 60, 15, 42, 80, 210, 10, 32, 20, 95, 28, 70, 50, 130, 25, 60, 12, 22, 8, 22),
+(3, '2026-02', 38, 95, 25, 65, 135, 370, 15, 50, 30, 115, 42, 75, 60, 145, 25, 68, 18, 48, 90, 250, 12, 38, 22, 80, 30, 60, 45, 115, 22, 50, 8, 15, 6, 18);
 
 -- 欧洲运营商站点数据 (2026-03)
-INSERT INTO site_info (operator_id, data_month, lte_700M_site, lte_700M_cell, lte_800M_site, lte_800M_cell, lte_900M_site, lte_900M_cell, lte_1400M_site, lte_1400M_cell, lte_1800M_site, lte_1800M_cell, lte_2100M_site, lte_2100M_cell, lte_2600M_site, lte_2600M_cell, nr_700M_site, nr_700M_cell, nr_800M_site, nr_800M_cell, nr_900M_site, nr_900M_cell, nr_1400M_site, nr_1400M_cell, nr_1800M_site, nr_1800M_cell, nr_2100M_site, nr_2100M_cell, nr_2600M_site, nr_2600M_cell, nr_3500M_site, nr_3500M_cell, nr_4900M_site, nr_4900M_cell) VALUES
+INSERT INTO site_info (operator_id, data_month, lte_700M_site, lte_700M_cell, lte_800M_site, lte_800M_cell, lte_900M_site, lte_900M_cell, lte_1400M_site, lte_1400M_cell, lte_1800M_site, lte_1800M_cell, lte_2100M_site, lte_2100M_cell, lte_2600M_site, lte_2600M_cell, nr_700M_site, nr_700M_cell, nr_800M_site, nr_800M_cell, nr_900M_site, nr_900M_cell, nr_1400M_site, nr_1400M_cell, nr_1800M_site, nr_1800M_cell, nr_2100M_site, nr_2100M_cell, nr_2600M_site, nr_2600M_cell, nr_3500M_site, nr_3500M_cell, nr_4900M_site, nr_4900M_cell, nr_2300M_site, nr_2300M_cell) VALUES
 -- Deutsche Telekom (Germany, 5G覆盖较广)
-(4, '2026-03', 25, 65, 80, 220, 180, 520, 30, 85, 55, 150, 70, 200, 95, 280, 45, 120, 35, 95, 120, 350, 25, 70, 40, 110, 50, 140, 80, 220, 55, 150, 30, 85),
+(4, '2026-03', 25, 65, 80, 220, 180, 520, 30, 85, 55, 150, 70, 200, 95, 280, 45, 120, 35, 95, 120, 350, 25, 70, 40, 110, 50, 140, 80, 220, 55, 150, 30, 85, 18, 48),
 -- Vodafone (UK)
-(5, '2026-03', 20, 50, 60, 170, 140, 400, 22, 65, 45, 120, 55, 160, 75, 210, 35, 95, 28, 75, 95, 280, 18, 50, 32, 90, 42, 115, 65, 180, 42, 115, 22, 60),
+(5, '2026-03', 20, 50, 60, 170, 140, 400, 22, 65, 45, 120, 55, 160, 75, 210, 35, 95, 28, 75, 95, 280, 18, 50, 32, 90, 42, 115, 65, 180, 42, 115, 22, 60, 15, 40),
 -- Orange (法国)
-(6, '2026-03', 18, 45, 55, 150, 130, 370, 20, 58, 40, 110, 50, 145, 70, 195, 32, 88, 25, 68, 88, 255, 16, 45, 28, 80, 38, 105, 58, 160, 38, 105, 20, 55),
+(6, '2026-03', 18, 45, 55, 150, 130, 370, 20, 58, 40, 110, 50, 145, 70, 195, 32, 88, 25, 68, 88, 255, 16, 45, 28, 80, 38, 105, 58, 160, 38, 105, 20, 55, 12, 32),
 -- Telefonica (西班牙)
-(7, '2026-03', 15, 40, 48, 135, 115, 330, 18, 52, 38, 100, 45, 130, 62, 175, 28, 78, 22, 60, 78, 225, 14, 40, 25, 70, 35, 95, 52, 145, 35, 95, 18, 48),
+(7, '2026-03', 15, 40, 48, 135, 115, 330, 18, 52, 38, 100, 45, 130, 62, 175, 28, 78, 22, 60, 78, 225, 14, 40, 25, 70, 35, 95, 52, 145, 35, 95, 18, 48, 10, 28),
 -- BT Group (英国)
-(8, '2026-03', 12, 32, 40, 110, 95, 270, 15, 42, 30, 82, 38, 110, 52, 145, 24, 65, 18, 50, 65, 190, 12, 35, 20, 58, 28, 78, 45, 125, 30, 82, 15, 40);
+(8, '2026-03', 12, 32, 40, 110, 95, 270, 15, 42, 30, 82, 38, 110, 52, 145, 24, 65, 18, 50, 65, 190, 12, 35, 20, 58, 28, 78, 45, 125, 30, 82, 15, 40, 8, 22);
 
 -- 欧洲运营商站点数据 (2026-02)
-INSERT INTO site_info (operator_id, data_month, lte_700M_site, lte_700M_cell, lte_800M_site, lte_800M_cell, lte_900M_site, lte_900M_cell, lte_1400M_site, lte_1400M_cell, lte_1800M_site, lte_1800M_cell, lte_2100M_site, lte_2100M_cell, lte_2600M_site, lte_2600M_cell, nr_700M_site, nr_700M_cell, nr_800M_site, nr_800M_cell, nr_900M_site, nr_900M_cell, nr_1400M_site, nr_1400M_cell, nr_1800M_site, nr_1800M_cell, nr_2100M_site, nr_2100M_cell, nr_2600M_site, nr_2600M_cell, nr_3500M_site, nr_3500M_cell, nr_4900M_site, nr_4900M_cell) VALUES
-(4, '2026-02', 22, 58, 75, 205, 170, 490, 28, 78, 50, 138, 65, 185, 88, 258, 40, 108, 30, 82, 110, 320, 22, 62, 35, 98, 45, 128, 72, 198, 48, 132, 25, 72),
-(5, '2026-02', 18, 45, 55, 155, 130, 375, 20, 58, 42, 112, 50, 148, 68, 192, 30, 82, 24, 65, 85, 255, 15, 42, 28, 82, 38, 105, 58, 162, 38, 102, 18, 52),
-(6, '2026-02', 15, 40, 50, 138, 120, 340, 18, 52, 36, 100, 45, 132, 65, 178, 28, 75, 22, 60, 80, 235, 14, 40, 25, 72, 35, 95, 52, 145, 32, 90, 16, 48),
-(7, '2026-02', 12, 35, 42, 120, 105, 300, 15, 45, 34, 90, 40, 118, 55, 158, 24, 68, 18, 52, 70, 205, 12, 35, 22, 62, 32, 85, 48, 130, 30, 82, 15, 42),
-(8, '2026-02', 10, 28, 35, 98, 85, 245, 12, 38, 28, 75, 35, 100, 48, 132, 20, 55, 15, 42, 58, 170, 10, 30, 18, 52, 25, 70, 40, 112, 26, 72, 12, 35);
+INSERT INTO site_info (operator_id, data_month, lte_700M_site, lte_700M_cell, lte_800M_site, lte_800M_cell, lte_900M_site, lte_900M_cell, lte_1400M_site, lte_1400M_cell, lte_1800M_site, lte_1800M_cell, lte_2100M_site, lte_2100M_cell, lte_2600M_site, lte_2600M_cell, nr_700M_site, nr_700M_cell, nr_800M_site, nr_800M_cell, nr_900M_site, nr_900M_cell, nr_1400M_site, nr_1400M_cell, nr_1800M_site, nr_1800M_cell, nr_2100M_site, nr_2100M_cell, nr_2600M_site, nr_2600M_cell, nr_3500M_site, nr_3500M_cell, nr_4900M_site, nr_4900M_cell, nr_2300M_site, nr_2300M_cell) VALUES
+(4, '2026-02', 22, 58, 75, 205, 170, 490, 28, 78, 50, 138, 65, 185, 88, 258, 40, 108, 30, 82, 110, 320, 22, 62, 35, 98, 45, 128, 72, 198, 48, 132, 25, 72, 15, 42),
+(5, '2026-02', 18, 45, 55, 155, 130, 375, 20, 58, 42, 112, 50, 148, 68, 192, 30, 82, 24, 65, 85, 255, 15, 42, 28, 82, 38, 105, 58, 162, 38, 102, 18, 52, 12, 35),
+(6, '2026-02', 15, 40, 50, 138, 120, 340, 18, 52, 36, 100, 45, 132, 65, 178, 28, 75, 22, 60, 80, 235, 14, 40, 25, 72, 35, 95, 52, 145, 32, 90, 16, 48, 10, 28),
+(7, '2026-02', 12, 35, 42, 120, 105, 300, 15, 45, 34, 90, 40, 118, 55, 158, 24, 68, 18, 52, 70, 205, 12, 35, 22, 62, 32, 85, 48, 130, 30, 82, 15, 42, 8, 22),
+(8, '2026-02', 10, 28, 35, 98, 85, 245, 12, 38, 28, 75, 35, 100, 48, 132, 20, 55, 15, 42, 58, 170, 10, 30, 18, 52, 25, 70, 40, 112, 26, 72, 12, 35, 6, 18);
 
 -- 指标数据 (2026-03)
 INSERT INTO indicator_info (operator_id, data_month, lte_700M_dl_rate, lte_700M_ul_rate, lte_700M_dl_prb, lte_700M_ul_prb, lte_800M_dl_rate, lte_800M_ul_rate, lte_800M_dl_prb, lte_800M_ul_prb, lte_900M_dl_rate, lte_900M_ul_rate, lte_900M_dl_prb, lte_900M_ul_prb, lte_1400M_dl_rate, lte_1400M_ul_rate, lte_1400M_dl_prb, lte_1400M_ul_prb, lte_1800M_dl_rate, lte_1800M_ul_rate, lte_1800M_dl_prb, lte_1800M_ul_prb, lte_2100M_dl_rate, lte_2100M_ul_rate, lte_2100M_dl_prb, lte_2100M_ul_prb, lte_2600M_dl_rate, lte_2600M_ul_rate, lte_2600M_dl_prb, lte_2600M_ul_prb, nr_700M_dl_rate, nr_700M_ul_rate, nr_700M_dl_prb, nr_700M_ul_prb, nr_800M_dl_rate, nr_800M_ul_rate, nr_800M_dl_prb, nr_800M_ul_prb, nr_900M_dl_rate, nr_900M_ul_rate, nr_900M_dl_prb, nr_900M_ul_prb, nr_1400M_dl_rate, nr_1400M_ul_rate, nr_1400M_dl_prb, nr_1400M_ul_prb, nr_1800M_dl_rate, nr_1800M_ul_rate, nr_1800M_dl_prb, nr_1800M_ul_prb, nr_2100M_dl_rate, nr_2100M_ul_rate, nr_2100M_dl_prb, nr_2100M_ul_prb, nr_2600M_dl_rate, nr_2600M_ul_rate, nr_2600M_dl_prb, nr_2600M_ul_prb, nr_3500M_dl_rate, nr_3500M_ul_rate, nr_3500M_dl_prb, nr_3500M_ul_prb, nr_4900M_dl_rate, nr_4900M_ul_rate, nr_4900M_dl_prb, nr_4900M_ul_prb, lte_avg_dl_rate, lte_avg_prb, nr_avg_dl_rate, nr_avg_prb, split_ratio, dwell_ratio, terminal_penetration, duration_dwell_ratio, fallback_ratio) VALUES
