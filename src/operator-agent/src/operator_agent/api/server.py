@@ -282,13 +282,102 @@ async def get_site_cells(query: SiteCellsQuery, _: bool = Depends(verify_api_key
     return result
 
 
+@app.get("/api/operator/all-data")
+async def get_all_operators_data(_: bool = Depends(verify_api_key), locale: str = Depends(get_locale)):
+    """Get aggregated data for all operators (site cells summary + latest indicators).
+
+    Returns data from all operators in a single call for efficient dashboard loading.
+    """
+    agent = await get_agent()
+
+    try:
+        # Fetch operators list
+        operators_result = await agent.call_java_service(
+            service_name="nl2sql-service",
+            endpoint="/operators",
+            method="GET",
+        )
+        if operators_result.get("error"):
+            raise HTTPException(status_code=500, detail=get_error_response(GET_OPERATORS_FAILED, locale, operators_result["error"]))
+
+        operators = operators_result.get("data", []) if isinstance(operators_result, dict) else operators_result
+        operators = operators if isinstance(operators, list) else []
+
+        # Fetch all site cells and indicators in parallel
+        async def fetch_operator_data(op_id: int, op_name: str):
+            try:
+                site_cells_result = await agent.call_java_service(
+                    service_name="nl2sql-service",
+                    endpoint="/site-summary",
+                    method="GET",
+                    query_params={"operatorId": op_id} if op_id else {},
+                )
+                indicators_result = await agent.call_java_service(
+                    service_name="nl2sql-service",
+                    endpoint="/indicators/latest",
+                    method="GET",
+                    query_params={"operatorName": op_name, "limit": 10},
+                )
+                site_cells = site_cells_result.get("data", []) if isinstance(site_cells_result, dict) else site_cells_result
+                indicators = indicators_result.get("data", []) if isinstance(indicators_result, dict) else indicators_result
+                return {
+                    "operatorId": op_id,
+                    "operatorName": op_name,
+                    "siteCells": site_cells if isinstance(site_cells, list) else [],
+                    "indicators": indicators if isinstance(indicators, list) else [],
+                    "error": None,
+                }
+            except Exception as e:
+                return {
+                    "operatorId": op_id,
+                    "operatorName": op_name,
+                    "siteCells": [],
+                    "indicators": [],
+                    "error": str(e),
+                }
+
+        # Fetch data for all operators
+        tasks = [fetch_operator_data(op.get("id"), op.get("operatorName", "")) for op in operators]
+        operator_data_results = await asyncio.gather(*tasks)
+
+        # Calculate summary totals
+        total_lte_site = 0
+        total_lte_cell = 0
+        total_nr_site = 0
+        total_nr_cell = 0
+        for op_data in operator_data_results:
+            for sc in op_data.get("siteCells", []):
+                if isinstance(sc, dict):
+                    total_lte_site += sc.get("lteTotalSite", 0)
+                    total_lte_cell += sc.get("lteTotalCell", 0)
+                    total_nr_site += sc.get("nrTotalSite", 0)
+                    total_nr_cell += sc.get("nrTotalCell", 0)
+
+        return {
+            "operators": operator_data_results,
+            "summary": {
+                "totalLteSite": total_lte_site,
+                "totalLteCell": total_lte_cell,
+                "totalNrSite": total_nr_site,
+                "totalNrCell": total_nr_cell,
+                "totalSite": total_lte_site + total_nr_site,
+                "totalCell": total_lte_cell + total_nr_cell,
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=get_error_response(INTERNAL_ERROR, locale, str(e)))
+
+
 def format_site_data_with_chart(site_cells: list, operators: list, latest_only: bool = False) -> Dict[str, Any]:
-    """Format site cell data into markdown table format with chart data."""
+    """Format site cell data into structured blocks with chart data.
+
+    Returns content with :::chart, :::table, :::metrics blocks for rich rendering.
+    """
     if not site_cells:
         return {"content": "未找到站点数据", "chart": None}
-
-    lines = ["# 运营商站点信息\n"]
-    chart_data = []
 
     # Get operator names and regions
     operator_map = {}
@@ -297,6 +386,12 @@ def format_site_data_with_chart(site_cells: list, operators: list, latest_only: 
         if isinstance(op, dict):
             operator_map[op.get("id")] = op.get("operatorName", "Unknown")
             operator_region_map[op.get("id")] = op.get("region", "")
+
+    # Aggregate data for structured blocks
+    all_chart_data = []
+    table_rows = []
+    metrics_items = []
+    operator_summaries = {}
 
     # Group by operator
     operator_ids = set()
@@ -308,7 +403,6 @@ def format_site_data_with_chart(site_cells: list, operators: list, latest_only: 
         op_name = operator_map.get(op_id, f"运营商{op_id}")
         region = operator_region_map.get(op_id, "")
         region_info = f" (数据区域: {region})" if region else ""
-        lines.append(f"\n## {op_name}{region_info}\n")
 
         # Filter site cells for this operator
         op_cells = [sc for sc in site_cells if isinstance(sc, dict) and sc.get("operatorId") == op_id]
@@ -319,13 +413,8 @@ def format_site_data_with_chart(site_cells: list, operators: list, latest_only: 
         # For each month data
         for cell in op_cells:
             data_month = cell.get("dataMonth", "")
-            if latest_only:
-                lines.append(f"\n### 数据月份: {data_month}\n")
-            else:
-                lines.append(f"\n### 数据月份: {data_month}\n")
 
             # LTE bands
-            lines.append("**LTE 频段:**\n")
             lte_bands = [
                 ("700M", cell.get("lte700MSite", 0), cell.get("lte700MCell", 0)),
                 ("800M", cell.get("lte800MSite", 0), cell.get("lte800MCell", 0)),
@@ -337,12 +426,9 @@ def format_site_data_with_chart(site_cells: list, operators: list, latest_only: 
             ]
             for band, sites, cells in lte_bands:
                 if sites or cells:
-                    lines.append(f"- LTE {band}: {sites} 站点, {cells} 小区")
-                    chart_data.append({"频段": f"LTE {band}", "站点": sites, "小区": cells})
-            lines.append(f"- **LTE 合计**: {cell.get('lteTotalSite', 0)} 站点, {cell.get('lteTotalCell', 0)} 小区")
+                    all_chart_data.append({"频段": f"LTE {band}", "站点": sites, "小区": cells})
 
             # NR bands
-            lines.append("\n**NR 频段:**\n")
             nr_bands = [
                 ("700M", cell.get("nr700MSite", 0), cell.get("nr700MCell", 0)),
                 ("800M", cell.get("nr800MSite", 0), cell.get("nr800MCell", 0)),
@@ -357,22 +443,93 @@ def format_site_data_with_chart(site_cells: list, operators: list, latest_only: 
             ]
             for band, sites, cells in nr_bands:
                 if sites or cells:
-                    lines.append(f"- NR {band}: {sites} 站点, {cells} 小区")
-                    chart_data.append({"频段": f"NR {band}", "站点": sites, "小区": cells})
-            lines.append(f"- **NR 合计**: {cell.get('nrTotalSite', 0)} 站点, {cell.get('nrTotalCell', 0)} 小区")
+                    all_chart_data.append({"频段": f"NR {band}", "站点": sites, "小区": cells})
 
-    # Build chart config if we have data
+            # Build operator summary for table
+            lte_total_site = cell.get('lteTotalSite', 0)
+            lte_total_cell = cell.get('lteTotalCell', 0)
+            nr_total_site = cell.get('nrTotalSite', 0)
+            nr_total_cell = cell.get('nrTotalCell', 0)
+            table_rows.append({
+                "operator": op_name,
+                "region": region,
+                "dataMonth": data_month,
+                "lteSite": lte_total_site,
+                "lteCell": lte_total_cell,
+                "nrSite": nr_total_site,
+                "nrCell": nr_total_cell,
+                "totalSite": lte_total_site + nr_total_site,
+                "totalCell": lte_total_cell + nr_total_cell,
+            })
+
+            # Accumulate metrics per operator
+            if op_name not in operator_summaries:
+                operator_summaries[op_name] = {"lteSite": 0, "lteCell": 0, "nrSite": 0, "nrCell": 0}
+            operator_summaries[op_name]["lteSite"] += lte_total_site
+            operator_summaries[op_name]["lteCell"] += lte_total_cell
+            operator_summaries[op_name]["nrSite"] += nr_total_site
+            operator_summaries[op_name]["nrCell"] += nr_total_cell
+
+    # Build structured content
+    content_parts = ["# 运营商站点信息\n"]
+
+    # Add chart block - simple single-series format for parser
+    # Multi-series data is provided via the chart object
+    if all_chart_data:
+        chart_lines = [":::chart[bar]"]
+        seen_bands = set()
+        for item in all_chart_data[:20]:  # Limit to 20 items
+            band = item['频段']
+            if band not in seen_bands:
+                # Show total cells as primary metric
+                chart_lines.append(f"- {band}: {item['站点'] + item['小区']}")
+                seen_bands.add(band)
+        chart_lines.append(":::")
+        content_parts.append("\n".join(chart_lines))
+
+    # Add table block
+    if table_rows:
+        table_lines = [":::table"]
+        table_lines.append("| 运营商 | 区域 | 数据月 | LTE站点 | LTE小区 | NR站点 | NR小区 | 总站点 | 总小区 |")
+        table_lines.append("|--------|------|--------|---------|--------|--------|--------|--------|--------|")
+        for row in table_rows:
+            table_lines.append(f"| {row['operator']} | {row['region']} | {row['dataMonth']} | {row['lteSite']} | {row['lteCell']} | {row['nrSite']} | {row['nrCell']} | {row['totalSite']} | {row['totalCell']} |")
+        table_lines.append(":::")
+        content_parts.append("\n".join(table_lines))
+
+    # Add metrics block
+    if operator_summaries:
+        metrics_lines = [":::metrics"]
+        total_lte_site = 0
+        total_lte_cell = 0
+        total_nr_site = 0
+        total_nr_cell = 0
+        for op_name, summary in operator_summaries.items():
+            metrics_lines.append(f"- {op_name} LTE站点: {summary['lteSite']}, LTE小区: {summary['lteCell']}")
+            metrics_lines.append(f"- {op_name} NR站点: {summary['nrSite']}, NR小区: {summary['nrCell']}")
+            total_lte_site += summary['lteSite']
+            total_lte_cell += summary['lteCell']
+            total_nr_site += summary['nrSite']
+            total_nr_cell += summary['nrCell']
+        metrics_lines.append(f"- **LTE总站点**: {total_lte_site}")
+        metrics_lines.append(f"- **LTE总小区**: {total_lte_cell}")
+        metrics_lines.append(f"- **NR总站点**: {total_nr_site}")
+        metrics_lines.append(f"- **NR总小区**: {total_nr_cell}")
+        metrics_lines.append(":::")
+        content_parts.append("\n".join(metrics_lines))
+
+    # Build chart config
     chart = None
-    if chart_data:
+    if all_chart_data:
         chart = {
             "type": "bar",
             "column": "频段",
-            "data": chart_data,
+            "data": all_chart_data,
             "keys": ["站点", "小区"],
             "colors": ["#10b981", "#4f46e5"]
         }
 
-    return {"content": "\n".join(lines), "chart": chart}
+    return {"content": "\n".join(content_parts), "chart": chart}
 
 
 def format_site_data(site_cells: list, operators: list, latest_only: bool = False) -> str:
@@ -458,6 +615,21 @@ def _filter_by_operator(site_cells: list, operators: list, operator_name: str) -
     return site_cells
 
 
+def _build_thinking_chain(query: str, intent: str, operator_name: str = None, data_type: str = None) -> str:
+    """Build thinking chain content for display."""
+    steps = [
+        f"分析用户查询：{query}",
+        f"意图检测：{intent}",
+    ]
+    if operator_name:
+        steps.append(f"识别运营商：{operator_name}")
+    if data_type:
+        steps.append(f"数据类型：{data_type}")
+    steps.append("调用NL2SQL服务获取数据")
+    steps.append("格式化返回结果")
+    return "<!-- thinking_start -->\n" + "\n".join(f"{i+1}. {s}" for i, s in enumerate(steps)) + "\n<!-- thinking_end -->"
+
+
 async def _process_agent_request(user_input: str, confirmed: bool = False, locale: str = "zh") -> Dict[str, Any]:
     """
     Shared logic for processing agent requests.
@@ -502,7 +674,9 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
             if data_month:
                 site_cells = [sc for sc in site_cells if isinstance(sc, dict) and sc.get("dataMonth") == data_month]
 
-            return format_site_data_with_chart(site_cells, operators, latest_only=False)
+            chart_result = format_site_data_with_chart(site_cells, operators, latest_only=False)
+            thinking = _build_thinking_chain(user_input, "site_data - 站点数据查询", operator_name, "站点小区汇总")
+            return {"content": thinking + "\n\n" + chart_result["content"], "chart": chart_result.get("chart")}
 
         elif intent == "latest_data":
             site_cells_result = await agent.get_site_cells()
@@ -531,7 +705,8 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
             content_lines = chart_result["content"].split("\n", 1)
             if len(content_lines) > 1:
                 lines.append(content_lines[1])
-            return {"content": "\n".join(lines) if lines[-1] else chart_result["content"], "chart": chart_result.get("chart")}
+            thinking = _build_thinking_chain(user_input, "latest_data - 最新数据查询", operator_name, "站点小区汇总")
+            return {"content": thinking + "\n\n" + ("\n".join(lines) if lines[-1] else chart_result["content"]), "chart": chart_result.get("chart")}
 
         elif intent == "indicator_data":
             indicators_result = await agent.get_latest_indicators(limit=limit)
@@ -547,7 +722,8 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
                 if isinstance(item, dict):
                     lines.append(f"- **{item.get('dataMonth', 'N/A')}** | LTE下行: {item.get('lteAvgDlRate', 'N/A')} Mbps | NR下行: {item.get('nrAvgDlRate', 'N/A')} Mbps | 分流比: {item.get('splitRatio', 'N/A')}%")
 
-            return {"content": "\n".join(lines)}
+            thinking = _build_thinking_chain(user_input, "indicator_data - 指标数据查询", operator_name, "性能指标")
+            return {"content": thinking + "\n\n" + "\n".join(lines)}
 
         elif intent == "operator_list":
             operators_result = await agent.call_java_service(
@@ -573,7 +749,8 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
                     network = op.get("networkType", "")
                     lines.append(f"- **{name}** | {country} | {region} | {network}")
 
-            return {"content": "\n".join(lines)}
+            thinking = _build_thinking_chain(user_input, "operator_list - 运营商列表查询", None, "运营商基础信息")
+            return {"content": thinking + "\n\n" + "\n".join(lines)}
 
         elif intent == "nl2sql":
             nl2sql_result = await agent.query_nl2sql(natural_language_query=user_input)
@@ -593,7 +770,8 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
                     if isinstance(row, dict):
                         lines.append("| " + " | ".join(str(row.get(k, "")) for k in keys) + " |")
 
-            return {"content": "\n".join(lines)}
+            thinking = _build_thinking_chain(user_input, "nl2sql - 自然语言查询", operator_name, "数据库记录")
+            return {"content": thinking + "\n\n" + "\n".join(lines)}
 
         else:
             # Fallback to NL2SQL
@@ -614,7 +792,8 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
                     if isinstance(row, dict):
                         lines.append("| " + " | ".join(str(row.get(k, "")) for k in keys) + " |")
 
-            return {"content": "\n".join(lines)}
+            thinking = _build_thinking_chain(user_input, "nl2sql - 自然语言查询(兜底)", operator_name, "数据库记录")
+            return {"content": thinking + "\n\n" + "\n".join(lines)}
 
     except Exception as e:
         return get_error_response(INTERNAL_ERROR, locale, str(e))

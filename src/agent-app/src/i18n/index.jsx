@@ -9,6 +9,7 @@ const translations = {
     placeholder: '输入您的查询...',
     send: '发送',
     thinking: '思考中...',
+    thinkingProcess: '正在思考...',
     error: '错误',
     retry: '重试',
     noData: '暂无数据',
@@ -18,6 +19,18 @@ const translations = {
     copied: '已复制',
     regenerate: '重新生成',
     resend: '重新发送',
+    helpful: '有帮助',
+    notHelpful: '没帮助',
+    // Chat blocks
+    analysisSteps: '分析步骤',
+    dataVisualization: '数据可视化',
+    jsonData: 'JSON 数据',
+    expand: '展开',
+    collapse: '收起',
+    // Validation
+    responseComplete: '响应完成',
+    responseError: '响应异常',
+    emptyResponse: '空响应',
     // Dashboard
     operator: '运营商',
     siteCount: '站点数',
@@ -38,6 +51,7 @@ const translations = {
     placeholder: 'Enter your query...',
     send: 'Send',
     thinking: 'Thinking...',
+    thinkingProcess: 'Thinking...',
     error: 'Error',
     retry: 'Retry',
     noData: 'No data',
@@ -47,6 +61,18 @@ const translations = {
     copied: 'Copied',
     regenerate: 'Regenerate',
     resend: 'Resend',
+    helpful: 'Helpful',
+    notHelpful: 'Not helpful',
+    // Chat blocks
+    analysisSteps: 'Analysis Steps',
+    dataVisualization: 'Data Visualization',
+    jsonData: 'JSON Data',
+    expand: 'Expand',
+    collapse: 'Collapse',
+    // Validation
+    responseComplete: 'Response complete',
+    responseError: 'Response error',
+    emptyResponse: 'Empty response',
     // Dashboard
     operator: 'Operator',
     siteCount: 'Sites',
