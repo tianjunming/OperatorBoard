@@ -123,6 +123,67 @@
   font-size: 10px;
 }
 
+/* Command Panel */
+.command-panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 280px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 100;
+  animation: slideUp 0.2s ease-out;
+}
+
+.command-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-light);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.command-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.command-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.command-item:hover,
+.command-item.selected {
+  background: var(--bg-hover);
+}
+
+.command-item.selected {
+  background: rgba(79, 70, 229, 0.1);
+}
+
+.command-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.command-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .chat-input-main {
@@ -136,5 +197,9 @@
   .send-btn {
     width: 32px;
     height: 32px;
+  }
+
+  .command-panel {
+    width: calc(100vw - 32px);
   }
 }

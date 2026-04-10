@@ -71,23 +71,36 @@ function parseTableBlock(match) {
   const content = match[1];
   const lines = content.trim().split('\n').filter(l => l.trim());
 
-  if (lines.length < 2) return { data: [], columns: [] };
+  if (lines.length < 2) return { data: [], columns: [], citations: [] };
 
   // Parse header
   const headers = lines[0].split('|').filter(c => c.trim()).map(h => h.trim());
 
   // Parse rows
   const data = [];
+  const citations = [];
   for (let i = 2; i < lines.length; i++) {
     const values = lines[i].split('|').filter(c => c.trim()).map(v => v.trim());
     if (values.length === headers.length) {
       const row = {};
-      headers.forEach((h, idx) => { row[h] = values[idx]; });
+      headers.forEach((h, idx) => {
+        let value = values[idx];
+        // Check for citation markers like [1], [2]
+        const citationMatch = value.match(/\[(\d+)\]\s*$/);
+        if (citationMatch) {
+          row[h] = value.replace(/\[(\d+)\]\s*$/, '').trim();
+          if (!citations.includes(citationMatch[1])) {
+            citations.push(citationMatch[1]);
+          }
+        } else {
+          row[h] = value;
+        }
+      });
       data.push(row);
     }
   }
 
-  return { data, columns: headers };
+  return { data, columns: headers, citations };
 }
 
 function parseChartBlock(match) {
@@ -204,6 +217,7 @@ export function autoDetectStructure(content) {
 
 /**
  * Format thinking chain for display
+ * Supports: [action], [step], [result], [error] annotations and source: tags
  */
 export function formatThinkingChain(thinking) {
   if (!thinking) return [];
@@ -212,14 +226,43 @@ export function formatThinkingChain(thinking) {
   const formatted = [];
 
   for (const step of steps) {
-    // Detect step type
-    if (step.match(/^\d+[\.)]\s*/)) {
-      formatted.push({ type: 'step', content: step.replace(/^\d+[\.)]\s*/, ''), index: formatted.length + 1 });
+    let content = step;
+    let type = 'info';
+    let source = null;
+
+    // Detect annotated types [action], [step], [result], [error]
+    if (step.includes('[action]')) {
+      type = 'action';
+      content = step.replace(/\[action\]/g, '').trim();
+    } else if (step.includes('[step]')) {
+      type = 'step';
+      content = step.replace(/\[step\]/g, '').trim();
+    } else if (step.includes('[result]')) {
+      type = 'result';
+      content = step.replace(/\[result\]/g, '').trim();
+    } else if (step.includes('[error]')) {
+      type = 'error';
+      content = step.replace(/\[error\]/g, '').trim();
+    } else if (step.match(/^\d+[\.)]\s*/)) {
+      type = 'step';
+      content = step.replace(/^\d+[\.)]\s*/, '');
     } else if (step.match(/^(分析|查询|处理|生成|理解)/)) {
-      formatted.push({ type: 'action', content: step, index: formatted.length + 1 });
-    } else {
-      formatted.push({ type: 'info', content: step, index: formatted.length + 1 });
+      type = 'action';
     }
+
+    // Extract source: tag
+    const sourceMatch = content.match(/source:\s*(\S+)/i);
+    if (sourceMatch) {
+      source = sourceMatch[1];
+      content = content.replace(/source:\s*\S+/i, '').trim();
+    }
+
+    formatted.push({
+      type,
+      content: content.trim(),
+      source,
+      index: formatted.length + 1
+    });
   }
 
   return formatted;

@@ -66,7 +66,9 @@ function ChatView() {
       <div className="chat-input-container">
         <ChatInput
           onSend={handleSendMessage}
+          onClear={handleClear}
           disabled={isStreaming}
+          messages={messages}
           placeholder={locale === 'zh'
             ? t('placeholder') || '输入您的查询...'
             : 'Enter your query...'}

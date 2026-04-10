@@ -1,204 +1,10 @@
--- 权限管理表
-SOURCE auth_schema.sql;
-
--- 聊天历史表
-SOURCE chat_schema.sql;
-
--- 运营商信息表
-SET FOREIGN_KEY_CHECKS=0;
-DROP TABLE IF EXISTS operator_info;
-CREATE TABLE operator_info (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    operator_name VARCHAR(100) NOT NULL COMMENT '运营商名称',
-    country VARCHAR(50) COMMENT '国家名称',
-    region VARCHAR(100) COMMENT '地区',
-    network_type VARCHAR(50) COMMENT '网络类型 (4G/5G)',
-    data_month VARCHAR(7) COMMENT '数据月份 (YYYY-MM)',
-    created_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运营商信息表';
-
--- 站点信息表（宽表：每行一个运营商一个月）
-DROP TABLE IF EXISTS site_info;
-CREATE TABLE site_info (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    operator_id BIGINT NOT NULL COMMENT '关联运营商ID',
-    data_month VARCHAR(7) NOT NULL COMMENT '数据月份 (YYYY-MM)',
-    -- LTE 700M 频段
-    lte_700M_site INT DEFAULT 0 COMMENT 'LTE 700M 物理站点数',
-    lte_700M_cell INT DEFAULT 0 COMMENT 'LTE 700M 物理小区数',
-    -- LTE 800M 频段
-    lte_800M_site INT DEFAULT 0 COMMENT 'LTE 800M 物理站点数',
-    lte_800M_cell INT DEFAULT 0 COMMENT 'LTE 800M 物理小区数',
-    -- LTE 900M 频段
-    lte_900M_site INT DEFAULT 0 COMMENT 'LTE 900M 物理站点数',
-    lte_900M_cell INT DEFAULT 0 COMMENT 'LTE 900M 物理小区数',
-    -- LTE 1400M 频段
-    lte_1400M_site INT DEFAULT 0 COMMENT 'LTE 1400M 物理站点数',
-    lte_1400M_cell INT DEFAULT 0 COMMENT 'LTE 1400M 物理小区数',
-    -- LTE 1800M 频段
-    lte_1800M_site INT DEFAULT 0 COMMENT 'LTE 1800M 物理站点数',
-    lte_1800M_cell INT DEFAULT 0 COMMENT 'LTE 1800M 物理小区数',
-    -- LTE 2100M 频段
-    lte_2100M_site INT DEFAULT 0 COMMENT 'LTE 2100M 物理站点数',
-    lte_2100M_cell INT DEFAULT 0 COMMENT 'LTE 2100M 物理小区数',
-    -- LTE 2600M 频段
-    lte_2600M_site INT DEFAULT 0 COMMENT 'LTE 2600M 物理站点数',
-    lte_2600M_cell INT DEFAULT 0 COMMENT 'LTE 2600M 物理小区数',
-    -- NR 700M 频段
-    nr_700M_site INT DEFAULT 0 COMMENT 'NR 700M 物理站点数',
-    nr_700M_cell INT DEFAULT 0 COMMENT 'NR 700M 物理小区数',
-    -- NR 800M 频段
-    nr_800M_site INT DEFAULT 0 COMMENT 'NR 800M 物理站点数',
-    nr_800M_cell INT DEFAULT 0 COMMENT 'NR 800M 物理小区数',
-    -- NR 900M 频段
-    nr_900M_site INT DEFAULT 0 COMMENT 'NR 900M 物理站点数',
-    nr_900M_cell INT DEFAULT 0 COMMENT 'NR 900M 物理小区数',
-    -- NR 1400M 频段
-    nr_1400M_site INT DEFAULT 0 COMMENT 'NR 1400M 物理站点数',
-    nr_1400M_cell INT DEFAULT 0 COMMENT 'NR 1400M 物理小区数',
-    -- NR 1800M 频段
-    nr_1800M_site INT DEFAULT 0 COMMENT 'NR 1800M 物理站点数',
-    nr_1800M_cell INT DEFAULT 0 COMMENT 'NR 1800M 物理小区数',
-    -- NR 2100M 频段
-    nr_2100M_site INT DEFAULT 0 COMMENT 'NR 2100M 物理站点数',
-    nr_2100M_cell INT DEFAULT 0 COMMENT 'NR 2100M 物理小区数',
-    -- NR 2600M 频段
-    nr_2600M_site INT DEFAULT 0 COMMENT 'NR 2600M 物理站点数',
-    nr_2600M_cell INT DEFAULT 0 COMMENT 'NR 2600M 物理小区数',
-    -- NR 3500M 频段
-    nr_3500M_site INT DEFAULT 0 COMMENT 'NR 3500M 物理站点数',
-    nr_3500M_cell INT DEFAULT 0 COMMENT 'NR 3500M 物理小区数',
-    -- NR 4900M 频段
-    nr_4900M_site INT DEFAULT 0 COMMENT 'NR 4900M 物理站点数',
-    nr_4900M_cell INT DEFAULT 0 COMMENT 'NR 4900M 物理小区数',
-    -- NR 2300M 频段
-    nr_2300M_site INT DEFAULT 0 COMMENT 'NR 2300M 物理站点数',
-    nr_2300M_cell INT DEFAULT 0 COMMENT 'NR 2300M 物理小区数',
-    -- 汇总字段
-    lte_total_site INT DEFAULT 0 COMMENT 'LTE物理站点总数',
-    lte_total_cell INT GENERATED ALWAYS AS (lte_700M_cell + lte_800M_cell + lte_900M_cell + lte_1400M_cell + lte_1800M_cell + lte_2100M_cell + lte_2600M_cell) STORED COMMENT 'LTE物理小区总数',
-    nr_total_site INT DEFAULT 0 COMMENT 'NR物理站点总数',
-    nr_total_cell INT GENERATED ALWAYS AS (nr_700M_cell + nr_800M_cell + nr_900M_cell + nr_1400M_cell + nr_1800M_cell + nr_2100M_cell + nr_2600M_cell + nr_3500M_cell + nr_4900M_cell + nr_2300M_cell) STORED COMMENT 'NR物理小区总数',
-    created_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    FOREIGN KEY (operator_id) REFERENCES operator_info(id),
-    UNIQUE KEY uk_operator_month (operator_id, data_month)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='站点信息表';
-
--- 指标信息表（宽表：每行一个运营商一个月）
-DROP TABLE IF EXISTS indicator_info;
-CREATE TABLE indicator_info (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    operator_id BIGINT NOT NULL COMMENT '关联运营商ID',
-    data_month VARCHAR(7) NOT NULL COMMENT '数据月份 (YYYY-MM)',
-    -- LTE 700M 频段指标
-    lte_700M_dl_rate DECIMAL(10,2) COMMENT 'LTE 700M 下行速率 (Mbps)',
-    lte_700M_ul_rate DECIMAL(10,2) COMMENT 'LTE 700M 上行速率 (Mbps)',
-    lte_700M_dl_prb DECIMAL(5,2) COMMENT 'LTE 700M 下行PRB利用率 (%)',
-    lte_700M_ul_prb DECIMAL(5,2) COMMENT 'LTE 700M 上行PRB利用率 (%)',
-    -- LTE 800M 频段指标
-    lte_800M_dl_rate DECIMAL(10,2) COMMENT 'LTE 800M 下行速率 (Mbps)',
-    lte_800M_ul_rate DECIMAL(10,2) COMMENT 'LTE 800M 上行速率 (Mbps)',
-    lte_800M_dl_prb DECIMAL(5,2) COMMENT 'LTE 800M 下行PRB利用率 (%)',
-    lte_800M_ul_prb DECIMAL(5,2) COMMENT 'LTE 800M 上行PRB利用率 (%)',
-    -- LTE 900M 频段指标
-    lte_900M_dl_rate DECIMAL(10,2) COMMENT 'LTE 900M 下行速率 (Mbps)',
-    lte_900M_ul_rate DECIMAL(10,2) COMMENT 'LTE 900M 上行速率 (Mbps)',
-    lte_900M_dl_prb DECIMAL(5,2) COMMENT 'LTE 900M 下行PRB利用率 (%)',
-    lte_900M_ul_prb DECIMAL(5,2) COMMENT 'LTE 900M 上行PRB利用率 (%)',
-    -- LTE 1400M 频段指标
-    lte_1400M_dl_rate DECIMAL(10,2) COMMENT 'LTE 1400M 下行速率 (Mbps)',
-    lte_1400M_ul_rate DECIMAL(10,2) COMMENT 'LTE 1400M 上行速率 (Mbps)',
-    lte_1400M_dl_prb DECIMAL(5,2) COMMENT 'LTE 1400M 下行PRB利用率 (%)',
-    lte_1400M_ul_prb DECIMAL(5,2) COMMENT 'LTE 1400M 上行PRB利用率 (%)',
-    -- LTE 1800M 频段指标
-    lte_1800M_dl_rate DECIMAL(10,2) COMMENT 'LTE 1800M 下行速率 (Mbps)',
-    lte_1800M_ul_rate DECIMAL(10,2) COMMENT 'LTE 1800M 上行速率 (Mbps)',
-    lte_1800M_dl_prb DECIMAL(5,2) COMMENT 'LTE 1800M 下行PRB利用率 (%)',
-    lte_1800M_ul_prb DECIMAL(5,2) COMMENT 'LTE 1800M 上行PRB利用率 (%)',
-    -- LTE 2100M 频段指标
-    lte_2100M_dl_rate DECIMAL(10,2) COMMENT 'LTE 2100M 下行速率 (Mbps)',
-    lte_2100M_ul_rate DECIMAL(10,2) COMMENT 'LTE 2100M 上行速率 (Mbps)',
-    lte_2100M_dl_prb DECIMAL(5,2) COMMENT 'LTE 2100M 下行PRB利用率 (%)',
-    lte_2100M_ul_prb DECIMAL(5,2) COMMENT 'LTE 2100M 上行PRB利用率 (%)',
-    -- LTE 2600M 频段指标
-    lte_2600M_dl_rate DECIMAL(10,2) COMMENT 'LTE 2600M 下行速率 (Mbps)',
-    lte_2600M_ul_rate DECIMAL(10,2) COMMENT 'LTE 2600M 上行速率 (Mbps)',
-    lte_2600M_dl_prb DECIMAL(5,2) COMMENT 'LTE 2600M 下行PRB利用率 (%)',
-    lte_2600M_ul_prb DECIMAL(5,2) COMMENT 'LTE 2600M 上行PRB利用率 (%)',
-    -- NR 700M 频段指标
-    nr_700M_dl_rate DECIMAL(10,2) COMMENT 'NR 700M 下行速率 (Mbps)',
-    nr_700M_ul_rate DECIMAL(10,2) COMMENT 'NR 700M 上行速率 (Mbps)',
-    nr_700M_dl_prb DECIMAL(5,2) COMMENT 'NR 700M 下行PRB利用率 (%)',
-    nr_700M_ul_prb DECIMAL(5,2) COMMENT 'NR 700M 上行PRB利用率 (%)',
-    -- NR 800M 频段指标
-    nr_800M_dl_rate DECIMAL(10,2) COMMENT 'NR 800M 下行速率 (Mbps)',
-    nr_800M_ul_rate DECIMAL(10,2) COMMENT 'NR 800M 上行速率 (Mbps)',
-    nr_800M_dl_prb DECIMAL(5,2) COMMENT 'NR 800M 下行PRB利用率 (%)',
-    nr_800M_ul_prb DECIMAL(5,2) COMMENT 'NR 800M 上行PRB利用率 (%)',
-    -- NR 900M 频段指标
-    nr_900M_dl_rate DECIMAL(10,2) COMMENT 'NR 900M 下行速率 (Mbps)',
-    nr_900M_ul_rate DECIMAL(10,2) COMMENT 'NR 900M 上行速率 (Mbps)',
-    nr_900M_dl_prb DECIMAL(5,2) COMMENT 'NR 900M 下行PRB利用率 (%)',
-    nr_900M_ul_prb DECIMAL(5,2) COMMENT 'NR 900M 上行PRB利用率 (%)',
-    -- NR 1400M 频段指标
-    nr_1400M_dl_rate DECIMAL(10,2) COMMENT 'NR 1400M 下行速率 (Mbps)',
-    nr_1400M_ul_rate DECIMAL(10,2) COMMENT 'NR 1400M 上行速率 (Mbps)',
-    nr_1400M_dl_prb DECIMAL(5,2) COMMENT 'NR 1400M 下行PRB利用率 (%)',
-    nr_1400M_ul_prb DECIMAL(5,2) COMMENT 'NR 1400M 上行PRB利用率 (%)',
-    -- NR 1800M 频段指标
-    nr_1800M_dl_rate DECIMAL(10,2) COMMENT 'NR 1800M 下行速率 (Mbps)',
-    nr_1800M_ul_rate DECIMAL(10,2) COMMENT 'NR 1800M 上行速率 (Mbps)',
-    nr_1800M_dl_prb DECIMAL(5,2) COMMENT 'NR 1800M 下行PRB利用率 (%)',
-    nr_1800M_ul_prb DECIMAL(5,2) COMMENT 'NR 1800M 上行PRB利用率 (%)',
-    -- NR 2100M 频段指标
-    nr_2100M_dl_rate DECIMAL(10,2) COMMENT 'NR 2100M 下行速率 (Mbps)',
-    nr_2100M_ul_rate DECIMAL(10,2) COMMENT 'NR 2100M 上行速率 (Mbps)',
-    nr_2100M_dl_prb DECIMAL(5,2) COMMENT 'NR 2100M 下行PRB利用率 (%)',
-    nr_2100M_ul_prb DECIMAL(5,2) COMMENT 'NR 2100M 上行PRB利用率 (%)',
-    -- NR 2600M 频段指标
-    nr_2600M_dl_rate DECIMAL(10,2) COMMENT 'NR 2600M 下行速率 (Mbps)',
-    nr_2600M_ul_rate DECIMAL(10,2) COMMENT 'NR 2600M 上行速率 (Mbps)',
-    nr_2600M_dl_prb DECIMAL(5,2) COMMENT 'NR 2600M 下行PRB利用率 (%)',
-    nr_2600M_ul_prb DECIMAL(5,2) COMMENT 'NR 2600M 上行PRB利用率 (%)',
-    -- NR 3500M 频段指标
-    nr_3500M_dl_rate DECIMAL(10,2) COMMENT 'NR 3500M 下行速率 (Mbps)',
-    nr_3500M_ul_rate DECIMAL(10,2) COMMENT 'NR 3500M 上行速率 (Mbps)',
-    nr_3500M_dl_prb DECIMAL(5,2) COMMENT 'NR 3500M 下行PRB利用率 (%)',
-    nr_3500M_ul_prb DECIMAL(5,2) COMMENT 'NR 3500M 上行PRB利用率 (%)',
-    -- NR 4900M 频段指标
-    nr_4900M_dl_rate DECIMAL(10,2) COMMENT 'NR 4900M 下行速率 (Mbps)',
-    nr_4900M_ul_rate DECIMAL(10,2) COMMENT 'NR 4900M 上行速率 (Mbps)',
-    nr_4900M_dl_prb DECIMAL(5,2) COMMENT 'NR 4900M 下行PRB利用率 (%)',
-    nr_4900M_ul_prb DECIMAL(5,2) COMMENT 'NR 4900M 上行PRB利用率 (%)',
-    -- NR 2300M 频段指标
-    nr_2300M_dl_rate DECIMAL(10,2) COMMENT 'NR 2300M 下行速率 (Mbps)',
-    nr_2300M_ul_rate DECIMAL(10,2) COMMENT 'NR 2300M 上行速率 (Mbps)',
-    nr_2300M_dl_prb DECIMAL(5,2) COMMENT 'NR 2300M 下行PRB利用率 (%)',
-    nr_2300M_ul_prb DECIMAL(5,2) COMMENT 'NR 2300M 上行PRB利用率 (%)',
-
-    lte_avg_dl_rate DECIMAL(10,2) COMMENT 'LTE 平均下行速率 (Mbps)',
-    lte_avg_prb DECIMAL(5,2) COMMENT 'LTE 平均PRB利用率 (%)',
-    nr_avg_dl_rate DECIMAL(10,2) COMMENT 'NR 平均下行速率 (Mbps)',
-    nr_avg_prb DECIMAL(5,2) COMMENT 'NR 平均PRB利用率 (%)',
-    
-    traffic_ratio DECIMAL(5,2) COMMENT '分流比 (%)',
-    traffic_campratio DECIMAL(5,2) COMMENT '流量驻留比 (%)',
-    terminal_penetration DECIMAL(5,2) COMMENT '终端渗透率 (%)',
-    duration_campratio DECIMAL(5,2) COMMENT '时长驻留比 (%)',
-    fallback_ratio DECIMAL(5,2) COMMENT '回流比 (%)',
-    created_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    FOREIGN KEY (operator_id) REFERENCES operator_info(id),
-    UNIQUE KEY uk_operator_month (operator_id, data_month)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='指标信息表';
-
 -- ============================================================================
 -- 全球运营商信息表数据 (按华为区域划分标准)
 -- 区域划分: 亚太、欧洲、美洲、中东、非洲(北非、南非)
--- 总计: 180个运营商
 -- ============================================================================
+
+-- 清空现有数据（注意：这将影响 site_info 和 indicator_info 的关联，需配合重建）
+SET FOREIGN_KEY_CHECKS=0;
 
 -- 亚太地区 (Asia Pacific) - 43个运营商
 INSERT INTO operator_info (operator_name, country, region, network_type, data_month) VALUES
@@ -460,12 +266,21 @@ INSERT INTO operator_info (operator_name, country, region, network_type, data_mo
 ('Airtel DRC', '刚果民主共和国', '非洲-南非', '5G', '2026-03'),
 ('Vodacom DRC', '刚果民主共和国', '非洲-南非', '5G', '2026-03');
 
--- ============================================================================
--- 全球运营商站点数据和指标数据
--- 注意: 请执行以下命令加载生成的测试数据
--- SOURCE generated_test_data.sql;
--- 或手动导入 generated_test_data.sql 文件
--- ============================================================================
+SET FOREIGN_KEY_CHECKS=1;
 
--- 站点和指标数据已移至 generated_test_data.sql
--- 请在初始化数据库后执行: SOURCE generated_test_data.sql;
+-- ============================================================================
+-- 汇总统计
+-- ============================================================================
+SELECT '亚太' AS region, COUNT(*) AS operator_count FROM operator_info WHERE region = '亚太'
+UNION ALL
+SELECT '欧洲' AS region, COUNT(*) FROM operator_info WHERE region = '欧洲'
+UNION ALL
+SELECT '美洲' AS region, COUNT(*) FROM operator_info WHERE region = '美洲'
+UNION ALL
+SELECT '中东' AS region, COUNT(*) FROM operator_info WHERE region = '中东'
+UNION ALL
+SELECT '非洲-北非' AS region, COUNT(*) FROM operator_info WHERE region = '非洲-北非'
+UNION ALL
+SELECT '非洲-南非' AS region, COUNT(*) FROM operator_info WHERE region = '非洲-南非'
+UNION ALL
+SELECT '总计' AS region, COUNT(*) FROM operator_info;

@@ -5,7 +5,7 @@ import {
   User, Bot, AlertCircle, CheckCircle, AlertTriangle, Info,
   ChevronDown, ChevronUp, ChevronRight, MessageSquare, Database,
   BarChart3, Table2, Code2, Sparkles, Eye, EyeOff,
-  Clock, ArrowRight, Search, Cpu, Loader2
+  Clock, ArrowRight, Search, Cpu, Loader2, Download, Filter, ArrowUp, ArrowDown, X
 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, AreaChart, Area,
@@ -14,11 +14,92 @@ import {
 } from 'recharts';
 import { useI18n } from '../i18n';
 import { parseStructuredBlocks, formatThinkingChain } from '../utils/responseParser';
+import { useTableSort } from '../hooks/useTableSort';
+import ChartTypeSelector from './charts/ChartTypeSelector';
 import CodeBlock from './CodeBlock';
 import './MessageItem.css';
 
 // Message feedback state
 const MESSAGE_FEEDBACK = { NONE: 'none', LIKED: 'liked', DISLIKED: 'disliked' };
+
+// Toggle Block Renderer (defined outside component to ensure availability)
+function RenderToggle({ block, blockIdx, viewMode, onToggleView }) {
+  const table = block?.table || { columns: [], data: [] };
+  const chart = block?.chart || { data: [], keys: [], column: '数据月' };
+
+  return (
+    <div className="structured-toggle">
+      <div className="toggle-header">
+        <div className="toggle-title">
+          <BarChart3 size={14} />
+          <span>站点数据</span>
+        </div>
+        <div className="toggle-buttons">
+          <button
+            className={`toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
+            onClick={() => onToggleView(blockIdx)}
+          >
+            <Table2 size={14} />
+            <span>表格</span>
+          </button>
+          <button
+            className={`toggle-btn ${viewMode === 'chart' ? 'active' : ''}`}
+            onClick={() => onToggleView(blockIdx)}
+          >
+            <BarChart3 size={14} />
+            <span>图表</span>
+          </button>
+        </div>
+      </div>
+      <div className="toggle-content">
+        {viewMode === 'table' ? (
+          <div className="structured-table">
+            <div className="table-scroll">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    {(table.columns || []).map((col, idx) => (
+                      <th key={idx}>{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(table.data || []).map((row, idx) => (
+                    <tr key={idx}>
+                      {(table.columns || []).map((col, cidx) => (
+                        <td key={cidx}>{row[col]}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="structured-chart">
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={chart.data || []} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
+                <XAxis dataKey={chart.column || '数据月'} tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--border-light)' }} />
+                <Legend />
+                {(chart.keys || []).map((key, idx) => (
+                  <Bar
+                    key={key}
+                    dataKey={key}
+                    fill={['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'][idx % 6]}
+                    radius={[4, 4, 0, 0]}
+                  />
+                ))}
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function MessageItem({ message, onResend, isStreaming, onFeedback }) {
   const { role, content, isError, complete, chart, metadata } = message;
@@ -28,6 +109,7 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
   const [feedback, setFeedback] = useState(MESSAGE_FEEDBACK.NONE);
   const [showThinking, setShowThinking] = useState(true);
   const [stepsExpanded, setStepsExpanded] = useState(true);
+  const [toggleViewModes, setToggleViewModes] = useState({});
 
   const isUser = role === 'user';
   const isAssistant = role === 'assistant';
@@ -95,7 +177,10 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
                   <div className="step-content">
                     {step.type === 'action' && <span className="step-icon"><Cpu size={12} /></span>}
                     {step.type === 'step' && <span className="step-number">{step.index}</span>}
+                    {step.type === 'result' && <span className="step-icon"><CheckCircle size={12} /></span>}
+                    {step.type === 'error' && <span className="step-icon"><AlertCircle size={12} /></span>}
                     <span className="step-text">{step.content}</span>
+                    {step.source && <span className="step-source"><Database size={10} />{step.source}</span>}
                   </div>
                 </div>
               ))}
@@ -110,24 +195,65 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
   const renderTable = (block) => {
     if (!block.data || block.data.length === 0) return null;
 
+    const {
+      sortedData,
+      sortConfig,
+      globalFilter,
+      handleSort,
+      handleGlobalFilter,
+      exportCSV,
+      filteredCount,
+      totalCount
+    } = useTableSort(block.data, block.columns);
+
     return (
       <div className="structured-table">
         <div className="table-header">
           <Table2 size={14} />
           <span>数据表格</span>
-          <span className="table-count">{block.data.length} 条记录</span>
+          <span className="table-count">{filteredCount} / {totalCount} 条记录</span>
+        </div>
+        <div className="table-controls">
+          <div className="table-search-wrapper">
+            <Filter size={12} className="table-filter-icon" />
+            <input
+              type="text"
+              className="table-filter-input"
+              placeholder="筛选数据..."
+              value={globalFilter}
+              onChange={(e) => handleGlobalFilter(e.target.value)}
+            />
+            {globalFilter && (
+              <button className="table-filter-clear" onClick={() => handleGlobalFilter('')}>
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          <button className="table-export-btn" onClick={() => exportCSV()}>
+            <Download size={12} />
+            <span>导出</span>
+          </button>
         </div>
         <div className="table-scroll">
           <table className="data-table">
             <thead>
               <tr>
                 {block.columns.map((col, idx) => (
-                  <th key={idx}>{col}</th>
+                  <th key={idx} onClick={() => handleSort(col)}>
+                    {col}
+                    <span className={`th-sort-indicator ${sortConfig.key === col ? 'active' : ''}`}>
+                      {sortConfig.key === col ? (
+                        sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+                      ) : (
+                        <ArrowUp size={12} className="th-sort-icon" />
+                      )}
+                    </span>
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {block.data.map((row, idx) => (
+              {sortedData.map((row, idx) => (
                 <tr key={idx}>
                   {block.columns.map((col, cidx) => (
                     <td key={cidx}>{row[col]}</td>
@@ -137,27 +263,43 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
             </tbody>
           </table>
         </div>
+        {block.citations && block.citations.length > 0 && (
+          <div className="citation-list">
+            {block.citations.map((cite) => (
+              <div key={cite} className="citation-item">
+                <span className="citation-num">{cite}</span>
+                <span>数据来源 #{cite}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
 
   // Chart Renderer
   const renderChart = (block) => {
-    const { chartType = 'bar', data, keys, column = 'name' } = block;
+    const [chartType, setChartType] = useState(block.chartType || 'bar');
+    const { chartType: initialType, data, keys, column = 'name' } = block;
     const colors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
     if (!data || data.length === 0) return null;
+
+    // 安全获取数据键，确保 column 存在于数据中
+    const dataKeys = data[0] ? Object.keys(data[0]) : [];
+    const safeColumn = dataKeys.includes(column) ? column : (dataKeys[0] || 'name');
+    const safeKeys = keys || dataKeys.filter(k => k !== safeColumn);
 
     const commonProps = { data, margin: { top: 20, right: 30, left: 20, bottom: 5 } };
 
     const renderBar = () => (
       <ComposedChart {...commonProps}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-        <XAxis dataKey={column} tick={{ fontSize: 11 }} />
+        <XAxis dataKey={safeColumn} tick={{ fontSize: 11 }} />
         <YAxis tick={{ fontSize: 11 }} />
         <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--border-light)' }} />
         <Legend />
-        {(keys || Object.keys(data[0] || {}).filter(k => k !== column)).map((key, idx) => (
+        {safeKeys.map((key, idx) => (
           <Bar key={key} dataKey={key} fill={colors[idx % colors.length]} radius={[4, 4, 0, 0]} />
         ))}
       </ComposedChart>
@@ -166,18 +308,17 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
     const renderLine = () => (
       <LineChart {...commonProps}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-        <XAxis dataKey={column} tick={{ fontSize: 11 }} />
+        <XAxis dataKey={safeColumn} tick={{ fontSize: 11 }} />
         <YAxis tick={{ fontSize: 11 }} />
         <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--border-light)' }} />
         <Legend />
-        {(keys || Object.keys(data[0] || {}).filter(k => k !== column)).map((key, idx) => (
+        {safeKeys.map((key, idx) => (
           <Line key={key} type="monotone" dataKey={key} stroke={colors[idx % colors.length]} strokeWidth={2} dot={{ r: 4 }} />
         ))}
       </LineChart>
     );
 
     const renderPie = () => {
-      const total = data.reduce((sum, d) => sum + (d.value || 0), 0);
       return (
         <PieChart>
           <Pie
@@ -188,7 +329,10 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
             outerRadius={90}
             paddingAngle={2}
             dataKey="value"
-            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+            label={({ name, percent }) => {
+              const percentValue = isNaN(percent) || !isFinite(percent) ? 0 : (percent * 100).toFixed(0);
+              return `${name} (${percentValue}%)`;
+            }}
           >
             {data.map((_, idx) => (
               <Cell key={idx} fill={colors[idx % colors.length]} />
@@ -211,15 +355,23 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
           ))}
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-        <XAxis dataKey={column} tick={{ fontSize: 11 }} />
+        <XAxis dataKey={safeColumn} tick={{ fontSize: 11 }} />
         <YAxis tick={{ fontSize: 11 }} />
         <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--border-light)' }} />
         <Legend />
-        {(keys || Object.keys(data[0] || {}).filter(k => k !== column)).map((key, idx) => (
+        {safeKeys.map((key, idx) => (
           <Area key={key} type="monotone" dataKey={key} stroke={colors[idx % colors.length]} fill={`url(#gradient-${idx})`} />
         ))}
       </AreaChart>
     );
+
+    // Toggle view mode handler
+    const toggleViewMode = (blockIdx) => {
+      setToggleViewModes(prev => ({
+        ...prev,
+        [blockIdx]: prev[blockIdx] === 'table' ? 'chart' : 'table'
+      }));
+    };
 
     const chartTitles = {
       bar: '柱状图对比',
@@ -234,8 +386,9 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
         <div className="chart-header">
           <BarChart3 size={14} />
           <span>{chartTitles[chartType] || '数据图表'}</span>
+          <ChartTypeSelector currentType={chartType} onChange={setChartType} />
           <div className="chart-legend">
-            {(keys || Object.keys(data[0] || {}).filter(k => k !== column)).map((key, idx) => (
+            {safeKeys.map((key, idx) => (
               <span key={key} className="legend-item">
                 <span className="legend-dot" style={{ background: colors[idx % colors.length] }} />
                 {key}
@@ -257,23 +410,31 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
   const renderMetrics = (block) => {
     if (!block.items || block.items.length === 0) return null;
 
-    const maxValue = Math.max(...block.items.map(i => i.numeric || 0));
+    // 安全计算最大值，避免 NaN 和 Infinity
+    const validValues = block.items
+      .map(i => i.numeric || 0)
+      .filter(v => isFinite(v));
+    const maxValue = validValues.length > 0 ? Math.max(...validValues) : 0;
 
     return (
       <div className="structured-metrics">
         <div className="metrics-grid">
-          {block.items.map((item, idx) => (
-            <div key={idx} className="metric-card">
-              <div className="metric-label">{item.label}</div>
-              <div className="metric-value">{item.value}</div>
-              <div className="metric-bar">
-                <div
-                  className="metric-bar-fill"
-                  style={{ width: `${((item.numeric || 0) / maxValue) * 100}%` }}
-                />
+          {block.items.map((item, idx) => {
+            const numericValue = item.numeric || 0;
+            const barWidth = maxValue > 0 ? (numericValue / maxValue) * 100 : 0;
+            return (
+              <div key={idx} className="metric-card">
+                <div className="metric-label">{item.label}</div>
+                <div className="metric-value">{item.value}</div>
+                <div className="metric-bar">
+                  <div
+                    className="metric-bar-fill"
+                    style={{ width: `${barWidth}%` }}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
@@ -350,6 +511,31 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
         <div className="message-bubble">
           {isAssistant && (
             <>
+              {/* Message Header with Metadata */}
+              {message.metadata && (message.metadata.source || message.metadata.query_time || message.metadata.confidence) && (
+                <div className="message-header">
+                  <div className="header-meta">
+                    {message.metadata.source && (
+                      <div className="header-source">
+                        <Database size={12} />
+                        <span>{message.metadata.source}</span>
+                      </div>
+                    )}
+                    {message.metadata.query_time && (
+                      <div className="header-time">
+                        <Clock size={12} />
+                        <span>{message.metadata.query_time}ms</span>
+                      </div>
+                    )}
+                  </div>
+                  {message.metadata.confidence && (
+                    <div className={`header-badge ${message.metadata.confidence < 70 ? 'warning' : ''}`}>
+                      置信度: {message.metadata.confidence}%
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Thinking Chain */}
               {thinkingBlock && renderThinkingChain(thinkingBlock.content)}
 
@@ -362,6 +548,7 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
                     case 'metrics': return <div key={idx} className="block-metrics">{renderMetrics(block)}</div>;
                     case 'steps': return <div key={idx} className="block-steps">{renderSteps(block)}</div>;
                     case 'sql': return <div key={idx} className="block-sql">{renderSql(block)}</div>;
+                    case 'toggle': return <div key={idx} className="block-toggle"><RenderToggle block={block} blockIdx={idx} viewMode={toggleViewModes[idx] || 'table'} onToggleView={toggleViewMode} /></div>;
                     case 'text': return <div key={idx} className="block-text">{renderText(block.content)}</div>;
                     default: return null;
                   }

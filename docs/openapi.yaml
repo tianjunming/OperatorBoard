@@ -1,0 +1,1088 @@
+openapi: 3.0.3
+info:
+  title: OperatorBoard API
+  description: |
+    OperatorBoard NL2SQL API - 电信运营商数据管理平台
+
+    ## 认证
+    所有API需要通过X-API-Key Header进行认证
+
+    ## 错误响应
+    所有错误遵循统一格式：
+    ```json
+    {
+      "code": "E3001",
+      "message": "获取站点数据失败",
+      "category": "DATA",
+      "detail": "详细错误信息",
+      "request_id": "req_xxx",
+      "doc_url": "https://operatorboard.example.com/docs/errors/E3001",
+      "errors": []
+    }
+    ```
+
+    ## 错误码分类
+    - E0001-E0099: GENERAL (通用错误)
+    - E1001-E1099: AGENT (Agent错误)
+    - E1101-E1199: INTENT (意图识别错误)
+    - E1201-E1299: TOOL (工具错误)
+    - E2001-E2099: CONFIG (配置错误)
+    - E3001-E3099: DATA (数据错误)
+    - E3101-E3199: NL2SQL (NL2SQL错误)
+    - E4001-E4099: EXTERNAL (外部服务错误)
+    - E5001-E5099: AUTH (认证错误)
+  version: 1.0.0
+  contact:
+    name: OperatorBoard Team
+
+servers:
+  - url: http://localhost:8080
+    description: Operator Agent (Primary)
+  - url: http://localhost:8081
+    description: Operator Service (NL2SQL)
+  - url: http://localhost:8083
+    description: Predict Agent (Coverage Prediction)
+
+tags:
+  - name: Health
+    description: 健康检查
+  - name: Agent
+    description: Agent执行相关
+  - name: Operator
+    description: 运营商数据查询
+  - name: NL2SQL
+    description: 自然语言转SQL
+  - name: Coverage
+    description: 覆盖预测问答
+  - name: Simulation
+    description: 仿真参数调优
+
+paths:
+  # ============ Health ============
+  /health:
+    get:
+      summary: 健康检查
+      description: 检查服务健康状态
+      tags: [Health]
+      operationId: healthCheck
+      responses:
+        '200':
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: healthy
+
+  # ============ Agent - Operator Agent ============
+  /api/agent/run:
+    post:
+      summary: Agent同步执行
+      description: 同步执行Agent任务，返回格式化结果（支持Markdown表格、图表数据）
+      tags: [Agent]
+      operationId: agentRun
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRunRequest'
+            example:
+              input: "查询北京联通的站点数据"
+              stream: false
+              confirmed: false
+      responses:
+        '200':
+          description: 执行成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentRunResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/agent/stream:
+    post:
+      summary: Agent流式执行
+      description: 流式执行Agent任务，通过SSE实时推送结果
+      tags: [Agent]
+      operationId: agentStream
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentStreamRequest'
+      responses:
+        '200':
+          description: 成功建立SSE连接
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                example: |
+                  event: start
+                  data: {"type": "start", "request_id": "req_abc123"}
+
+                  event: content
+                  data: {"type": "content", "content": "## 北京联通..."}
+
+                  event: done
+                  data: {"type": "done", "request_id": "req_abc123"}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/agent/capabilities:
+    get:
+      summary: 获取Agent能力列表
+      description: 返回当前Agent支持的所有工具、技能和意图
+      tags: [Agent]
+      operationId: getCapabilities
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapabilitiesResponse'
+
+  # ============ Operator ============
+  /api/operator/indicators/latest:
+    post:
+      summary: 获取运营商最新指标
+      description: 获取指定运营商的最新性能指标
+      tags: [Operator]
+      operationId: getLatestIndicators
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IndicatorsRequest'
+            example:
+              operatorName: "中国联通"
+              limit: 10
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndicatorsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/operator/site-cells:
+    post:
+      summary: 获取站点小区汇总
+      description: 获取运营商站点小区按频段分布汇总
+      tags: [Operator]
+      operationId: getSiteCells
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteCellsRequest'
+            example:
+              operatorId: 1
+              band: "3500M"
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteCellsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============ NL2SQL - Operator Service ============
+  /api/v1/nl2sql/query:
+    post:
+      summary: NL2SQL查询
+      description: 将自然语言查询转换为SQL并执行
+      tags: [NL2SQL]
+      operationId: nl2sqlQuery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NL2SqlRequest'
+            example:
+              naturalLanguageQuery: "北京联通有多少个5G站点？"
+              maxResults: 1000
+              latest: true
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NL2SqlResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/v1/nl2sql/schema:
+    get:
+      summary: 获取数据库Schema
+      description: 返回当前数据库的表结构和字段信息
+      tags: [NL2SQL]
+      operationId: getSchema
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaResponse'
+
+  # ============ Query - Operator Service ============
+  /api/v1/query/operators:
+    get:
+      summary: 运营商列表
+      description: 获取运营商列表，支持分页和按国家筛选
+      tags: [Operator]
+      operationId: listOperators
+      parameters:
+        - name: country
+          in: query
+          description: 国家筛选
+          schema:
+            type: string
+            example: "中国"
+        - name: page
+          in: query
+          description: 页码
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          description: 每页条数
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperatorListResponse'
+
+  /api/v1/query/operators/{operatorId}:
+    get:
+      summary: 运营商详情
+      description: 获取指定运营商的详细信息
+      tags: [Operator]
+      operationId: getOperator
+      parameters:
+        - name: operatorId
+          in: path
+          required: true
+          description: 运营商ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operator'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/query/site-summary:
+    get:
+      summary: 站点汇总
+      description: 获取指定运营商的站点汇总数据（宽表格式）
+      tags: [Operator]
+      operationId: getSiteSummary
+      parameters:
+        - name: operatorId
+          in: query
+          required: true
+          description: 运营商ID
+          schema:
+            type: integer
+        - name: dataMonth
+          in: query
+          description: 数据月份 (YYYY-MM格式)
+          schema:
+            type: string
+            pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteSummaryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/query/indicators/latest:
+    get:
+      summary: 最新指标
+      description: 获取指定运营商的最新性能指标
+      tags: [Operator]
+      operationId: getIndicatorsLatest
+      parameters:
+        - name: operatorId
+          in: query
+          required: true
+          description: 运营商ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndicatorsDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/query/indicators/trend:
+    get:
+      summary: 指标趋势
+      description: 获取指定运营商的指标趋势数据
+      tags: [Operator]
+      operationId: getIndicatorsTrend
+      parameters:
+        - name: operatorId
+          in: query
+          required: true
+          description: 运营商ID
+          schema:
+            type: integer
+        - name: months
+          in: query
+          description: 趋势月份数
+          schema:
+            type: integer
+            default: 6
+            maximum: 24
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndicatorsTrendResponse'
+
+  # ============ Coverage Prediction - Predict Agent ============
+  /coverage/query:
+    post:
+      summary: 覆盖预测问答
+      description: 基于RAG检索的覆盖预测知识问答
+      tags: [Coverage]
+      operationId: coverageQuery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoverageQueryRequest'
+            example:
+              query: "5G覆盖预测的关键参数有哪些？"
+              topic: "general"
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoverageQueryResponse'
+
+  # ============ Simulation - Predict Agent ============
+  /simulation/recommend:
+    post:
+      summary: 仿真参数推荐
+      description: 根据场景推荐仿真参数
+      tags: [Simulation]
+      operationId: simulationRecommend
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulationRecommendRequest'
+            example:
+              scenario: "urban"
+              networkType: "5G"
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationRecommendResponse'
+
+  /simulation/tune:
+    post:
+      summary: 仿真参数调优
+      description: 根据性能指标调优仿真参数
+      tags: [Simulation]
+      operationId: simulationTune
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulationTuneRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationTuneResponse'
+
+# ============ Components ============
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API认证密钥
+
+  schemas:
+    # ---- Common ----
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: healthy
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: 错误码
+          example: E3001
+        message:
+          type: string
+          description: 错误信息
+          example: 获取站点数据失败
+        category:
+          type: string
+          description: 错误分类
+          example: DATA
+        detail:
+          type: string
+          description: 详细错误信息
+        request_id:
+          type: string
+          description: 请求追踪ID
+        doc_url:
+          type: string
+          description: 错误文档链接
+        errors:
+          type: array
+          description: 字段级错误数组
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: 错误字段名
+              code:
+                type: string
+                description: 错误代码
+              message:
+                type: string
+                description: 字段级错误描述
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    # ---- Agent ----
+    AgentRunRequest:
+      type: object
+      required:
+        - input
+      properties:
+        input:
+          type: string
+          description: 用户查询输入
+          maxLength: 500
+        stream:
+          type: boolean
+          description: 是否启用流式响应
+          default: false
+        confirmed:
+          type: boolean
+          description: 是否已确认执行（需二次确认）
+          default: false
+
+    AgentRunResponse:
+      type: object
+      properties:
+        content:
+          type: string
+          description: Markdown格式的响应内容
+        chart:
+          type: object
+          description: 图表数据对象（可选）
+          properties:
+            type:
+              type: string
+              enum: [bar, line, pie, area]
+            column:
+              type: string
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  value:
+                    type: number
+
+    AgentStreamRequest:
+      type: object
+      required:
+        - input
+        - stream
+      properties:
+        input:
+          type: string
+        stream:
+          type: boolean
+          enum: [true]
+
+    CapabilitiesResponse:
+      type: object
+      properties:
+        tools:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+              enabled:
+                type: boolean
+        skills:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+              enabled:
+                type: boolean
+        intents:
+          type: array
+          items:
+            type: string
+            enum: [site_data, indicator_data, operator_list, latest_data, nl2sql]
+
+    # ---- Operator ----
+    IndicatorsRequest:
+      type: object
+      required:
+        - operatorName
+      properties:
+        operatorName:
+          type: string
+          description: 运营商名称（支持模糊匹配）
+        limit:
+          type: integer
+          description: 返回条数限制
+          default: 10
+          maximum: 100
+
+    IndicatorsResponse:
+      type: object
+      properties:
+        indicators:
+          type: object
+          properties:
+            operatorId:
+              type: integer
+            operatorName:
+              type: string
+            dataMonth:
+              type: string
+            lteAvgDlRate:
+              type: number
+            lteAvgPrb:
+              type: number
+            nrAvgDlRate:
+              type: number
+            nrAvgPrb:
+              type: number
+
+    SiteCellsRequest:
+      type: object
+      required:
+        - operatorId
+      properties:
+        operatorId:
+          type: integer
+          description: 运营商ID
+          minimum: 1
+        band:
+          type: string
+          description: 频段筛选（如"3500M"）
+
+    SiteCellsResponse:
+      type: object
+      properties:
+        siteCells:
+          type: object
+          properties:
+            operatorId:
+              type: integer
+            operatorName:
+              type: string
+            dataMonth:
+              type: string
+            lteTotalSite:
+              type: integer
+            lteTotalCell:
+              type: integer
+            nrTotalSite:
+              type: integer
+            nrTotalCell:
+              type: integer
+            bandDetails:
+              type: array
+              items:
+                type: object
+                properties:
+                  band:
+                    type: string
+                  siteCount:
+                    type: integer
+                  cellCount:
+                    type: integer
+
+    Operator:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 运营商ID
+        operatorName:
+          type: string
+          description: 运营商名称
+          example: 中国联通
+        country:
+          type: string
+          description: 国家
+        region:
+          type: string
+          description: 地区
+        networkType:
+          type: string
+          description: 网络类型
+          enum: [4G, 5G, 4G/5G]
+        dataMonth:
+          type: string
+          description: 数据月份
+
+    OperatorListResponse:
+      type: object
+      properties:
+        operators:
+          type: array
+          items:
+            $ref: '#/components/schemas/Operator'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    SiteSummaryResponse:
+      type: object
+      properties:
+        siteSummary:
+          type: object
+          properties:
+            operatorId:
+              type: integer
+            operatorName:
+              type: string
+            dataMonth:
+              type: string
+            lteTotalSite:
+              type: integer
+            lteTotalCell:
+              type: integer
+            nrTotalSite:
+              type: integer
+            nrTotalCell:
+              type: integer
+            lte700MSite:
+              type: integer
+            lte800MSite:
+              type: integer
+            lte900MSite:
+              type: integer
+            lte1800MSite:
+              type: integer
+            lte2600MSite:
+              type: integer
+            nr700MSite:
+              type: integer
+            nr3500MSite:
+              type: integer
+            nr4900MSite:
+              type: integer
+            nr2300MSite:
+              type: integer
+
+    IndicatorsDetailResponse:
+      type: object
+      properties:
+        indicators:
+          type: object
+          properties:
+            operatorId:
+              type: integer
+            operatorName:
+              type: string
+            dataMonth:
+              type: string
+            lteAvgDlRate:
+              type: number
+            lteAvgUlRate:
+              type: number
+            lteAvgPrb:
+              type: number
+            nrAvgDlRate:
+              type: number
+            nrAvgUlRate:
+              type: number
+            nrAvgPrb:
+              type: number
+            trafficRatio:
+              type: number
+            dwellRatio:
+              type: number
+            durationDwellRatio:
+              type: number
+
+    IndicatorsTrendResponse:
+      type: object
+      properties:
+        operatorId:
+          type: integer
+        trendData:
+          type: array
+          items:
+            type: object
+            properties:
+              dataMonth:
+                type: string
+              lteAvgDlRate:
+                type: number
+              nrAvgDlRate:
+                type: number
+              trafficRatio:
+                type: number
+
+    # ---- NL2SQL ----
+    NL2SqlRequest:
+      type: object
+      required:
+        - naturalLanguageQuery
+      properties:
+        naturalLanguageQuery:
+          type: string
+          description: 自然语言查询
+          maxLength: 500
+        maxResults:
+          type: integer
+          description: 最大返回条数
+          default: 1000
+          maximum: 10000
+        latest:
+          type: boolean
+          description: 是否仅返回最新月份
+          default: true
+
+    NL2SqlResponse:
+      type: object
+      properties:
+        generatedSql:
+          type: string
+          description: 生成的SQL语句
+        results:
+          type: array
+          description: 查询结果集
+        rowCount:
+          type: integer
+          description: 结果行数
+        executionTimeMs:
+          type: integer
+          description: 执行耗时（毫秒）
+        status:
+          type: string
+          enum: [success, error]
+
+    SchemaResponse:
+      type: object
+      properties:
+        tables:
+          type: array
+          items:
+            type: object
+            properties:
+              tableName:
+                type: string
+              columns:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                    description:
+                      type: string
+
+    # ---- Coverage Prediction ----
+    CoverageQueryRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: 问题内容
+        topic:
+          type: string
+          description: 话题分类
+          default: general
+
+    CoverageQueryResponse:
+      type: object
+      properties:
+        answer:
+          type: string
+          description: 回答内容
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              content:
+                type: string
+              score:
+                type: number
+
+    # ---- Simulation ----
+    SimulationRecommendRequest:
+      type: object
+      required:
+        - scenario
+        - networkType
+      properties:
+        scenario:
+          type: string
+          description: 场景类型
+          enum: [urban, suburban, rural]
+        networkType:
+          type: string
+          description: 网络类型
+          enum: [4G, 5G]
+
+    SimulationRecommendResponse:
+      type: object
+      properties:
+        recommendation:
+          type: object
+          properties:
+            frequency:
+              type: integer
+              description: 频段 (MHz)
+            txPower:
+              type: integer
+              description: 发射功率 (dBm)
+            antennaHeight:
+              type: number
+              description: 天线高度 (m)
+            antennaDowntilt:
+              type: number
+              description: 下倾角 (度)
+            cellRadius:
+              type: integer
+              description: 小区半径 (m)
+
+    SimulationTuneRequest:
+      type: object
+      required:
+        - currentParams
+        - performanceMetrics
+        - targetMetrics
+      properties:
+        currentParams:
+          type: object
+          properties:
+            frequency:
+              type: integer
+            txPower:
+              type: integer
+            cellRadius:
+              type: integer
+        performanceMetrics:
+          type: object
+          properties:
+            coverage:
+              type: number
+            throughput:
+              type: number
+            interference:
+              type: number
+        targetMetrics:
+          type: object
+          properties:
+            coverage:
+              type: number
+
+    SimulationTuneResponse:
+      type: object
+      properties:
+        tunedParams:
+          type: object
+          properties:
+            frequency:
+              type: integer
+            txPower:
+              type: integer
+            antennaHeight:
+              type: number
+            antennaDowntilt:
+              type: number
+            cellRadius:
+              type: integer
+        recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              parameter:
+                type: string
+              currentValue:
+                type: number
+              recommendedValue:
+                type: number
+              reason:
+                type: string
+
+  responses:
+    BadRequest:
+      description: 请求参数错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: E0001
+            message: 请求参数验证失败
+            category: GENERAL
+            detail: "operator_id必须为正整数"
+            errors:
+              - field: operator_id
+                code: invalid_type
+                message: "operator_id必须为正整数"
+
+    Unauthorized:
+      description: 认证失败或API Key无效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: E5001
+            message: API Key无效或缺失
+            category: AUTH
+            detail: X-API-Key header is missing
+
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: E3001
+            message: 运营商不存在
+            category: DATA
+            detail: "operator_id=999 not found"
+
+    RateLimited:
+      description: 请求频率超限
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: E4001
+            message: 请求频率超限
+            category: EXTERNAL
+            detail: "Rate limit exceeded. Please retry after 60 seconds."
+
+    InternalError:
+      description: 服务器内部错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: E1001
+            message: Agent执行内部错误
+            category: AGENT
+            detail: "Unexpected error in agent execution"

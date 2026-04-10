@@ -123,6 +123,7 @@
   cursor: pointer;
   transition: all var(--transition-fast);
   border: 1px solid transparent;
+  position: relative;
 }
 
 .session-item:hover {
@@ -130,7 +131,9 @@
   border-color: var(--border-light);
 }
 
-.session-item:hover .session-delete {
+.session-item:hover .session-delete,
+.session-item:hover .session-bookmark,
+.session-item:hover .session-tag-btn {
   opacity: 1;
 }
 
@@ -182,6 +185,37 @@
   color: var(--text-muted);
 }
 
+.session-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.session-tags {
+  display: flex;
+  gap: 4px;
+}
+
+.session-tag {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: var(--font-weight-medium);
+}
+
+.session-tag-more {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.session-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.session-bookmark,
+.session-tag-btn,
 .session-delete {
   display: flex;
   align-items: center;
@@ -193,6 +227,24 @@
   opacity: 0;
   transition: all var(--transition-fast);
   flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.session-bookmark:hover {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--color-warning);
+}
+
+.session-bookmark.active {
+  opacity: 1;
+  color: var(--color-warning);
+}
+
+.session-tag-btn:hover {
+  background: rgba(79, 70, 229, 0.1);
+  color: var(--color-primary);
 }
 
 .session-delete:hover {
@@ -204,6 +256,136 @@
   opacity: 1;
   background: rgba(239, 68, 68, 0.1);
   color: var(--color-error);
+}
+
+/* Session Groups */
+.session-group {
+  margin-bottom: var(--space-sm);
+}
+
+.session-group-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+}
+
+.session-group-header:hover {
+  background: var(--bg-hover);
+}
+
+.group-toggle {
+  display: flex;
+  align-items: center;
+  color: var(--text-tertiary);
+}
+
+.group-title {
+  flex: 1;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.group-count {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+}
+
+.session-group-items {
+  margin-top: var(--space-xs);
+}
+
+/* Tag Menu */
+.tag-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: var(--space-xs);
+  width: 180px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.tag-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-light);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.tag-menu-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.tag-menu-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.tag-menu-list {
+  padding: var(--space-xs);
+}
+
+.tag-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.tag-menu-item:hover {
+  background: var(--bg-hover);
+}
+
+.tag-menu-item.selected {
+  background: rgba(79, 70, 229, 0.1);
+}
+
+.tag-menu-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tag-menu-label {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.tag-menu-check {
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
 }
 
 /* Footer */

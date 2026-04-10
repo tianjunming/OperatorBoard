@@ -61,6 +61,7 @@
 | agent-framework | Python | 核心 Agent 框架 |
 | operator-agent | Python | 业务 Agent 实现 |
 | operator-service | Java Spring Boot | NL2SQL 服务 (MVC+CQRS) |
+| auth-agent | Python FastAPI | 用户认证、角色权限管理 (Port 8084) |
 | agent-app | React + Node.js | 前端应用 |
 
 ### 核心变更 (MVC+CQRS)

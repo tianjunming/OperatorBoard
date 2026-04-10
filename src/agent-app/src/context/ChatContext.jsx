@@ -154,6 +154,89 @@ export function ChatProvider({ children }) {
     }
   }, [currentSession]);
 
+  // Toggle session bookmark
+  const toggleSessionBookmark = useCallback(async (sessionId) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    const newBookmarked = !session.bookmarked;
+
+    // Optimistic update
+    setSessions(prev =>
+      prev.map(s =>
+        s.id === sessionId ? { ...s, bookmarked: newBookmarked } : s
+      ).sort((a, b) => {
+        // Bookmarked sessions first, then by updated_at
+        if (a.bookmarked !== b.bookmarked) return b.bookmarked ? 1 : -1;
+        return new Date(b.updated_at) - new Date(a.updated_at);
+      })
+    );
+
+    try {
+      const response = await fetch(`${API_BASE}/chat/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: getHeaders(),
+        body: JSON.stringify({ bookmarked: newBookmarked }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update bookmark');
+      }
+    } catch (error) {
+      // Revert on error
+      setSessions(prev =>
+        prev.map(s =>
+          s.id === sessionId ? { ...s, bookmarked: !newBookmarked } : s
+        )
+      );
+      console.error('Toggle bookmark error:', error);
+    }
+  }, [sessions]);
+
+  // Update session tags
+  const updateSessionTags = useCallback(async (sessionId, tags) => {
+    // Optimistic update
+    setSessions(prev =>
+      prev.map(s =>
+        s.id === sessionId ? { ...s, tags } : s
+      )
+    );
+
+    try {
+      const response = await fetch(`${API_BASE}/chat/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: getHeaders(),
+        body: JSON.stringify({ tags }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update tags');
+      }
+    } catch (error) {
+      console.error('Update tags error:', error);
+    }
+  }, []);
+
+  // Add tag to session
+  const addSessionTag = useCallback(async (sessionId, tag) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    const currentTags = session.tags || [];
+    if (currentTags.includes(tag)) return;
+
+    await updateSessionTags(sessionId, [...currentTags, tag]);
+  }, [sessions, updateSessionTags]);
+
+  // Remove tag from session
+  const removeSessionTag = useCallback(async (sessionId, tag) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    const currentTags = session.tags || [];
+    await updateSessionTags(sessionId, currentTags.filter(t => t !== tag));
+  }, [sessions, updateSessionTags]);
+
   // Save a message to the current session
   const saveMessage = useCallback(async (role, content, metadata = {}) => {
     console.log('[ChatContext] saveMessage called:', { role, content: content?.substring(0, 50), currentSession: !!currentSession });
@@ -246,6 +329,10 @@ export function ChatProvider({ children }) {
     clearCurrentSession,
     toggleSidebar,
     setSidebarOpen,
+    toggleSessionBookmark,
+    updateSessionTags,
+    addSessionTag,
+    removeSessionTag,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
