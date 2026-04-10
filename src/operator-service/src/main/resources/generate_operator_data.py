@@ -325,8 +325,7 @@ def generate_sql():
             operator_idx += 1
 
     # 生成SQL文件
-    site_sql = f"""-- 站点数据 (基于全球{operator_idx-1}个运营商)
-INSERT INTO site_info (operator_id, data_month,
+    site_sql = """-- 站点数据 (基于全球%d个运营商)\nINSERT INTO site_info (operator_id, data_month,
     lte_700M_site, lte_700M_cell,
     lte_800M_site, lte_800M_cell,
     lte_900M_site, lte_900M_cell,
@@ -344,9 +343,8 @@ INSERT INTO site_info (operator_id, data_month,
     nr_3500M_site, nr_3500M_cell,
     nr_4900M_site, nr_4900M_cell,
     nr_2300M_site, nr_2300M_cell,
-    lte_total_site, nr_total_site) VALUES
-{chr(10).join(site_values)};
-"""
+    lte_total_site, nr_total_site) VALUES\n%s;
+""" % (operator_idx - 1, ',\n'.join(site_values))
 
     indicator_sql = f"""-- 指标数据 (基于全球{operator_idx-1}个运营商)
 INSERT INTO indicator_info (operator_id, data_month,
@@ -369,8 +367,8 @@ INSERT INTO indicator_info (operator_id, data_month,
     nr_2300M_dl_rate, nr_2300M_ul_rate, nr_2300M_dl_prb, nr_2300M_ul_prb,
     lte_avg_dl_rate, lte_avg_prb, nr_avg_dl_rate, nr_avg_prb,
     traffic_ratio, traffic_campratio, terminal_penetration, duration_campratio, fallback_ratio) VALUES
-{chr(10).join(indicator_values)};
-"""
+%s;
+""" % ',\n'.join(indicator_values)
 
     return site_sql + "\n" + indicator_sql
 
