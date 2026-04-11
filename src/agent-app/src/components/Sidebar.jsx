@@ -172,9 +172,9 @@ function Sidebar({ collapsed }) {
   }
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" data-testid="sidebar">
       <div className="sidebar-header">
-        <button className="new-chat-btn" onClick={handleNewChat}>
+        <button className="new-chat-btn" onClick={handleNewChat} data-testid="new-chat-button">
           <Plus size={18} />
           <span>新对话</span>
         </button>
@@ -188,10 +188,11 @@ function Sidebar({ collapsed }) {
           placeholder="搜索对话..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          data-testid="session-search-input"
         />
       </div>
 
-      <div className="session-list" ref={listRef}>
+      <div className="session-list" ref={listRef} data-testid="session-list">
         {loading && sessions.length === 0 ? (
           <div className="session-loading">
             <div className="skeleton" style={{ height: 60, marginBottom: 8 }} />

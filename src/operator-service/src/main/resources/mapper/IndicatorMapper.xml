@@ -168,7 +168,7 @@
             NOW() AS created_time, NOW() AS updated_time
         FROM operator_info o
         LEFT JOIN indicator_info ni ON o.id = ni.operator_id
-        LEFT JOIN band b ON ni.band_id = b.id
+        LEFT JOIN band_info b ON ni.band_id = b.id
         GROUP BY o.id, ni.data_month
         ORDER BY o.id, ni.data_month
     </select>
@@ -252,8 +252,8 @@
             NOW() AS created_time, NOW() AS updated_time
         FROM operator_info o
         LEFT JOIN indicator_info ni ON o.id = ni.operator_id
-        LEFT JOIN band b ON ni.band_id = b.id
-        WHERE ni.data_month = (SELECT MAX(ni2.data_month) FROM indicator_info ni2)
+        LEFT JOIN band_info b ON ni.band_id = b.id
+        WHERE ni.data_month = (SELECT MAX(ni2.data_month) FROM indicator_info ni2 WHERE ni2.operator_id = ni.operator_id)
         <if test="operatorId != null">
             AND o.id = #{operatorId}
         </if>
@@ -340,7 +340,7 @@
             NOW() AS created_time, NOW() AS updated_time
         FROM operator_info o
         LEFT JOIN indicator_info ni ON o.id = ni.operator_id
-        LEFT JOIN band b ON ni.band_id = b.id
+        LEFT JOIN band_info b ON ni.band_id = b.id
         WHERE o.id = #{operatorId}
         GROUP BY o.id, ni.data_month
         ORDER BY ni.data_month
@@ -425,7 +425,7 @@
             NOW() AS created_time, NOW() AS updated_time
         FROM operator_info o
         LEFT JOIN indicator_info ni ON o.id = ni.operator_id
-        LEFT JOIN band b ON ni.band_id = b.id
+        LEFT JOIN band_info b ON ni.band_id = b.id
         WHERE o.id = #{operatorId} AND ni.data_month = #{dataMonth}
         GROUP BY o.id, ni.data_month
     </select>
@@ -509,7 +509,7 @@
             NOW() AS created_time, NOW() AS updated_time
         FROM operator_info o
         LEFT JOIN indicator_info ni ON o.id = ni.operator_id
-        LEFT JOIN band b ON ni.band_id = b.id
+        LEFT JOIN band_info b ON ni.band_id = b.id
         WHERE o.id = #{operatorId}
         GROUP BY o.id, ni.data_month
         ORDER BY ni.data_month ASC

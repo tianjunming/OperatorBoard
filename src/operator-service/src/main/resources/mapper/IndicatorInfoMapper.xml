@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.operator.nl2sql.repository.IndicatorInfoMapper">
+
+    <resultMap id="IndicatorInfoResultMap" type="com.operator.nl2sql.entity.IndicatorInfo">
+        <id property="id" column="id"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="bandId" column="band_id"/>
+        <result property="bandName" column="band_name"/>
+        <result property="dataMonth" column="data_month"/>
+        <result property="technology" column="technology"/>
+        <result property="dlPrb" column="dl_prb"/>
+        <result property="ulPrb" column="ul_prb"/>
+        <result property="dlRate" column="dl_rate"/>
+        <result property="ulRate" column="ul_rate"/>
+        <result property="totalTraffic" column="total_traffic"/>
+        <result property="dlTraffic" column="dl_traffic"/>
+        <result property="ulTraffic" column="ul_traffic"/>
+        <result property="onlineUsers" column="online_users"/>
+        <result property="nrUsers" column="nr_users"/>
+        <result property="terminalPenetrationRatio" column="terminal_penetration_ratio"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="IndicatorInfoResultMap">
+        SELECT id, operator_id, band_id, band_name, data_month, technology,
+               dl_prb, ul_prb, dl_rate, ul_rate,
+               total_traffic, dl_traffic, ul_traffic,
+               online_users, nr_users, terminal_penetration_ratio
+        FROM indicator_info
+        ORDER BY id
+    </select>
+
+    <select id="findById" resultMap="IndicatorInfoResultMap">
+        SELECT id, operator_id, band_id, band_name, data_month, technology,
+               dl_prb, ul_prb, dl_rate, ul_rate,
+               total_traffic, dl_traffic, ul_traffic,
+               online_users, nr_users, terminal_penetration_ratio
+        FROM indicator_info
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByOperatorId" resultMap="IndicatorInfoResultMap">
+        SELECT id, operator_id, band_id, band_name, data_month, technology,
+               dl_prb, ul_prb, dl_rate, ul_rate,
+               total_traffic, dl_traffic, ul_traffic,
+               online_users, nr_users, terminal_penetration_ratio
+        FROM indicator_info
+        WHERE operator_id = #{operatorId}
+        ORDER BY data_month
+    </select>
+
+    <select id="findByDataMonth" resultMap="IndicatorInfoResultMap">
+        SELECT id, operator_id, band_id, band_name, data_month, technology,
+               dl_prb, ul_prb, dl_rate, ul_rate,
+               total_traffic, dl_traffic, ul_traffic,
+               online_users, nr_users, terminal_penetration_ratio
+        FROM indicator_info
+        WHERE data_month = #{dataMonth}
+        ORDER BY operator_id
+    </select>
+
+    <select id="findByOperatorIdAndDataMonth" resultMap="IndicatorInfoResultMap">
+        SELECT id, operator_id, band_id, band_name, data_month, technology,
+               dl_prb, ul_prb, dl_rate, ul_rate,
+               total_traffic, dl_traffic, ul_traffic,
+               online_users, nr_users, terminal_penetration_ratio
+        FROM indicator_info
+        WHERE operator_id = #{operatorId}
+          AND data_month = #{dataMonth}
+        ORDER BY band_id
+    </select>
+
+    <select id="findByTechnology" resultMap="IndicatorInfoResultMap">
+        SELECT id, operator_id, band_id, band_name, data_month, technology,
+               dl_prb, ul_prb, dl_rate, ul_rate,
+               total_traffic, dl_traffic, ul_traffic,
+               online_users, nr_users, terminal_penetration_ratio
+        FROM indicator_info
+        WHERE technology = #{technology}
+        ORDER BY operator_id, data_month
+    </select>
+
+</mapper>

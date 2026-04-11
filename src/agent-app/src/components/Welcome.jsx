@@ -25,7 +25,7 @@ function Welcome({ onExampleClick }) {
   const { locale } = useI18n();
 
   const examples = locale === 'zh' ? [
-    '北京联通的站点数量是多少？',
+    '中国联通站点有多少',
     '显示最新的网络指标数据',
     '有哪些运营商客户？',
   ] : [

@@ -372,94 +372,14 @@ async def get_all_operators_data(_: bool = Depends(verify_api_key), locale: str 
 
 
 def format_site_data_with_chart(site_cells: list, operators: list, latest_only: bool = False) -> Dict[str, Any]:
-    """Format site cell data into structured blocks with chart data.
+    """Format site cell data into industry-standard structured blocks.
 
-    Returns content with :::chart, :::table blocks showing each band separately.
+    Returns content with :::toggle{json}::: blocks that frontend can parse properly.
     """
     if not site_cells:
         return {"content": "未找到站点数据", "chart": None}
 
-    # Get operator names and regions
-    operator_map = {}
-    operator_region_map = {}
-    for op in operators:
-        if isinstance(op, dict):
-            operator_map[op.get("id")] = op.get("operatorName", "Unknown")
-            operator_region_map[op.get("id")] = op.get("region", "")
-
-    # Data per band for chart
-    band_chart_data = []
-    # Data per operator per band for table
-    band_table_rows = []
-
-    # Group by operator
-    operator_ids = set()
-    for sc in site_cells:
-        if isinstance(sc, dict) and "operatorId" in sc:
-            operator_ids.add(sc["operatorId"])
-
-    for op_id in sorted(operator_ids):
-        op_name = operator_map.get(op_id, f"运营商{op_id}")
-        region = operator_region_map.get(op_id, "")
-
-        # Filter site cells for this operator
-        op_cells = [sc for sc in site_cells if isinstance(sc, dict) and sc.get("operatorId") == op_id]
-
-        if not op_cells:
-            continue
-
-        # For each month data
-        for cell in op_cells:
-            data_month = cell.get("dataMonth", "")
-
-            # LTE bands - each band as separate row
-            lte_bands = [
-                ("LTE 700M", cell.get("lte700MSite", 0), cell.get("lte700MCell", 0)),
-                ("LTE 800M", cell.get("lte800MSite", 0), cell.get("lte800MCell", 0)),
-                ("LTE 900M", cell.get("lte900MSite", 0), cell.get("lte900MCell", 0)),
-                ("LTE 1400M", cell.get("lte1400MSite", 0), cell.get("lte1400MCell", 0)),
-                ("LTE 1800M", cell.get("lte1800MSite", 0), cell.get("lte1800MCell", 0)),
-                ("LTE 2100M", cell.get("lte2100MSite", 0), cell.get("lte2100MCell", 0)),
-                ("LTE 2600M", cell.get("lte2600MSite", 0), cell.get("lte2600MCell", 0)),
-            ]
-            for band_name, sites, cells in lte_bands:
-                if sites or cells:
-                    band_chart_data.append({"运营商": op_name, "频段": band_name, "站点": sites, "小区": cells})
-                    band_table_rows.append({
-                        "operator": op_name,
-                        "region": region,
-                        "dataMonth": data_month,
-                        "band": band_name,
-                        "site": sites,
-                        "cell": cells,
-                    })
-
-            # NR bands - each band as separate row
-            nr_bands = [
-                ("NR 700M", cell.get("nr700MSite", 0), cell.get("nr700MCell", 0)),
-                ("NR 800M", cell.get("nr800MSite", 0), cell.get("nr800MCell", 0)),
-                ("NR 900M", cell.get("nr900MSite", 0), cell.get("nr900MCell", 0)),
-                ("NR 1400M", cell.get("nr1400MSite", 0), cell.get("nr1400MCell", 0)),
-                ("NR 1800M", cell.get("nr1800MSite", 0), cell.get("nr1800MCell", 0)),
-                ("NR 2100M", cell.get("nr2100MSite", 0), cell.get("nr2100MCell", 0)),
-                ("NR 2600M", cell.get("nr2600MSite", 0), cell.get("nr2600MCell", 0)),
-                ("NR 3500M", cell.get("nr3500MSite", 0), cell.get("nr3500MCell", 0)),
-                ("NR 4900M", cell.get("nr4900MSite", 0), cell.get("nr4900MCell", 0)),
-                ("NR 2300M", cell.get("nr2300MSite", 0), cell.get("nr2300MCell", 0)),
-            ]
-            for band_name, sites, cells in nr_bands:
-                if sites or cells:
-                    band_chart_data.append({"运营商": op_name, "频段": band_name, "站点": sites, "小区": cells})
-                    band_table_rows.append({
-                        "operator": op_name,
-                        "region": region,
-                        "dataMonth": data_month,
-                        "band": band_name,
-                        "site": sites,
-                        "cell": cells,
-                    })
-
-    # Define all bands
+    # Band definitions
     LTE_BANDS = [
         ("LTE 700M", "lte700MSite", "lte700MCell"),
         ("LTE 800M", "lte800MSite", "lte800MCell"),
@@ -483,8 +403,23 @@ def format_site_data_with_chart(site_cells: list, operators: list, latest_only: 
     ]
     ALL_BANDS = LTE_BANDS + NR_BANDS
 
-    # Build pivoted table data (dates as rows, bands as columns)
+    # Get operator names and regions
+    operator_map = {}
+    operator_region_map = {}
+    for op in operators:
+        if isinstance(op, dict):
+            operator_map[op.get("id")] = op.get("operatorName", "Unknown")
+            operator_region_map[op.get("id")] = op.get("region", "")
+
+    # Group by operator
+    operator_ids = set()
+    for sc in site_cells:
+        if isinstance(sc, dict) and "operatorId" in sc:
+            operator_ids.add(sc["operatorId"])
+
+    # Build structured toggle blocks
     toggle_blocks = []
+    total_stats = {"site": 0, "cell": 0, "operators": len(operator_ids)}
 
     for op_id in sorted(operator_ids):
         op_name = operator_map.get(op_id, f"运营商{op_id}")
@@ -501,75 +436,319 @@ def format_site_data_with_chart(site_cells: list, operators: list, latest_only: 
             if data_month not in month_data:
                 month_data[data_month] = cell
 
-        # Table: dates as rows, bands as columns (站点 and 小区 sub-columns)
-        table_headers = ["数据月"]
-        for band_name, _, _ in ALL_BANDS:
-            table_headers.append(f"{band_name} 站点")
-            table_headers.append(f"{band_name} 小区")
-
-        table_rows = []
+        # Build structured table data
+        table_columns = ["月份", "制式", "频段", "站点数", "小区数"]
+        table_data = []
         chart_data = []
 
-        for data_month in sorted(month_data.keys()):
-            cell = month_data[data_month]
-            row = [data_month]
-            month_chart_item = {"数据月": data_month}
+        # Aggregate for chart - by band totals across all months
+        band_site_totals = {}
+        band_cell_totals = {}
+        for band_name, _, _ in ALL_BANDS:
+            band_site_totals[band_name] = 0
+            band_cell_totals[band_name] = 0
 
-            for band_name, site_key, cell_key in ALL_BANDS:
+        for data_month in sorted(month_data.keys(), reverse=True)[:6]:  # Latest 6 months
+            cell = month_data[data_month]
+
+            # LTE bands
+            lte_month_site = 0
+            lte_month_cell = 0
+            for band_name, site_key, cell_key in LTE_BANDS:
                 sites = cell.get(site_key, 0) or 0
                 cells = cell.get(cell_key, 0) or 0
-                row.append(sites)
-                row.append(cells)
-                month_chart_item[f"{band_name}站点"] = sites
-                month_chart_item[f"{band_name}小区"] = cells
+                if sites > 0 or cells > 0:
+                    table_data.append({
+                        "月份": data_month,
+                        "制式": "LTE",
+                        "频段": band_name,
+                        "站点数": sites,
+                        "小区数": cells
+                    })
+                    band_site_totals[band_name] += sites
+                    band_cell_totals[band_name] += cells
+                    lte_month_site += sites
+                    lte_month_cell += cells
 
-            table_rows.append(row)
-            chart_data.append(month_chart_item)
+            # NR bands
+            nr_month_site = 0
+            nr_month_cell = 0
+            for band_name, site_key, cell_key in NR_BANDS:
+                sites = cell.get(site_key, 0) or 0
+                cells = cell.get(cell_key, 0) or 0
+                if sites > 0 or cells > 0:
+                    table_data.append({
+                        "月份": data_month,
+                        "制式": "NR",
+                        "频段": band_name,
+                        "站点数": sites,
+                        "小区数": cells
+                    })
+                    band_site_totals[band_name] += sites
+                    band_cell_totals[band_name] += cells
+                    nr_month_site += sites
+                    nr_month_cell += cells
 
-        # Build toggle block
-        toggle_lines = [":::toggle[site_cells]"]
+            # Add monthly summary row for chart
+            chart_data.append({
+                "月份": data_month,
+                "LTE站点": lte_month_site,
+                "LTE小区": lte_month_cell,
+                "NR站点": nr_month_site,
+                "NR小区": nr_month_cell,
+                "总站点": lte_month_site + nr_month_site,
+                "总小区": lte_month_cell + nr_month_cell
+            })
 
-        # Add table section
-        toggle_lines.append("[table]")
-        toggle_lines.append("| " + " | ".join(table_headers) + " |")
-        toggle_lines.append("| " + " | ".join(["---"] * len(table_headers)) + " |")
-        for row in table_rows:
-            toggle_lines.append("| " + " | ".join(str(v) for v in row) + " |")
+        # Calculate operator totals
+        op_total_site = sum(band_site_totals.values())
+        op_total_cell = sum(band_cell_totals.values())
+        total_stats["site"] += op_total_site
+        total_stats["cell"] += op_total_cell
 
-        # Add chart section - limit to top 8 bands by total value for readability
-        toggle_lines.append("[chart]")
-        # Calculate band totals across all months for ranking
-        band_totals = {}
-        for item in chart_data:
-            for band_name, _, _ in ALL_BANDS:
-                site_val = item.get(f"{band_name}站点", 0) or 0
-                cell_val = item.get(f"{band_name}小区", 0) or 0
-                if band_name not in band_totals:
-                    band_totals[band_name] = 0
-                band_totals[band_name] += site_val + cell_val
+        # Build chart keys (top 8 bands by total)
+        band_totals = [(b, band_site_totals[b] + band_cell_totals[b]) for b in band_site_totals]
+        top_bands = sorted(band_totals, key=lambda x: x[1], reverse=True)[:8]
+        chart_keys = [b[0] for b in top_bands]
 
-        # Get top 8 bands
-        top_bands = sorted(band_totals.keys(), key=lambda b: band_totals[b], reverse=True)[:8]
+        # Build toggle JSON structure
+        toggle_obj = {
+            "title": f"{op_name} 站点数据",
+            "subtitle": region,
+            "summary": {
+                "totalSite": op_total_site,
+                "totalCell": op_total_cell,
+                "bandCount": len([b for b in chart_keys if band_site_totals[b] > 0 or band_cell_totals[b] > 0])
+            },
+            "table": {
+                "columns": table_columns,
+                "data": table_data
+            },
+            "chart": {
+                "type": "bar",
+                "data": chart_data,
+                "keys": ["总站点", "总小区"],
+                "column": "月份"
+            }
+        }
 
-        for item in chart_data:
-            chart_parts = []
-            for band_name in top_bands:
-                site_val = item.get(f"{band_name}站点", 0) or 0
-                cell_val = item.get(f"{band_name}小区", 0) or 0
-                if site_val > 0:
-                    chart_parts.append(f"- {band_name} 站点: {site_val}")
-                if cell_val > 0:
-                    chart_parts.append(f"- {band_name} 小区: {cell_val}")
-            chart_lines = "\n".join(chart_parts)
-            toggle_lines.append(chart_lines)
+        # Calculate summary values
+        band_count = len([b for b in chart_keys if band_site_totals.get(b, 0) > 0 or band_cell_totals.get(b, 0) > 0])
 
-        toggle_lines.append(":::")
-        toggle_blocks.append(f"**{op_name}** ({region})\n" + "\n".join(toggle_lines))
+        # Use simple key-value format instead of JSON to avoid escaping issues
+        table_data_str = ";".join([f"{r['月份']}|{r['制式']}|{r['频段']}|{r['站点数']}|{r['小区数']}" for r in table_data]) if table_data else ""
+        chart_data_str = ";".join([f"{c['月份']},{c['LTE站点']},{c['LTE小区']},{c['NR站点']},{c['NR小区']},{c['总站点']},{c['总小区']}" for c in chart_data]) if chart_data else ""
 
-    content_parts = ["# 运营商站点信息\n"]
-    content_parts.append("\n\n".join(toggle_blocks))
+        toggle_block = f"""[toggle]
+[type::site]
+[title::{op_name} 站点数据]
+[subtitle::{region}]
+[summary::totalSite={op_total_site};totalCell={op_total_cell};bandCount={band_count}]
+[table_columns::{",".join(table_columns)}]
+[table_data::{table_data_str}]
+[chart_keys::总站点,总小区]
+[chart_data::{chart_data_str}]
+[/toggle]"""
+        toggle_blocks.append(toggle_block)
 
-    return {"content": "\n".join(content_parts), "chart": None}
+    # Build summary header
+    summary_text = f"""# 运营商站点概况
+
+**总计**: {total_stats['operators']} 个运营商 | {total_stats['site']:,} 站点 | {total_stats['cell']:,} 小区
+
+"""
+
+    return {
+        "content": summary_text + "\n\n".join(toggle_blocks),
+        "chart": None
+    }
+
+
+def format_indicator_data_with_chart(indicators: list, operators: list) -> Dict[str, Any]:
+    """Format indicator data into industry-standard structured blocks.
+
+    Returns content with [toggle] blocks for frontend parsing.
+    Network indicators include: DL rate, UL rate, DL PRB, UL PRB per band.
+    """
+    if not indicators:
+        return {"content": "未找到指标数据", "chart": None}
+
+    # Band definitions for indicators
+    LTE_BANDS = [
+        ("LTE 700M", "lte700MDlRate", "lte700MUlRate", "lte700MDlPrb", "lte700MUlPrb"),
+        ("LTE 800M", "lte800MDlRate", "lte800MUlRate", "lte800MDlPrb", "lte800MUlPrb"),
+        ("LTE 900M", "lte900MDlRate", "lte900MUlRate", "lte900MDlPrb", "lte900MUlPrb"),
+        ("LTE 1400M", "lte1400MDlRate", "lte1400MUlRate", "lte1400MDlPrb", "lte1400MUlPrb"),
+        ("LTE 1800M", "lte1800MDlRate", "lte1800MUlRate", "lte1800MDlPrb", "lte1800MUlPrb"),
+        ("LTE 2100M", "lte2100MDlRate", "lte2100MUlRate", "lte2100MDlPrb", "lte2100MUlPrb"),
+        ("LTE 2600M", "lte2600MDlRate", "lte2600MUlRate", "lte2600MDlPrb", "lte2600MUlPrb"),
+    ]
+    NR_BANDS = [
+        ("NR 700M", "nr700MDlRate", "nr700MUlRate", "nr700MDlPrb", "nr700MUlPrb"),
+        ("NR 800M", "nr800MDlRate", "nr800MUlRate", "nr800MDlPrb", "nr800MUlPrb"),
+        ("NR 900M", "nr900MDlRate", "nr900MUlRate", "nr900MDlPrb", "nr900MUlPrb"),
+        ("NR 1400M", "nr1400MDlRate", "nr1400MUlRate", "nr1400MDlPrb", "nr1400MUlPrb"),
+        ("NR 1800M", "nr1800MDlRate", "nr1800MUlRate", "nr1800MDlPrb", "nr1800MUlPrb"),
+        ("NR 2100M", "nr2100MDlRate", "nr2100MUlRate", "nr2100MDlPrb", "nr2100MUlPrb"),
+        ("NR 2600M", "nr2600MDlRate", "nr2600MUlRate", "nr2600MDlPrb", "nr2600MUlPrb"),
+        ("NR 3500M", "nr3500MDlRate", "nr3500MUlRate", "nr3500MDlPrb", "nr3500MUlPrb"),
+        ("NR 4900M", "nr4900MDlRate", "nr4900MUlRate", "nr4900MDlPrb", "nr4900MUlPrb"),
+        ("NR 2300M", "nr2300MDlRate", "nr2300MUlRate", "nr2300MDlPrb", "nr2300MUlPrb"),
+    ]
+
+    # Get operator info
+    operator_map = {}
+    for op in operators:
+        if isinstance(op, dict):
+            operator_map[op.get("id")] = {
+                "name": op.get("operatorName", "Unknown"),
+                "region": op.get("region", "")
+            }
+
+    # Process indicators by operator and month
+    toggle_blocks = []
+    all_months = sorted(set(item.get("dataMonth", "") for item in indicators if isinstance(item, dict)), reverse=True)
+    latest_month = all_months[0] if all_months else ""
+
+    for indicator in indicators:
+        if not isinstance(indicator, dict):
+            continue
+
+        op_id = indicator.get("operatorId")
+        op_info = operator_map.get(op_id, {"name": f"运营商{op_id}", "region": ""})
+        op_name = op_info["name"]
+        region = op_info["region"]
+        data_month = indicator.get("dataMonth", "")
+
+        # Build table data
+        table_columns = ["月份", "制式", "频段", "下行速率(Mbps)", "上行速率(Mbps)", "下行PRB(%)", "上行PRB(%)"]
+        table_data = []
+        chart_data = []
+
+        # Process LTE bands
+        lte_avg_dl, lte_avg_ul, lte_avg_prb_dl, lte_avg_prb_ul = 0, 0, 0, 0
+        lte_count = 0
+        for band_name, dl_key, ul_key, prb_dl_key, prb_ul_key in LTE_BANDS:
+            dl = indicator.get(dl_key) or 0
+            ul = indicator.get(ul_key) or 0
+            prb_dl = indicator.get(prb_dl_key) or 0
+            prb_ul = indicator.get(prb_ul_key) or 0
+            if dl or ul or prb_dl or prb_ul:
+                table_data.append({
+                    "月份": data_month,
+                    "制式": "LTE",
+                    "频段": band_name,
+                    "下行速率(Mbps)": round(dl, 2) if dl else 0,
+                    "上行速率(Mbps)": round(ul, 2) if ul else 0,
+                    "下行PRB(%)": round(prb_dl, 1) if prb_dl else 0,
+                    "上行PRB(%)": round(prb_ul, 1) if prb_ul else 0,
+                })
+                lte_avg_dl += dl
+                lte_avg_ul += ul
+                lte_avg_prb_dl += prb_dl
+                lte_avg_prb_ul += prb_ul
+                lte_count += 1
+
+        if lte_count > 0:
+            lte_avg_dl /= lte_count
+            lte_avg_ul /= lte_count
+            lte_avg_prb_dl /= lte_count
+            lte_avg_prb_ul /= lte_count
+
+        # Process NR bands
+        nr_avg_dl, nr_avg_ul, nr_avg_prb_dl, nr_avg_prb_ul = 0, 0, 0, 0
+        nr_count = 0
+        for band_name, dl_key, ul_key, prb_dl_key, prb_ul_key in NR_BANDS:
+            dl = indicator.get(dl_key) or 0
+            ul = indicator.get(ul_key) or 0
+            prb_dl = indicator.get(prb_dl_key) or 0
+            prb_ul = indicator.get(prb_ul_key) or 0
+            if dl or ul or prb_dl or prb_ul:
+                table_data.append({
+                    "月份": data_month,
+                    "制式": "NR",
+                    "频段": band_name,
+                    "下行速率(Mbps)": round(dl, 2) if dl else 0,
+                    "上行速率(Mbps)": round(ul, 2) if ul else 0,
+                    "下行PRB(%)": round(prb_dl, 1) if prb_dl else 0,
+                    "上行PRB(%)": round(prb_ul, 1) if prb_ul else 0,
+                })
+                nr_avg_dl += dl
+                nr_avg_ul += ul
+                nr_avg_prb_dl += prb_dl
+                nr_avg_prb_ul += prb_ul
+                nr_count += 1
+
+        if nr_count > 0:
+            nr_avg_dl /= nr_count
+            nr_avg_ul /= nr_count
+            nr_avg_prb_dl /= nr_count
+            nr_avg_prb_ul /= nr_count
+
+        # Chart data for this operator/month
+        chart_data.append({
+            "月份": data_month,
+            "LTE下行": round(lte_avg_dl, 2),
+            "LTE上行": round(lte_avg_ul, 2),
+            "NR下行": round(nr_avg_dl, 2),
+            "NR上行": round(nr_avg_ul, 2),
+        })
+
+        # Build toggle JSON
+        toggle_obj = {
+            "title": f"{op_name} 网络指标",
+            "subtitle": region,
+            "dataMonth": data_month,
+            "summary": {
+                "avgDlRate": round((lte_avg_dl * lte_count + nr_avg_dl * nr_count) / (lte_count + nr_count), 2) if (lte_count + nr_count) > 0 else 0,
+                "avgUlRate": round((lte_avg_ul * lte_count + nr_avg_ul * nr_count) / (lte_count + nr_count), 2) if (lte_count + nr_count) > 0 else 0,
+                "avgPrbDl": round((lte_avg_prb_dl * lte_count + nr_avg_prb_dl * nr_count) / (lte_count + nr_count), 1) if (lte_count + nr_count) > 0 else 0,
+                "bandCount": lte_count + nr_count
+            },
+            "table": {
+                "columns": table_columns,
+                "data": table_data
+            },
+            "chart": {
+                "type": "bar",
+                "data": chart_data,
+                "keys": ["LTE下行", "LTE上行", "NR下行", "NR上行"],
+                "column": "月份"
+            }
+        }
+
+        # Calculate summary values
+        total_count = lte_count + nr_count
+        avg_dl_rate = round((lte_avg_dl * lte_count + nr_avg_dl * nr_count) / total_count, 2) if total_count > 0 else 0
+        avg_ul_rate = round((lte_avg_ul * lte_count + nr_avg_ul * nr_count) / total_count, 2) if total_count > 0 else 0
+        avg_prb_dl = round((lte_avg_prb_dl * lte_count + nr_avg_prb_dl * nr_count) / total_count, 1) if total_count > 0 else 0
+
+        # Use simple key-value format instead of JSON to avoid escaping issues
+        # Format: [key::value] with pipe/semicolon separators
+        table_data_str = ";".join([f"{r['月份']}|{r['制式']}|{r['频段']}|{r['下行速率(Mbps)']}|{r['上行速率(Mbps)']}|{r['下行PRB(%)']}|{r['上行PRB(%)']}" for r in table_data]) if table_data else ""
+        chart_data_str = ";".join([f"{c['月份']},{c['LTE下行']},{c['LTE上行']},{c['NR下行']},{c['NR上行']}" for c in chart_data]) if chart_data else ""
+        chart_keys_list = ["LTE下行", "LTE上行", "NR下行", "NR上行"]
+
+        toggle_block = f"""[toggle]
+[type::indicator]
+[title::{op_name} 网络指标]
+[subtitle::{region}]
+[dataMonth::{data_month}]
+[summary::avgDlRate={avg_dl_rate};avgUlRate={avg_ul_rate};avgPrbDl={avg_prb_dl};bandCount={total_count}]
+[table_columns::{",".join(table_columns)}]
+[table_data::{table_data_str}]
+[chart_keys::{",".join(chart_keys_list)}]
+[chart_data::{chart_data_str}]
+[/toggle]"""
+        toggle_blocks.append(toggle_block)
+
+    # Build summary header
+    content_parts = [f"# 网络指标数据 (最新月份: {latest_month})\n"]
+
+    return {
+        "content": "\n\n".join(content_parts) + "\n\n".join(toggle_blocks),
+        "chart": None
+    }
 
 
 def format_site_data(site_cells: list, operators: list, latest_only: bool = False) -> str:
@@ -610,15 +789,16 @@ async def agent_stream(request: AgentRunRequest, _: bool = Depends(verify_api_ke
                 # Legacy error format
                 yield f"data: {{\"type\": \"error\", \"content\": {json.dumps(result['error'])}}}\n\n"
             elif "content" in result:
-                # Stream content word by word for better UX
+                # Stream content in larger chunks for better performance
                 content = result["content"]
-                for i in range(0, len(content), 50):
-                    chunk = content[i:i+50]
-                    yield f"data: {{\"type\": \"content\", \"content\": {json.dumps(chunk)}}}\n\n"
+                for i in range(0, len(content), 200):
+                    chunk = content[i:i+200]
+                    # Use standard SSE format - content as plain string
+                    yield f'data: {json.dumps({"type": "content", "content": chunk})}\n\n'
                     await asyncio.sleep(0.01)  # Small delay for streaming effect
                 # Send chart data if available
                 if result.get("chart"):
-                    yield f"data: {{\"type\": \"chart\", \"chart\": {json.dumps(result['chart'])} }}\n\n"
+                    yield f'data: {json.dumps({"type": "chart", "chart": result["chart"]})}\n\n'
             else:
                 yield f"data: {{\"type\": \"content\", \"content\": {json.dumps(str(result))}}}\n\n"
 
@@ -757,73 +937,23 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
             if not data:
                 return {"content": "未找到指标数据"}
 
-            # Format indicator data with chart and table per band
-            content_parts = ["# 运营商指标数据\n"]
-            chart_data = []
-            table_rows = []
+            # Get operators for name resolution
+            operators_result = await agent.call_java_service(
+                service_name="nl2sql-service",
+                endpoint="/operators",
+                method="GET",
+            )
+            operators = []
+            if isinstance(operators_result, dict) and operators_result.get("error") is None:
+                operators = operators_result.get("data", [])
+                operators = operators if isinstance(operators, list) else []
 
+            # Format using industry-standard structured blocks
             items = data[:limit] if isinstance(data, list) else [data]
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-                data_month = item.get('dataMonth', 'N/A')
-
-                # LTE bands - each band as separate row
-                lte_bands = [
-                    ("LTE 700M", item.get("lte700MDlRate"), item.get("lte700MUlRate"), item.get("lte700MDlPrb")),
-                    ("LTE 800M", item.get("lte800MDlRate"), item.get("lte800MUlRate"), item.get("lte800MDlPrb")),
-                    ("LTE 900M", item.get("lte900MDlRate"), item.get("lte900MUlRate"), item.get("lte900MDlPrb")),
-                    ("LTE 1400M", item.get("lte1400MDlRate"), item.get("lte1400MUlRate"), item.get("lte1400MDlPrb")),
-                    ("LTE 1800M", item.get("lte1800MDlRate"), item.get("lte1800MUlRate"), item.get("lte1800MDlPrb")),
-                    ("LTE 2100M", item.get("lte2100MDlRate"), item.get("lte2100MUlRate"), item.get("lte2100MDlPrb")),
-                    ("LTE 2600M", item.get("lte2600MDlRate"), item.get("lte2600MUlRate"), item.get("lte2600MDlPrb")),
-                ]
-                for band, dl, ul, prb in lte_bands:
-                    if dl or ul or prb:
-                        chart_data.append({"频段": band, "下行速率": dl or 0, "上行速率": ul or 0, "下行PRB": prb or 0})
-                        table_rows.append({"数据月": data_month, "频段": band, "下行速率": dl, "上行速率": ul, "下行PRB": prb})
-
-                # NR bands - each band as separate row
-                nr_bands = [
-                    ("NR 700M", item.get("nr700MDlRate"), item.get("nr700MUlRate"), item.get("nr700MDlPrb")),
-                    ("NR 800M", item.get("nr800MDlRate"), item.get("nr800MUlRate"), item.get("nr800MDlPrb")),
-                    ("NR 900M", item.get("nr900MDlRate"), item.get("nr900MUlRate"), item.get("nr900MDlPrb")),
-                    ("NR 1400M", item.get("nr1400MDlRate"), item.get("nr1400MUlRate"), item.get("nr1400MDlPrb")),
-                    ("NR 1800M", item.get("nr1800MDlRate"), item.get("nr1800MUlRate"), item.get("nr1800MDlPrb")),
-                    ("NR 2100M", item.get("nr2100MDlRate"), item.get("nr2100MUlRate"), item.get("nr2100MDlPrb")),
-                    ("NR 2600M", item.get("nr2600MDlRate"), item.get("nr2600MUlRate"), item.get("nr2600MDlPrb")),
-                    ("NR 3500M", item.get("nr3500MDlRate"), item.get("nr3500MUlRate"), item.get("nr3500MDlPrb")),
-                    ("NR 4900M", item.get("nr4900MDlRate"), item.get("nr4900MUlRate"), item.get("nr4900MDlPrb")),
-                    ("NR 2300M", item.get("nr2300MDlRate"), item.get("nr2300MUlRate"), item.get("nr2300MDlPrb")),
-                ]
-                for band, dl, ul, prb in nr_bands:
-                    if dl or ul or prb:
-                        chart_data.append({"频段": band, "下行速率": dl or 0, "上行速率": ul or 0, "下行PRB": prb or 0})
-                        table_rows.append({"数据月": data_month, "频段": band, "下行速率": dl, "上行速率": ul, "下行PRB": prb})
-
-            # Add chart block
-            if chart_data:
-                chart_lines = [":::chart[bar]"]
-                for item in chart_data[:20]:
-                    chart_lines.append(f"- {item['频段']} 下行: {item['下行速率']} Mbps")
-                chart_lines.append(":::")
-                content_parts.append("\n".join(chart_lines))
-
-            # Add table block - each band as separate row
-            if table_rows:
-                table_lines = [":::table"]
-                table_lines.append("| 数据月 | 频段 | 下行速率(Mbps) | 上行速率(Mbps) | 下行PRB(%) |")
-                table_lines.append("|--------|------|----------------|----------------|------------|")
-                for row in table_rows:
-                    dl = row['下行速率'] if row['下行速率'] is not None else 'N/A'
-                    ul = row['上行速率'] if row['上行速率'] is not None else 'N/A'
-                    prb = row['下行PRB'] if row['下行PRB'] is not None else 'N/A'
-                    table_lines.append(f"| {row['数据月']} | {row['频段']} | {dl} | {ul} | {prb} |")
-                table_lines.append(":::")
-                content_parts.append("\n".join(table_lines))
+            chart_result = format_indicator_data_with_chart(items, operators)
 
             thinking = _build_thinking_chain(user_input, "indicator_data - 指标数据查询", operator_name, "性能指标")
-            return {"content": thinking + "\n\n" + "\n".join(content_parts), "chart": {"type": "bar", "column": "频段", "data": chart_data, "keys": ["下行速率", "上行速率"], "colors": ["#10b981", "#4f46e5"]} if chart_data else None}
+            return {"content": thinking + "\n\n" + chart_result["content"], "chart": chart_result.get("chart")}
 
         elif intent == "operator_list":
             operators_result = await agent.call_java_service(

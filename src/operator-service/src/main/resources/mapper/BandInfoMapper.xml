@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.operator.nl2sql.repository.BandInfoMapper">
+
+    <resultMap id="BandInfoResultMap" type="com.operator.nl2sql.entity.BandInfo">
+        <id property="id" column="id"/>
+        <result property="bandCode" column="band_code"/>
+        <result property="bandName" column="band_name"/>
+        <result property="technology" column="technology"/>
+        <result property="frequencyMhz" column="frequency_mhz"/>
+        <result property="duplexMode" column="duplex_mode"/>
+        <result property="bandGroup" column="band_group"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="BandInfoResultMap">
+        SELECT id, band_code, band_name, technology, frequency_mhz, duplex_mode, band_group
+        FROM band_info
+        ORDER BY technology, frequency_mhz
+    </select>
+
+    <select id="findById" resultMap="BandInfoResultMap">
+        SELECT id, band_code, band_name, technology, frequency_mhz, duplex_mode, band_group
+        FROM band_info
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByBandCode" resultMap="BandInfoResultMap">
+        SELECT id, band_code, band_name, technology, frequency_mhz, duplex_mode, band_group
+        FROM band_info
+        WHERE band_code = #{bandCode}
+    </select>
+
+    <select id="findByTechnology" resultMap="BandInfoResultMap">
+        SELECT id, band_code, band_name, technology, frequency_mhz, duplex_mode, band_group
+        FROM band_info
+        WHERE technology = #{technology}
+        ORDER BY frequency_mhz
+    </select>
+
+    <select id="findByDuplexMode" resultMap="BandInfoResultMap">
+        SELECT id, band_code, band_name, technology, frequency_mhz, duplex_mode, band_group
+        FROM band_info
+        WHERE duplex_mode = #{duplexMode}
+        ORDER BY technology, frequency_mhz
+    </select>
+
+</mapper>

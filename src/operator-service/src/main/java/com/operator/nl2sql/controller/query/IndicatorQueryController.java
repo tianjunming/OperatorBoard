@@ -1,7 +1,7 @@
 package com.operator.nl2sql.controller.query;
 
-import com.operator.nl2sql.entity.IndicatorInfo;
 import com.operator.nl2sql.entity.OperatorInfo;
+import com.operator.nl2sql.entity.IndicatorInfo;
 import com.operator.nl2sql.service.query.IndicatorQueryService;
 import com.operator.nl2sql.service.query.OperatorQueryService;
 import org.springframework.http.ResponseEntity;

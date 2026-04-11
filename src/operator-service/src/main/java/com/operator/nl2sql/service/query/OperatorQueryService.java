@@ -1,8 +1,11 @@
 package com.operator.nl2sql.service.query;
 
 import com.operator.nl2sql.entity.OperatorInfo;
+import com.operator.nl2sql.entity.IndicatorInfo;
 import com.operator.nl2sql.entity.SiteCellSummary;
+import com.operator.nl2sql.repository.IndicatorRepository;
 import com.operator.nl2sql.repository.OperatorRepository;
+import com.operator.nl2sql.repository.SiteStatisticsMapper;
 import com.operator.nl2sql.service.builder.OperatorSqlBuilder;
 import org.springframework.stereotype.Service;
 
@@ -13,10 +16,17 @@ public class OperatorQueryService {
 
     private final OperatorRepository operatorRepository;
     private final OperatorSqlBuilder operatorSqlBuilder;
+    private final SiteStatisticsMapper siteStatisticsMapper;
+    private final IndicatorRepository indicatorRepository;
 
-    public OperatorQueryService(OperatorRepository operatorRepository, OperatorSqlBuilder operatorSqlBuilder) {
+    public OperatorQueryService(OperatorRepository operatorRepository,
+                                  OperatorSqlBuilder operatorSqlBuilder,
+                                  SiteStatisticsMapper siteStatisticsMapper,
+                                  IndicatorRepository indicatorRepository) {
         this.operatorRepository = operatorRepository;
         this.operatorSqlBuilder = operatorSqlBuilder;
+        this.siteStatisticsMapper = siteStatisticsMapper;
+        this.indicatorRepository = indicatorRepository;
     }
 
     public List<OperatorInfo> findAllOperators() {
@@ -49,6 +59,42 @@ public class OperatorQueryService {
 
     public List<String> findDistinctDataMonths() {
         return operatorRepository.findDistinctDataMonths();
+    }
+
+    // ==================== Site Statistics (using SiteStatisticsMapper) ====================
+
+    public List<SiteCellSummary> getOperatorSitesLatest(Long operatorId) {
+        return siteStatisticsMapper.findSiteCellSummaryByOperatorId(operatorId);
+    }
+
+    public List<SiteCellSummary> getAllOperatorsSitesLatest() {
+        return siteStatisticsMapper.findAllSiteCellSummaryLatest();
+    }
+
+    public List<SiteCellSummary> getOperatorSitesHistory(Long operatorId) {
+        return siteStatisticsMapper.findSiteCellSummaryByOperatorId(operatorId);
+    }
+
+    // ==================== Indicator Queries (using IndicatorRepository) ====================
+
+    public IndicatorInfo getOperatorIndicatorsLatest(Long operatorId) {
+        List<IndicatorInfo> indicators = indicatorRepository.findLatestIndicators(operatorId);
+        return indicators.isEmpty() ? null : indicators.get(0);
+    }
+
+    public List<IndicatorInfo> getAllOperatorsIndicatorsLatest() {
+        return indicatorRepository.findLatestIndicators(null);
+    }
+
+    public List<IndicatorInfo> getOperatorIndicatorsTrend(Long operatorId) {
+        return indicatorRepository.findTrendData(operatorId);
+    }
+
+    // ==================== Helper Methods ====================
+
+    private OperatorInfo findOperatorByName(String operatorName) {
+        List<OperatorInfo> operators = operatorRepository.findByOperatorName(operatorName);
+        return operators.isEmpty() ? null : operators.get(0);
     }
 
     // ==================== SQL构建器方法 ====================

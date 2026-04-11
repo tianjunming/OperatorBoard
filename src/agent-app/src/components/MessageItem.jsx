@@ -22,17 +22,112 @@ import './MessageItem.css';
 // Message feedback state
 const MESSAGE_FEEDBACK = { NONE: 'none', LIKED: 'liked', DISLIKED: 'disliked' };
 
+// Table Block Renderer (独立组件，封装表格状态)
+function TableBlock({ block }) {
+  const {
+    sortedData,
+    sortConfig,
+    globalFilter,
+    handleSort,
+    handleGlobalFilter,
+    exportCSV,
+    filteredCount,
+    totalCount
+  } = useTableSort(block.data || [], block.columns || []);
+
+  if (!block.data || block.data.length === 0) return null;
+
+  return (
+    <div className="structured-table" data-testid="structured-table">
+      <div className="table-header">
+        <Table2 size={14} />
+        <span>数据表格</span>
+        <span className="table-count">{filteredCount} / {totalCount} 条记录</span>
+      </div>
+      <div className="table-controls">
+        <div className="table-search-wrapper">
+          <Filter size={12} className="table-filter-icon" />
+          <input
+            type="text"
+            className="table-filter-input"
+            placeholder="筛选数据..."
+            value={globalFilter}
+            onChange={(e) => handleGlobalFilter(e.target.value)}
+            data-testid="table-filter-input"
+          />
+          {globalFilter && (
+            <button className="table-filter-clear" onClick={() => handleGlobalFilter('')}>
+              <X size={12} />
+            </button>
+          )}
+        </div>
+        <button className="table-export-btn" onClick={() => exportCSV()} data-testid="table-export-button">
+          <Download size={12} />
+          <span>导出</span>
+        </button>
+      </div>
+      <div className="table-scroll">
+        <table className="data-table" data-testid="data-table">
+          <thead>
+            <tr>
+              {block.columns.map((col, idx) => (
+                <th key={idx} onClick={() => handleSort(col)} data-testid={`table-header-${idx}`}>
+                  {col}
+                  <span className={`th-sort-indicator ${sortConfig.key === col ? 'active' : ''}`}>
+                    {sortConfig.key === col ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+                    ) : (
+                      <ArrowUp size={12} className="th-sort-icon" />
+                    )}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody data-testid="table-body">
+            {sortedData.map((row, idx) => (
+              <tr key={idx} data-testid={`table-row-${idx}`}>
+                {block.columns.map((col, cidx) => (
+                  <td key={cidx} data-testid={`table-cell-${idx}-${cidx}`}>{row[col]}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {block.citations && block.citations.length > 0 && (
+        <div className="citation-list" data-testid="citation-list">
+          {block.citations.map((cite) => (
+            <div key={cite} className="citation-item">
+              <span className="citation-num">{cite}</span>
+              <span>数据来源 #{cite}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Toggle Block Renderer (defined outside component to ensure availability)
 function RenderToggle({ block, blockIdx, viewMode, onToggleView }) {
-  const table = block?.table || { columns: [], data: [] };
-  const chart = block?.chart || { data: [], keys: [], column: '数据月' };
+  const { title = '站点数据', subtitle = '', summary = {}, table = {}, chart = {} } = block || {};
+  const columns = table.columns || [];
+  const tableData = table.data || [];
+  const chartData = chart.data || [];
+  const chartKeys = chart.keys || [];
+  const chartColumn = chart.column || '月份';
+
+  // Format numbers with thousand separators
+  const formatNum = (n) => n?.toLocaleString() ?? '0';
 
   return (
     <div className="structured-toggle">
       <div className="toggle-header">
         <div className="toggle-title">
           <BarChart3 size={14} />
-          <span>站点数据</span>
+          <span>{title}</span>
+          {subtitle && <span className="toggle-subtitle">({subtitle})</span>}
         </div>
         <div className="toggle-buttons">
           <button
@@ -51,6 +146,25 @@ function RenderToggle({ block, blockIdx, viewMode, onToggleView }) {
           </button>
         </div>
       </div>
+
+      {/* Summary Stats */}
+      {summary.totalSite !== undefined && (
+        <div className="toggle-summary">
+          <div className="summary-item">
+            <span className="summary-label">总站点</span>
+            <span className="summary-value">{formatNum(summary.totalSite)}</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">总小区</span>
+            <span className="summary-value">{formatNum(summary.totalCell)}</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">频段数</span>
+            <span className="summary-value">{formatNum(summary.bandCount)}</span>
+          </div>
+        </div>
+      )}
+
       <div className="toggle-content">
         {viewMode === 'table' ? (
           <div className="structured-table">
@@ -58,16 +172,18 @@ function RenderToggle({ block, blockIdx, viewMode, onToggleView }) {
               <table className="data-table">
                 <thead>
                   <tr>
-                    {(table.columns || []).map((col, idx) => (
+                    {columns.map((col, idx) => (
                       <th key={idx}>{col}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {(table.data || []).map((row, idx) => (
+                  {tableData.map((row, idx) => (
                     <tr key={idx}>
-                      {(table.columns || []).map((col, cidx) => (
-                        <td key={cidx}>{row[col]}</td>
+                      {columns.map((col, cidx) => (
+                        <td key={cidx}>
+                          {typeof row[col] === 'number' ? row[col].toLocaleString() : row[col]}
+                        </td>
                       ))}
                     </tr>
                   ))}
@@ -78,13 +194,13 @@ function RenderToggle({ block, blockIdx, viewMode, onToggleView }) {
         ) : (
           <div className="structured-chart">
             <ResponsiveContainer width="100%" height={300}>
-              <ComposedChart data={chart.data || []} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-                <XAxis dataKey={chart.column || '数据月'} tick={{ fontSize: 11 }} />
+                <XAxis dataKey={chartColumn} tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--border-light)' }} />
                 <Legend />
-                {(chart.keys || []).map((key, idx) => (
+                {chartKeys.map((key, idx) => (
                   <Bar
                     key={key}
                     dataKey={key}
@@ -101,6 +217,123 @@ function RenderToggle({ block, blockIdx, viewMode, onToggleView }) {
   );
 }
 
+// Chart Block Renderer (独立组件，封装图表状态)
+function ChartBlock({ block }) {
+  const [chartType, setChartType] = useState(block.chartType || 'bar');
+  const { data, keys, column = 'name' } = block;
+  const colors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+
+  if (!data || data.length === 0) return null;
+
+  const dataKeys = data[0] ? Object.keys(data[0]) : [];
+  const safeColumn = dataKeys.includes(column) ? column : (dataKeys[0] || 'name');
+  const safeKeys = keys || dataKeys.filter(k => k !== safeColumn);
+  const commonProps = { data, margin: { top: 20, right: 30, left: 20, bottom: 5 } };
+
+  const renderBar = () => (
+    <ComposedChart {...commonProps}>
+      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
+      <XAxis dataKey={safeColumn} tick={{ fontSize: 11 }} />
+      <YAxis tick={{ fontSize: 11 }} />
+      <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--border-light)' }} />
+      <Legend />
+      {safeKeys.map((key, idx) => (
+        <Bar key={key} dataKey={key} fill={colors[idx % colors.length]} radius={[4, 4, 0, 0]} />
+      ))}
+    </ComposedChart>
+  );
+
+  const renderLine = () => (
+    <LineChart {...commonProps}>
+      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
+      <XAxis dataKey={safeColumn} tick={{ fontSize: 11 }} />
+      <YAxis tick={{ fontSize: 11 }} />
+      <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--border-light)' }} />
+      <Legend />
+      {safeKeys.map((key, idx) => (
+        <Line key={key} type="monotone" dataKey={key} stroke={colors[idx % colors.length]} strokeWidth={2} dot={{ r: 4 }} />
+      ))}
+    </LineChart>
+  );
+
+  const renderPie = () => (
+    <PieChart>
+      <Pie
+        data={data}
+        cx="50%"
+        cy="50%"
+        innerRadius={50}
+        outerRadius={90}
+        paddingAngle={2}
+        dataKey="value"
+        label={({ name, percent }) => {
+          const percentValue = isNaN(percent) || !isFinite(percent) ? 0 : (percent * 100).toFixed(0);
+          return `${name} (${percentValue}%)`;
+        }}
+      >
+        {data.map((_, idx) => (
+          <Cell key={idx} fill={colors[idx % colors.length]} />
+        ))}
+      </Pie>
+      <Tooltip formatter={(value) => [`${value}`, '数量']} />
+      <Legend />
+    </PieChart>
+  );
+
+  const renderArea = () => (
+    <AreaChart {...commonProps}>
+      <defs>
+        {colors.map((color, idx) => (
+          <linearGradient key={idx} id={`gradient-${idx}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+            <stop offset="95%" stopColor={color} stopOpacity={0} />
+          </linearGradient>
+        ))}
+      </defs>
+      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
+      <XAxis dataKey={safeColumn} tick={{ fontSize: 11 }} />
+      <YAxis tick={{ fontSize: 11 }} />
+      <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--border-light)' }} />
+      <Legend />
+      {safeKeys.map((key, idx) => (
+        <Area key={key} type="monotone" dataKey={key} stroke={colors[idx % colors.length]} fill={`url(#gradient-${idx})`} />
+      ))}
+    </AreaChart>
+  );
+
+  const chartTitles = {
+    bar: '柱状图对比',
+    line: '趋势分析',
+    pie: '占比分布',
+    area: '面积分析',
+    radar: '雷达分析'
+  };
+
+  return (
+    <div className="structured-chart" data-testid="structured-chart">
+      <div className="chart-header">
+        <BarChart3 size={14} />
+        <span>{chartTitles[chartType] || '数据图表'}</span>
+        <ChartTypeSelector currentType={chartType} onChange={setChartType} />
+        <div className="chart-legend">
+          {safeKeys.map((key, idx) => (
+            <span key={key} className="legend-item">
+              <span className="legend-dot" style={{ background: colors[idx % colors.length] }} />
+              {key}
+            </span>
+          ))}
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height={300} data-testid="chart-container">
+        {chartType === 'line' ? renderLine() :
+         chartType === 'pie' ? renderPie() :
+         chartType === 'area' ? renderArea() :
+         renderBar()}
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 function MessageItem({ message, onResend, isStreaming, onFeedback }) {
   const { role, content, isError, complete, chart, metadata } = message;
   const { locale, t } = useI18n();
@@ -110,6 +343,14 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
   const [showThinking, setShowThinking] = useState(true);
   const [stepsExpanded, setStepsExpanded] = useState(true);
   const [toggleViewModes, setToggleViewModes] = useState({});
+
+  // Toggle view mode handler
+  const toggleViewMode = useCallback((blockIdx) => {
+    setToggleViewModes(prev => ({
+      ...prev,
+      [blockIdx]: prev[blockIdx] === 'table' ? 'chart' : 'table'
+    }));
+  }, []);
 
   const isUser = role === 'user';
   const isAssistant = role === 'assistant';
@@ -151,14 +392,14 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
   const renderThinkingChain = (thinking) => {
     const formatted = formatThinkingChain(thinking);
     return (
-      <div className="thinking-chain">
+      <div className="thinking-chain" data-testid="thinking-chain">
         <div className="thinking-header" onClick={() => setShowThinking(!showThinking)}>
           <div className="thinking-title">
             <Sparkles size={14} />
             <span>AI 分析过程</span>
           </div>
           <div className="thinking-actions">
-            <button className="thinking-toggle">
+            <button className="thinking-toggle" data-testid="thinking-toggle">
               {showThinking ? <EyeOff size={14} /> : <Eye size={14} />}
               <span>{showThinking ? '隐藏' : '显示'}</span>
             </button>
@@ -166,10 +407,10 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
           </div>
         </div>
         {showThinking && (
-          <div className="thinking-content">
+          <div className="thinking-content" data-testid="thinking-content">
             <div className="thinking-steps">
               {formatted.map((step, idx) => (
-                <div key={idx} className={`thinking-step ${step.type}`}>
+                <div key={idx} className={`thinking-step ${step.type}`} data-testid={`thinking-step-${idx}`}>
                   <div className="step-indicator">
                     <div className="step-dot" />
                     {idx < formatted.length - 1 && <div className="step-line" />}
@@ -187,221 +428,6 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
             </div>
           </div>
         )}
-      </div>
-    );
-  };
-
-  // Table Renderer
-  const renderTable = (block) => {
-    if (!block.data || block.data.length === 0) return null;
-
-    const {
-      sortedData,
-      sortConfig,
-      globalFilter,
-      handleSort,
-      handleGlobalFilter,
-      exportCSV,
-      filteredCount,
-      totalCount
-    } = useTableSort(block.data, block.columns);
-
-    return (
-      <div className="structured-table">
-        <div className="table-header">
-          <Table2 size={14} />
-          <span>数据表格</span>
-          <span className="table-count">{filteredCount} / {totalCount} 条记录</span>
-        </div>
-        <div className="table-controls">
-          <div className="table-search-wrapper">
-            <Filter size={12} className="table-filter-icon" />
-            <input
-              type="text"
-              className="table-filter-input"
-              placeholder="筛选数据..."
-              value={globalFilter}
-              onChange={(e) => handleGlobalFilter(e.target.value)}
-            />
-            {globalFilter && (
-              <button className="table-filter-clear" onClick={() => handleGlobalFilter('')}>
-                <X size={12} />
-              </button>
-            )}
-          </div>
-          <button className="table-export-btn" onClick={() => exportCSV()}>
-            <Download size={12} />
-            <span>导出</span>
-          </button>
-        </div>
-        <div className="table-scroll">
-          <table className="data-table">
-            <thead>
-              <tr>
-                {block.columns.map((col, idx) => (
-                  <th key={idx} onClick={() => handleSort(col)}>
-                    {col}
-                    <span className={`th-sort-indicator ${sortConfig.key === col ? 'active' : ''}`}>
-                      {sortConfig.key === col ? (
-                        sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
-                      ) : (
-                        <ArrowUp size={12} className="th-sort-icon" />
-                      )}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sortedData.map((row, idx) => (
-                <tr key={idx}>
-                  {block.columns.map((col, cidx) => (
-                    <td key={cidx}>{row[col]}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {block.citations && block.citations.length > 0 && (
-          <div className="citation-list">
-            {block.citations.map((cite) => (
-              <div key={cite} className="citation-item">
-                <span className="citation-num">{cite}</span>
-                <span>数据来源 #{cite}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Chart Renderer
-  const renderChart = (block) => {
-    const [chartType, setChartType] = useState(block.chartType || 'bar');
-    const { chartType: initialType, data, keys, column = 'name' } = block;
-    const colors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
-
-    if (!data || data.length === 0) return null;
-
-    // 安全获取数据键，确保 column 存在于数据中
-    const dataKeys = data[0] ? Object.keys(data[0]) : [];
-    const safeColumn = dataKeys.includes(column) ? column : (dataKeys[0] || 'name');
-    const safeKeys = keys || dataKeys.filter(k => k !== safeColumn);
-
-    const commonProps = { data, margin: { top: 20, right: 30, left: 20, bottom: 5 } };
-
-    const renderBar = () => (
-      <ComposedChart {...commonProps}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-        <XAxis dataKey={safeColumn} tick={{ fontSize: 11 }} />
-        <YAxis tick={{ fontSize: 11 }} />
-        <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--border-light)' }} />
-        <Legend />
-        {safeKeys.map((key, idx) => (
-          <Bar key={key} dataKey={key} fill={colors[idx % colors.length]} radius={[4, 4, 0, 0]} />
-        ))}
-      </ComposedChart>
-    );
-
-    const renderLine = () => (
-      <LineChart {...commonProps}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-        <XAxis dataKey={safeColumn} tick={{ fontSize: 11 }} />
-        <YAxis tick={{ fontSize: 11 }} />
-        <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--border-light)' }} />
-        <Legend />
-        {safeKeys.map((key, idx) => (
-          <Line key={key} type="monotone" dataKey={key} stroke={colors[idx % colors.length]} strokeWidth={2} dot={{ r: 4 }} />
-        ))}
-      </LineChart>
-    );
-
-    const renderPie = () => {
-      return (
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            innerRadius={50}
-            outerRadius={90}
-            paddingAngle={2}
-            dataKey="value"
-            label={({ name, percent }) => {
-              const percentValue = isNaN(percent) || !isFinite(percent) ? 0 : (percent * 100).toFixed(0);
-              return `${name} (${percentValue}%)`;
-            }}
-          >
-            {data.map((_, idx) => (
-              <Cell key={idx} fill={colors[idx % colors.length]} />
-            ))}
-          </Pie>
-          <Tooltip formatter={(value) => [`${value}`, '数量']} />
-          <Legend />
-        </PieChart>
-      );
-    };
-
-    const renderArea = () => (
-      <AreaChart {...commonProps}>
-        <defs>
-          {colors.map((color, idx) => (
-            <linearGradient key={idx} id={`gradient-${idx}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-              <stop offset="95%" stopColor={color} stopOpacity={0} />
-            </linearGradient>
-          ))}
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-        <XAxis dataKey={safeColumn} tick={{ fontSize: 11 }} />
-        <YAxis tick={{ fontSize: 11 }} />
-        <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--border-light)' }} />
-        <Legend />
-        {safeKeys.map((key, idx) => (
-          <Area key={key} type="monotone" dataKey={key} stroke={colors[idx % colors.length]} fill={`url(#gradient-${idx})`} />
-        ))}
-      </AreaChart>
-    );
-
-    // Toggle view mode handler
-    const toggleViewMode = (blockIdx) => {
-      setToggleViewModes(prev => ({
-        ...prev,
-        [blockIdx]: prev[blockIdx] === 'table' ? 'chart' : 'table'
-      }));
-    };
-
-    const chartTitles = {
-      bar: '柱状图对比',
-      line: '趋势分析',
-      pie: '占比分布',
-      area: '面积分析',
-      radar: '雷达分析'
-    };
-
-    return (
-      <div className="structured-chart">
-        <div className="chart-header">
-          <BarChart3 size={14} />
-          <span>{chartTitles[chartType] || '数据图表'}</span>
-          <ChartTypeSelector currentType={chartType} onChange={setChartType} />
-          <div className="chart-legend">
-            {safeKeys.map((key, idx) => (
-              <span key={key} className="legend-item">
-                <span className="legend-dot" style={{ background: colors[idx % colors.length] }} />
-                {key}
-              </span>
-            ))}
-          </div>
-        </div>
-        <ResponsiveContainer width="100%" height={300}>
-          {chartType === 'line' ? renderLine() :
-           chartType === 'pie' ? renderPie() :
-           chartType === 'area' ? renderArea() :
-           renderBar()}
-        </ResponsiveContainer>
       </div>
     );
   };
@@ -502,13 +528,14 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
       className={`message-item ${isUser ? 'user' : 'assistant'} ${isError ? 'error' : ''} ${isStreaming ? 'streaming' : ''}`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
+      data-testid={`message-item-${role}`}
     >
-      <div className="message-avatar">
+      <div className="message-avatar" data-testid="message-avatar">
         {isUser ? <User size={18} /> : <Bot size={18} />}
       </div>
 
-      <div className="message-body">
-        <div className="message-bubble">
+      <div className="message-body" data-testid="message-body">
+        <div className="message-bubble" data-testid="message-bubble">
           {isAssistant && (
             <>
               {/* Message Header with Metadata */}
@@ -543,8 +570,8 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
               <div className="message-content">
                 {mainBlocks.map((block, idx) => {
                   switch (block.type) {
-                    case 'table': return <div key={idx} className="block-table">{renderTable(block)}</div>;
-                    case 'chart': return <div key={idx} className="block-chart">{renderChart(block)}</div>;
+                    case 'table': return <div key={idx} className="block-table"><TableBlock block={block} /></div>;
+                    case 'chart': return <div key={idx} className="block-chart"><ChartBlock block={block} /></div>;
                     case 'metrics': return <div key={idx} className="block-metrics">{renderMetrics(block)}</div>;
                     case 'steps': return <div key={idx} className="block-steps">{renderSteps(block)}</div>;
                     case 'sql': return <div key={idx} className="block-sql">{renderSql(block)}</div>;
@@ -556,7 +583,7 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
 
                 {/* Legacy chart support */}
                 {chart && chart.type === 'bar' && chart.data && chart.data.length > 0 && (
-                  <div className="block-chart">{renderChart({ chartType: 'bar', data: chart.data, keys: chart.keys, column: chart.column })}</div>
+                  <div className="block-chart"><ChartBlock block={{ chartType: 'bar', data: chart.data, keys: chart.keys, column: chart.column }} /></div>
                 )}
 
                 {/* Streaming cursor */}

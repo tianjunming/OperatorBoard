@@ -1,25 +1,22 @@
 package com.operator.nl2sql.repository;
 
-import com.operator.nl2sql.entity.SiteStatistics;
+import com.operator.nl2sql.entity.SiteCellSummary;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-
 import java.util.List;
 
 @Mapper
 public interface SiteStatisticsMapper {
 
-    List<SiteStatistics> findAll();
+    // All operators, latest month only
+    List<SiteCellSummary> findAllSiteCellSummaryLatest();
 
-    SiteStatistics findById(@Param("id") Long id);
+    // Single operator, latest month only
+    SiteCellSummary findSiteCellSummaryLatestByOperatorId(@Param("operatorId") Long operatorId);
 
-    List<SiteStatistics> findByOperatorId(@Param("operatorId") Long operatorId);
+    // All operators, all months
+    List<SiteCellSummary> findAllSiteCellSummary();
 
-    List<SiteStatistics> findByDataMonth(@Param("dataMonth") String dataMonth);
-
-    List<SiteStatistics> findByOperatorIdAndDataMonth(
-            @Param("operatorId") Long operatorId,
-            @Param("dataMonth") String dataMonth);
-
-    List<SiteStatistics> findByTechnology(@Param("technology") String technology);
+    // Single operator, all months (for trend/historical)
+    List<SiteCellSummary> findSiteCellSummaryByOperatorId(@Param("operatorId") Long operatorId);
 }

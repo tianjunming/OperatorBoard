@@ -98,6 +98,7 @@ function ChatInput({ onSend, disabled, placeholder, messages, onClear }) {
           disabled={disabled}
           rows={1}
           autoFocus
+          data-testid="chat-input"
         />
 
         <div className="chat-input-actions">
@@ -109,6 +110,7 @@ function ChatInput({ onSend, disabled, placeholder, messages, onClear }) {
             type="submit"
             className={`send-btn ${canSend ? 'active' : ''}`}
             disabled={!canSend}
+            data-testid="send-button"
           >
             {disabled ? (
               <Loader2 size={18} className="spin" />

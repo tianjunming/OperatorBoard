@@ -87,6 +87,7 @@ CREATE TABLE site_info (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     operator_id BIGINT NOT NULL COMMENT '运营商ID',
     band_id BIGINT NOT NULL COMMENT '频段ID',
+    band_name VARCHAR(50) NOT NULL COMMENT '频段名称 如 LTE 700M FDD',
     data_month VARCHAR(7) NOT NULL COMMENT '数据月份 YYYY-MM',
     site_num INT DEFAULT 0 COMMENT '站点数量',
     cell_num INT DEFAULT 0 COMMENT '小区数量',
@@ -106,6 +107,7 @@ CREATE TABLE indicator_info (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     operator_id BIGINT NOT NULL COMMENT '运营商ID',
     band_id BIGINT NOT NULL COMMENT '频段ID',
+    band_name VARCHAR(50) NOT NULL COMMENT '频段名称 如 LTE 700M FDD',
     data_month VARCHAR(7) NOT NULL COMMENT '数据月份 YYYY-MM',
     technology VARCHAR(10) NOT NULL COMMENT '技术制式 LTE/NR',
 
