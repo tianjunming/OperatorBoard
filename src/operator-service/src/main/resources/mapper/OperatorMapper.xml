@@ -4,13 +4,15 @@
 
 <mapper namespace="com.operator.nl2sql.repository.OperatorRepository">
 
-    <resultMap id="OperatorInfoResultMap" type="com.operator.nl2sql.entity.OperatorInfo">
+    <resultMap id="OperatorInfoResultMap" type="com.operator.nl2sql.entity.DimOperator">
         <id property="id" column="id"/>
+        <result property="operatorCode" column="operator_code"/>
         <result property="operatorName" column="operator_name"/>
+        <result property="aliasName" column="alias_name"/>
         <result property="country" column="country"/>
         <result property="region" column="region"/>
         <result property="networkType" column="network_type"/>
-        <result property="dataMonth" column="data_month"/>
+        <result property="status" column="status"/>
         <result property="createdTime" column="created_time"/>
         <result property="updatedTime" column="updated_time"/>
     </resultMap>
@@ -62,109 +64,186 @@
     </resultMap>
 
     <select id="findAll" resultMap="OperatorInfoResultMap">
-        SELECT id, operator_name, country, region, network_type, data_month, created_time, updated_time
+        SELECT id, operator_code, operator_name, alias_name, country, region, network_type, status, created_time, updated_time
         FROM operator_info
         ORDER BY id
     </select>
 
     <select id="findByCountry" resultMap="OperatorInfoResultMap">
-        SELECT id, operator_name, country, region, network_type, data_month, created_time, updated_time
+        SELECT id, operator_code, operator_name, alias_name, country, region, network_type, status, created_time, updated_time
         FROM operator_info
         WHERE country = #{country}
         ORDER BY id
     </select>
 
     <select id="findByOperatorName" resultMap="OperatorInfoResultMap">
-        SELECT id, operator_name, country, region, network_type, data_month, created_time, updated_time
+        SELECT id, operator_code, operator_name, alias_name, country, region, network_type, status, created_time, updated_time
         FROM operator_info
         WHERE operator_name = #{operatorName}
         ORDER BY id
     </select>
 
     <select id="findById" resultMap="OperatorInfoResultMap">
-        SELECT id, operator_name, country, region, network_type, data_month, created_time, updated_time
+        SELECT id, operator_code, operator_name, alias_name, country, region, network_type, status, created_time, updated_time
         FROM operator_info
         WHERE id = #{id}
     </select>
 
     <select id="findAllSiteCellSummary" resultMap="SiteCellSummaryResultMap">
-        SELECT s.id, s.operator_id, s.data_month,
-               s.lte_700M_site, s.lte_700M_cell,
-               s.lte_800M_site, s.lte_800M_cell,
-               s.lte_900M_site, s.lte_900M_cell,
-               s.lte_1400M_site, s.lte_1400M_cell,
-               s.lte_1800M_site, s.lte_1800M_cell,
-               s.lte_2100M_site, s.lte_2100M_cell,
-               s.lte_2600M_site, s.lte_2600M_cell,
-               s.nr_700M_site, s.nr_700M_cell,
-               s.nr_800M_site, s.nr_800M_cell,
-               s.nr_900M_site, s.nr_900M_cell,
-               s.nr_1400M_site, s.nr_1400M_cell,
-               s.nr_1800M_site, s.nr_1800M_cell,
-               s.nr_2100M_site, s.nr_2100M_cell,
-               s.nr_2600M_site, s.nr_2600M_cell,
-               s.nr_3500M_site, s.nr_3500M_cell,
-               s.nr_4900M_site, s.nr_4900M_cell,
-               s.nr_2300M_site, s.nr_2300M_cell,
-               s.lte_total_site, s.lte_total_cell,
-               s.nr_total_site, s.nr_total_cell,
-               s.created_time, s.updated_time
-        FROM site_info s
-        ORDER BY s.operator_id, s.data_month
+        SELECT
+            o.id,
+            o.id AS operator_id,
+            ss.data_month,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN ss.site_num END), 0) AS lte_700M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN ss.cell_num END), 0) AS lte_700M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN ss.site_num END), 0) AS lte_800M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN ss.cell_num END), 0) AS lte_800M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN ss.site_num END), 0) AS lte_900M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN ss.cell_num END), 0) AS lte_900M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN ss.site_num END), 0) AS lte_1400M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN ss.cell_num END), 0) AS lte_1400M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN ss.site_num END), 0) AS lte_1800M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN ss.cell_num END), 0) AS lte_1800M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN ss.site_num END), 0) AS lte_2100M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN ss.cell_num END), 0) AS lte_2100M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN ss.site_num END), 0) AS lte_2600M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN ss.cell_num END), 0) AS lte_2600M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN ss.site_num END), 0) AS nr_700M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN ss.cell_num END), 0) AS nr_700M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN ss.site_num END), 0) AS nr_800M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN ss.cell_num END), 0) AS nr_800M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN ss.site_num END), 0) AS nr_900M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN ss.cell_num END), 0) AS nr_900M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN ss.site_num END), 0) AS nr_1400M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN ss.cell_num END), 0) AS nr_1400M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN ss.site_num END), 0) AS nr_1800M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN ss.cell_num END), 0) AS nr_1800M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN ss.site_num END), 0) AS nr_2100M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN ss.cell_num END), 0) AS nr_2100M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN ss.site_num END), 0) AS nr_2600M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN ss.cell_num END), 0) AS nr_2600M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN ss.site_num END), 0) AS nr_3500M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN ss.cell_num END), 0) AS nr_3500M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN ss.site_num END), 0) AS nr_4900M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN ss.cell_num END), 0) AS nr_4900M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ss.site_num END), 0) AS nr_2300M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ss.cell_num END), 0) AS nr_2300M_cell,
+            COALESCE(SUM(CASE WHEN b.technology = 'LTE' THEN ss.site_num ELSE 0 END), 0) AS lte_total_site,
+            COALESCE(SUM(CASE WHEN b.technology = 'LTE' THEN ss.cell_num ELSE 0 END), 0) AS lte_total_cell,
+            COALESCE(SUM(CASE WHEN b.technology = 'NR' THEN ss.site_num ELSE 0 END), 0) AS nr_total_site,
+            COALESCE(SUM(CASE WHEN b.technology = 'NR' THEN ss.cell_num ELSE 0 END), 0) AS nr_total_cell,
+            NOW() AS created_time,
+            NOW() AS updated_time
+        FROM operator_info o
+        LEFT JOIN site_info ss ON o.id = ss.operator_id
+        LEFT JOIN band b ON ss.band_id = b.id
+        GROUP BY o.id, ss.data_month
+        ORDER BY o.id, ss.data_month
     </select>
 
     <select id="findSiteCellSummaryByOperatorId" resultMap="SiteCellSummaryResultMap">
-        SELECT s.id, s.operator_id, s.data_month,
-               s.lte_700M_site, s.lte_700M_cell,
-               s.lte_800M_site, s.lte_800M_cell,
-               s.lte_900M_site, s.lte_900M_cell,
-               s.lte_1400M_site, s.lte_1400M_cell,
-               s.lte_1800M_site, s.lte_1800M_cell,
-               s.lte_2100M_site, s.lte_2100M_cell,
-               s.lte_2600M_site, s.lte_2600M_cell,
-               s.nr_700M_site, s.nr_700M_cell,
-               s.nr_800M_site, s.nr_800M_cell,
-               s.nr_900M_site, s.nr_900M_cell,
-               s.nr_1400M_site, s.nr_1400M_cell,
-               s.nr_1800M_site, s.nr_1800M_cell,
-               s.nr_2100M_site, s.nr_2100M_cell,
-               s.nr_2600M_site, s.nr_2600M_cell,
-               s.nr_3500M_site, s.nr_3500M_cell,
-               s.nr_4900M_site, s.nr_4900M_cell,
-               s.nr_2300M_site, s.nr_2300M_cell,
-               s.lte_total_site, s.lte_total_cell,
-               s.nr_total_site, s.nr_total_cell,
-               s.created_time, s.updated_time
-        FROM site_info s
-        WHERE s.operator_id = #{operatorId}
-        ORDER BY s.data_month
+        SELECT
+            o.id,
+            o.id AS operator_id,
+            ss.data_month,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN ss.site_num END), 0) AS lte_700M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN ss.cell_num END), 0) AS lte_700M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN ss.site_num END), 0) AS lte_800M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN ss.cell_num END), 0) AS lte_800M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN ss.site_num END), 0) AS lte_900M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN ss.cell_num END), 0) AS lte_900M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN ss.site_num END), 0) AS lte_1400M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN ss.cell_num END), 0) AS lte_1400M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN ss.site_num END), 0) AS lte_1800M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN ss.cell_num END), 0) AS lte_1800M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN ss.site_num END), 0) AS lte_2100M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN ss.cell_num END), 0) AS lte_2100M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN ss.site_num END), 0) AS lte_2600M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN ss.cell_num END), 0) AS lte_2600M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN ss.site_num END), 0) AS nr_700M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN ss.cell_num END), 0) AS nr_700M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN ss.site_num END), 0) AS nr_800M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN ss.cell_num END), 0) AS nr_800M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN ss.site_num END), 0) AS nr_900M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN ss.cell_num END), 0) AS nr_900M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN ss.site_num END), 0) AS nr_1400M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN ss.cell_num END), 0) AS nr_1400M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN ss.site_num END), 0) AS nr_1800M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN ss.cell_num END), 0) AS nr_1800M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN ss.site_num END), 0) AS nr_2100M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN ss.cell_num END), 0) AS nr_2100M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN ss.site_num END), 0) AS nr_2600M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN ss.cell_num END), 0) AS nr_2600M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN ss.site_num END), 0) AS nr_3500M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN ss.cell_num END), 0) AS nr_3500M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN ss.site_num END), 0) AS nr_4900M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN ss.cell_num END), 0) AS nr_4900M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ss.site_num END), 0) AS nr_2300M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ss.cell_num END), 0) AS nr_2300M_cell,
+            COALESCE(SUM(CASE WHEN b.technology = 'LTE' THEN ss.site_num ELSE 0 END), 0) AS lte_total_site,
+            COALESCE(SUM(CASE WHEN b.technology = 'LTE' THEN ss.cell_num ELSE 0 END), 0) AS lte_total_cell,
+            COALESCE(SUM(CASE WHEN b.technology = 'NR' THEN ss.site_num ELSE 0 END), 0) AS nr_total_site,
+            COALESCE(SUM(CASE WHEN b.technology = 'NR' THEN ss.cell_num ELSE 0 END), 0) AS nr_total_cell,
+            NOW() AS created_time,
+            NOW() AS updated_time
+        FROM operator_info o
+        LEFT JOIN site_info ss ON o.id = ss.operator_id
+        LEFT JOIN band b ON ss.band_id = b.id
+        WHERE o.id = #{operatorId}
+        GROUP BY o.id, ss.data_month
+        ORDER BY ss.data_month
     </select>
 
     <select id="findSiteCellSummaryByOperatorIdAndMonth" resultMap="SiteCellSummaryResultMap">
-        SELECT s.id, s.operator_id, s.data_month,
-               s.lte_700M_site, s.lte_700M_cell,
-               s.lte_800M_site, s.lte_800M_cell,
-               s.lte_900M_site, s.lte_900M_cell,
-               s.lte_1400M_site, s.lte_1400M_cell,
-               s.lte_1800M_site, s.lte_1800M_cell,
-               s.lte_2100M_site, s.lte_2100M_cell,
-               s.lte_2600M_site, s.lte_2600M_cell,
-               s.nr_700M_site, s.nr_700M_cell,
-               s.nr_800M_site, s.nr_800M_cell,
-               s.nr_900M_site, s.nr_900M_cell,
-               s.nr_1400M_site, s.nr_1400M_cell,
-               s.nr_1800M_site, s.nr_1800M_cell,
-               s.nr_2100M_site, s.nr_2100M_cell,
-               s.nr_2600M_site, s.nr_2600M_cell,
-               s.nr_3500M_site, s.nr_3500M_cell,
-               s.nr_4900M_site, s.nr_4900M_cell,
-               s.nr_2300M_site, s.nr_2300M_cell,
-               s.lte_total_site, s.lte_total_cell,
-               s.nr_total_site, s.nr_total_cell,
-               s.created_time, s.updated_time
-        FROM site_info s
-        WHERE s.operator_id = #{operatorId}
-          AND s.data_month = #{dataMonth}
+        SELECT
+            o.id,
+            o.id AS operator_id,
+            ss.data_month,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN ss.site_num END), 0) AS lte_700M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN ss.cell_num END), 0) AS lte_700M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN ss.site_num END), 0) AS lte_800M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN ss.cell_num END), 0) AS lte_800M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN ss.site_num END), 0) AS lte_900M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN ss.cell_num END), 0) AS lte_900M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN ss.site_num END), 0) AS lte_1400M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN ss.cell_num END), 0) AS lte_1400M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN ss.site_num END), 0) AS lte_1800M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN ss.cell_num END), 0) AS lte_1800M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN ss.site_num END), 0) AS lte_2100M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN ss.cell_num END), 0) AS lte_2100M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN ss.site_num END), 0) AS lte_2600M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN ss.cell_num END), 0) AS lte_2600M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN ss.site_num END), 0) AS nr_700M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN ss.cell_num END), 0) AS nr_700M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN ss.site_num END), 0) AS nr_800M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN ss.cell_num END), 0) AS nr_800M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN ss.site_num END), 0) AS nr_900M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN ss.cell_num END), 0) AS nr_900M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN ss.site_num END), 0) AS nr_1400M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN ss.cell_num END), 0) AS nr_1400M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN ss.site_num END), 0) AS nr_1800M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN ss.cell_num END), 0) AS nr_1800M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN ss.site_num END), 0) AS nr_2100M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN ss.cell_num END), 0) AS nr_2100M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN ss.site_num END), 0) AS nr_2600M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN ss.cell_num END), 0) AS nr_2600M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN ss.site_num END), 0) AS nr_3500M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN ss.cell_num END), 0) AS nr_3500M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN ss.site_num END), 0) AS nr_4900M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN ss.cell_num END), 0) AS nr_4900M_cell,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ss.site_num END), 0) AS nr_2300M_site,
+            COALESCE(MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ss.cell_num END), 0) AS nr_2300M_cell,
+            COALESCE(SUM(CASE WHEN b.technology = 'LTE' THEN ss.site_num ELSE 0 END), 0) AS lte_total_site,
+            COALESCE(SUM(CASE WHEN b.technology = 'LTE' THEN ss.cell_num ELSE 0 END), 0) AS lte_total_cell,
+            COALESCE(SUM(CASE WHEN b.technology = 'NR' THEN ss.site_num ELSE 0 END), 0) AS nr_total_site,
+            COALESCE(SUM(CASE WHEN b.technology = 'NR' THEN ss.cell_num ELSE 0 END), 0) AS nr_total_cell,
+            NOW() AS created_time,
+            NOW() AS updated_time
+        FROM operator_info o
+        LEFT JOIN site_info ss ON o.id = ss.operator_id
+        LEFT JOIN band b ON ss.band_id = b.id
+        WHERE o.id = #{operatorId} AND ss.data_month = #{dataMonth}
+        GROUP BY o.id, ss.data_month
     </select>
 
     <select id="findDistinctDataMonths" resultType="string">

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.operator.nl2sql.repository.DimOperatorMapper">
+
+    <resultMap id="DimOperatorResultMap" type="com.operator.nl2sql.entity.DimOperator">
+        <id property="id" column="id"/>
+        <result property="operatorCode" column="operator_code"/>
+        <result property="operatorName" column="operator_name"/>
+        <result property="aliasName" column="alias_name"/>
+        <result property="country" column="country"/>
+        <result property="region" column="region"/>
+        <result property="networkType" column="network_type"/>
+        <result property="status" column="status"/>
+        <result property="createdTime" column="created_time"/>
+        <result property="updatedTime" column="updated_time"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="DimOperatorResultMap">
+        SELECT id, operator_code, operator_name, alias_name, country, region, network_type, status, created_time, updated_time
+        FROM operator_info
+        ORDER BY id
+    </select>
+
+    <select id="findByCountry" resultMap="DimOperatorResultMap">
+        SELECT id, operator_code, operator_name, alias_name, country, region, network_type, status, created_time, updated_time
+        FROM operator_info
+        WHERE country = #{country}
+        ORDER BY id
+    </select>
+
+    <select id="findByRegion" resultMap="DimOperatorResultMap">
+        SELECT id, operator_code, operator_name, alias_name, country, region, network_type, status, created_time, updated_time
+        FROM operator_info
+        WHERE region = #{region}
+        ORDER BY id
+    </select>
+
+    <select id="findById" resultMap="DimOperatorResultMap">
+        SELECT id, operator_code, operator_name, alias_name, country, region, network_type, status, created_time, updated_time
+        FROM operator_info
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByOperatorCode" resultMap="DimOperatorResultMap">
+        SELECT id, operator_code, operator_name, alias_name, country, region, network_type, status, created_time, updated_time
+        FROM operator_info
+        WHERE operator_code = #{operatorCode}
+    </select>
+
+    <select id="findByOperatorName" resultMap="DimOperatorResultMap">
+        SELECT id, operator_code, operator_name, alias_name, country, region, network_type, status, created_time, updated_time
+        FROM operator_info
+        WHERE operator_name LIKE '%' || #{operatorName} || '%'
+        ORDER BY id
+    </select>
+
+</mapper>

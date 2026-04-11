@@ -1,471 +1,165 @@
--- 权限管理表
-SOURCE auth_schema.sql;
+-- ============================================================================
+-- OperatorBoard 星型模型 (Star Schema)
+-- 重构日期: 2026-04-11
+-- ============================================================================
 
--- 聊天历史表
-SOURCE chat_schema.sql;
-
--- 运营商信息表
 SET FOREIGN_KEY_CHECKS=0;
+
+-- ============================================================================
+-- 运营商维度表
+-- ============================================================================
 DROP TABLE IF EXISTS operator_info;
 CREATE TABLE operator_info (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    operator_name VARCHAR(100) NOT NULL COMMENT '运营商名称',
-    country VARCHAR(50) COMMENT '国家名称',
-    region VARCHAR(100) COMMENT '地区',
-    network_type VARCHAR(50) COMMENT '网络类型 (4G/5G)',
-    data_month VARCHAR(7) COMMENT '数据月份 (YYYY-MM)',
-    created_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运营商信息表';
+    operator_code VARCHAR(50) UNIQUE NOT NULL COMMENT '运营商代码',
+    operator_name VARCHAR(255) NOT NULL COMMENT '运营商名称',
+    alias_name VARCHAR(255) COMMENT '别名',
+    country VARCHAR(100) NOT NULL COMMENT '国家',
+    region VARCHAR(50) NOT NULL COMMENT '区域',
+    network_type VARCHAR(20) COMMENT '网络类型 4G/5G',
+    status TINYINT DEFAULT 1 COMMENT '状态 1-激活 0-停用',
+    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_country (country),
+    INDEX idx_region (region),
+    INDEX idx_network_type (network_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- 站点信息表（宽表：每行一个运营商一个月）
+-- ============================================================================
+-- 频段维度表 (21个频段)
+-- ============================================================================
+DROP TABLE IF EXISTS band_info;
+CREATE TABLE band_info (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    band_code VARCHAR(20) UNIQUE NOT NULL COMMENT '频段代码 如 LTE700M_FDD',
+    band_name VARCHAR(50) NOT NULL COMMENT '频段名称 如 LTE 700M FDD',
+    technology VARCHAR(10) NOT NULL COMMENT '技术制式 LTE/NR',
+    frequency_mhz INT NOT NULL COMMENT '中心频率 MHz',
+    duplex_mode VARCHAR(10) NOT NULL COMMENT '双工模式 FDD/TDD',
+    band_group VARCHAR(20) COMMENT '频段组 700M/800M/900M等',
+    INDEX idx_tech (technology),
+    INDEX idx_duplex (duplex_mode)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- 插入21个频段数据
+INSERT INTO band_info (band_code, band_name, technology, frequency_mhz, duplex_mode, band_group) VALUES
+-- LTE 频段 (10个)
+('LTE700M_FDD', 'LTE 700M FDD', 'LTE', 700, 'FDD', '700M'),
+('LTE800M_FDD', 'LTE 800M FDD', 'LTE', 800, 'FDD', '800M'),
+('LTE900M_FDD', 'LTE 900M FDD', 'LTE', 900, 'FDD', '900M'),
+('LTE1400M_FDD', 'LTE 1400M FDD', 'LTE', 1400, 'FDD', '1400M'),
+('LTE1800M_FDD', 'LTE 1800M FDD', 'LTE', 1800, 'FDD', '1800M'),
+('LTE2100M_FDD', 'LTE 2100M FDD', 'LTE', 2100, 'FDD', '2100M'),
+('LTE2300M_FDD', 'LTE 2300M FDD', 'LTE', 2300, 'FDD', '2300M'),
+('LTE2300M_TDD', 'LTE 2300M TDD', 'LTE', 2300, 'TDD', '2300M'),
+('LTE2600M_FDD', 'LTE 2600M FDD', 'LTE', 2600, 'FDD', '2600M'),
+('LTE2600M_TDD', 'LTE 2600M TDD', 'LTE', 2600, 'TDD', '2600M'),
+-- NR 频段 (11个)
+('NR700M_FDD', 'NR 700M FDD', 'NR', 700, 'FDD', '700M'),
+('NR800M_FDD', 'NR 800M FDD', 'NR', 800, 'FDD', '800M'),
+('NR900M_FDD', 'NR 900M FDD', 'NR', 900, 'FDD', '900M'),
+('NR1400M_FDD', 'NR 1400M FDD', 'NR', 1400, 'FDD', '1400M'),
+('NR1800M_FDD', 'NR 1800M FDD', 'NR', 1800, 'FDD', '1800M'),
+('NR2100M_FDD', 'NR 2100M FDD', 'NR', 2100, 'FDD', '2100M'),
+('NR2300M_FDD', 'NR 2300M FDD', 'NR', 2300, 'FDD', '2300M'),
+('NR2300M_TDD', 'NR 2300M TDD', 'NR', 2300, 'TDD', '2300M'),
+('NR2600M_FDD', 'NR 2600M FDD', 'NR', 2600, 'FDD', '2600M'),
+('NR2600M_TDD', 'NR 2600M TDD', 'NR', 2600, 'TDD', '2600M'),
+('NR3500M_TDD', 'NR 3500M TDD', 'NR', 3500, 'TDD', '3500M'),
+('NR4900M_TDD', 'NR 4900M TDD', 'NR', 4900, 'TDD', '4900M');
+
+-- 从operator_info迁移数据到operator
+INSERT INTO operator_info (operator_code, operator_name, country, region, network_type)
+SELECT
+    CONCAT('OP', LPAD(id, 3, '0')) as operator_code,
+    operator_name,
+    COALESCE(country, 'Unknown') as country,
+    COALESCE(region, 'Unknown') as region,
+    COALESCE(network_type, '4G/5G') as network_type
+FROM operator_info
+GROUP BY operator_name;
+
+-- ============================================================================
+-- 站点信息表
+-- ============================================================================
 DROP TABLE IF EXISTS site_info;
 CREATE TABLE site_info (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    operator_id BIGINT NOT NULL COMMENT '关联运营商ID',
-    data_month VARCHAR(7) NOT NULL COMMENT '数据月份 (YYYY-MM)',
-    -- LTE 700M 频段
-    lte_700M_site INT DEFAULT 0 COMMENT 'LTE 700M 物理站点数',
-    lte_700M_cell INT DEFAULT 0 COMMENT 'LTE 700M 物理小区数',
-    -- LTE 800M 频段
-    lte_800M_site INT DEFAULT 0 COMMENT 'LTE 800M 物理站点数',
-    lte_800M_cell INT DEFAULT 0 COMMENT 'LTE 800M 物理小区数',
-    -- LTE 900M 频段
-    lte_900M_site INT DEFAULT 0 COMMENT 'LTE 900M 物理站点数',
-    lte_900M_cell INT DEFAULT 0 COMMENT 'LTE 900M 物理小区数',
-    -- LTE 1400M 频段
-    lte_1400M_site INT DEFAULT 0 COMMENT 'LTE 1400M 物理站点数',
-    lte_1400M_cell INT DEFAULT 0 COMMENT 'LTE 1400M 物理小区数',
-    -- LTE 1800M 频段
-    lte_1800M_site INT DEFAULT 0 COMMENT 'LTE 1800M 物理站点数',
-    lte_1800M_cell INT DEFAULT 0 COMMENT 'LTE 1800M 物理小区数',
-    -- LTE 2100M 频段
-    lte_2100M_site INT DEFAULT 0 COMMENT 'LTE 2100M 物理站点数',
-    lte_2100M_cell INT DEFAULT 0 COMMENT 'LTE 2100M 物理小区数',
-    -- LTE 2600M 频段
-    lte_2600M_site INT DEFAULT 0 COMMENT 'LTE 2600M 物理站点数',
-    lte_2600M_cell INT DEFAULT 0 COMMENT 'LTE 2600M 物理小区数',
-    -- NR 700M 频段
-    nr_700M_site INT DEFAULT 0 COMMENT 'NR 700M 物理站点数',
-    nr_700M_cell INT DEFAULT 0 COMMENT 'NR 700M 物理小区数',
-    -- NR 800M 频段
-    nr_800M_site INT DEFAULT 0 COMMENT 'NR 800M 物理站点数',
-    nr_800M_cell INT DEFAULT 0 COMMENT 'NR 800M 物理小区数',
-    -- NR 900M 频段
-    nr_900M_site INT DEFAULT 0 COMMENT 'NR 900M 物理站点数',
-    nr_900M_cell INT DEFAULT 0 COMMENT 'NR 900M 物理小区数',
-    -- NR 1400M 频段
-    nr_1400M_site INT DEFAULT 0 COMMENT 'NR 1400M 物理站点数',
-    nr_1400M_cell INT DEFAULT 0 COMMENT 'NR 1400M 物理小区数',
-    -- NR 1800M 频段
-    nr_1800M_site INT DEFAULT 0 COMMENT 'NR 1800M 物理站点数',
-    nr_1800M_cell INT DEFAULT 0 COMMENT 'NR 1800M 物理小区数',
-    -- NR 2100M 频段
-    nr_2100M_site INT DEFAULT 0 COMMENT 'NR 2100M 物理站点数',
-    nr_2100M_cell INT DEFAULT 0 COMMENT 'NR 2100M 物理小区数',
-    -- NR 2600M 频段
-    nr_2600M_site INT DEFAULT 0 COMMENT 'NR 2600M 物理站点数',
-    nr_2600M_cell INT DEFAULT 0 COMMENT 'NR 2600M 物理小区数',
-    -- NR 3500M 频段
-    nr_3500M_site INT DEFAULT 0 COMMENT 'NR 3500M 物理站点数',
-    nr_3500M_cell INT DEFAULT 0 COMMENT 'NR 3500M 物理小区数',
-    -- NR 4900M 频段
-    nr_4900M_site INT DEFAULT 0 COMMENT 'NR 4900M 物理站点数',
-    nr_4900M_cell INT DEFAULT 0 COMMENT 'NR 4900M 物理小区数',
-    -- NR 2300M 频段
-    nr_2300M_site INT DEFAULT 0 COMMENT 'NR 2300M 物理站点数',
-    nr_2300M_cell INT DEFAULT 0 COMMENT 'NR 2300M 物理小区数',
-    -- 汇总字段
-    lte_total_site INT DEFAULT 0 COMMENT 'LTE物理站点总数',
-    lte_total_cell INT GENERATED ALWAYS AS (lte_700M_cell + lte_800M_cell + lte_900M_cell + lte_1400M_cell + lte_1800M_cell + lte_2100M_cell + lte_2600M_cell) STORED COMMENT 'LTE物理小区总数',
-    nr_total_site INT DEFAULT 0 COMMENT 'NR物理站点总数',
-    nr_total_cell INT GENERATED ALWAYS AS (nr_700M_cell + nr_800M_cell + nr_900M_cell + nr_1400M_cell + nr_1800M_cell + nr_2100M_cell + nr_2600M_cell + nr_3500M_cell + nr_4900M_cell + nr_2300M_cell) STORED COMMENT 'NR物理小区总数',
-    created_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    operator_id BIGINT NOT NULL COMMENT '运营商ID',
+    band_id BIGINT NOT NULL COMMENT '频段ID',
+    data_month VARCHAR(7) NOT NULL COMMENT '数据月份 YYYY-MM',
+    site_num INT DEFAULT 0 COMMENT '站点数量',
+    cell_num INT DEFAULT 0 COMMENT '小区数量',
+    technology VARCHAR(10) NOT NULL COMMENT '技术制式 LTE/NR',
     FOREIGN KEY (operator_id) REFERENCES operator_info(id),
-    UNIQUE KEY uk_operator_month (operator_id, data_month)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='站点信息表';
+    FOREIGN KEY (band_id) REFERENCES band_info(id),
+    UNIQUE KEY uk_op_band_month (operator_id, band_id, data_month),
+    INDEX idx_op_month (operator_id, data_month),
+    INDEX idx_tech_month (technology, data_month)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- 指标信息表（宽表：每行一个运营商一个月）
+-- ============================================================================
+-- 网络指标表
+-- ============================================================================
 DROP TABLE IF EXISTS indicator_info;
 CREATE TABLE indicator_info (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    operator_id BIGINT NOT NULL COMMENT '关联运营商ID',
-    data_month VARCHAR(7) NOT NULL COMMENT '数据月份 (YYYY-MM)',
-    -- LTE 700M 频段指标
-    lte_700M_dl_rate DECIMAL(10,2) COMMENT 'LTE 700M 下行速率 (Mbps)',
-    lte_700M_ul_rate DECIMAL(10,2) COMMENT 'LTE 700M 上行速率 (Mbps)',
-    lte_700M_dl_prb DECIMAL(5,2) COMMENT 'LTE 700M 下行PRB利用率 (%)',
-    lte_700M_ul_prb DECIMAL(5,2) COMMENT 'LTE 700M 上行PRB利用率 (%)',
-    -- LTE 800M 频段指标
-    lte_800M_dl_rate DECIMAL(10,2) COMMENT 'LTE 800M 下行速率 (Mbps)',
-    lte_800M_ul_rate DECIMAL(10,2) COMMENT 'LTE 800M 上行速率 (Mbps)',
-    lte_800M_dl_prb DECIMAL(5,2) COMMENT 'LTE 800M 下行PRB利用率 (%)',
-    lte_800M_ul_prb DECIMAL(5,2) COMMENT 'LTE 800M 上行PRB利用率 (%)',
-    -- LTE 900M 频段指标
-    lte_900M_dl_rate DECIMAL(10,2) COMMENT 'LTE 900M 下行速率 (Mbps)',
-    lte_900M_ul_rate DECIMAL(10,2) COMMENT 'LTE 900M 上行速率 (Mbps)',
-    lte_900M_dl_prb DECIMAL(5,2) COMMENT 'LTE 900M 下行PRB利用率 (%)',
-    lte_900M_ul_prb DECIMAL(5,2) COMMENT 'LTE 900M 上行PRB利用率 (%)',
-    -- LTE 1400M 频段指标
-    lte_1400M_dl_rate DECIMAL(10,2) COMMENT 'LTE 1400M 下行速率 (Mbps)',
-    lte_1400M_ul_rate DECIMAL(10,2) COMMENT 'LTE 1400M 上行速率 (Mbps)',
-    lte_1400M_dl_prb DECIMAL(5,2) COMMENT 'LTE 1400M 下行PRB利用率 (%)',
-    lte_1400M_ul_prb DECIMAL(5,2) COMMENT 'LTE 1400M 上行PRB利用率 (%)',
-    -- LTE 1800M 频段指标
-    lte_1800M_dl_rate DECIMAL(10,2) COMMENT 'LTE 1800M 下行速率 (Mbps)',
-    lte_1800M_ul_rate DECIMAL(10,2) COMMENT 'LTE 1800M 上行速率 (Mbps)',
-    lte_1800M_dl_prb DECIMAL(5,2) COMMENT 'LTE 1800M 下行PRB利用率 (%)',
-    lte_1800M_ul_prb DECIMAL(5,2) COMMENT 'LTE 1800M 上行PRB利用率 (%)',
-    -- LTE 2100M 频段指标
-    lte_2100M_dl_rate DECIMAL(10,2) COMMENT 'LTE 2100M 下行速率 (Mbps)',
-    lte_2100M_ul_rate DECIMAL(10,2) COMMENT 'LTE 2100M 上行速率 (Mbps)',
-    lte_2100M_dl_prb DECIMAL(5,2) COMMENT 'LTE 2100M 下行PRB利用率 (%)',
-    lte_2100M_ul_prb DECIMAL(5,2) COMMENT 'LTE 2100M 上行PRB利用率 (%)',
-    -- LTE 2600M 频段指标
-    lte_2600M_dl_rate DECIMAL(10,2) COMMENT 'LTE 2600M 下行速率 (Mbps)',
-    lte_2600M_ul_rate DECIMAL(10,2) COMMENT 'LTE 2600M 上行速率 (Mbps)',
-    lte_2600M_dl_prb DECIMAL(5,2) COMMENT 'LTE 2600M 下行PRB利用率 (%)',
-    lte_2600M_ul_prb DECIMAL(5,2) COMMENT 'LTE 2600M 上行PRB利用率 (%)',
-    -- NR 700M 频段指标
-    nr_700M_dl_rate DECIMAL(10,2) COMMENT 'NR 700M 下行速率 (Mbps)',
-    nr_700M_ul_rate DECIMAL(10,2) COMMENT 'NR 700M 上行速率 (Mbps)',
-    nr_700M_dl_prb DECIMAL(5,2) COMMENT 'NR 700M 下行PRB利用率 (%)',
-    nr_700M_ul_prb DECIMAL(5,2) COMMENT 'NR 700M 上行PRB利用率 (%)',
-    -- NR 800M 频段指标
-    nr_800M_dl_rate DECIMAL(10,2) COMMENT 'NR 800M 下行速率 (Mbps)',
-    nr_800M_ul_rate DECIMAL(10,2) COMMENT 'NR 800M 上行速率 (Mbps)',
-    nr_800M_dl_prb DECIMAL(5,2) COMMENT 'NR 800M 下行PRB利用率 (%)',
-    nr_800M_ul_prb DECIMAL(5,2) COMMENT 'NR 800M 上行PRB利用率 (%)',
-    -- NR 900M 频段指标
-    nr_900M_dl_rate DECIMAL(10,2) COMMENT 'NR 900M 下行速率 (Mbps)',
-    nr_900M_ul_rate DECIMAL(10,2) COMMENT 'NR 900M 上行速率 (Mbps)',
-    nr_900M_dl_prb DECIMAL(5,2) COMMENT 'NR 900M 下行PRB利用率 (%)',
-    nr_900M_ul_prb DECIMAL(5,2) COMMENT 'NR 900M 上行PRB利用率 (%)',
-    -- NR 1400M 频段指标
-    nr_1400M_dl_rate DECIMAL(10,2) COMMENT 'NR 1400M 下行速率 (Mbps)',
-    nr_1400M_ul_rate DECIMAL(10,2) COMMENT 'NR 1400M 上行速率 (Mbps)',
-    nr_1400M_dl_prb DECIMAL(5,2) COMMENT 'NR 1400M 下行PRB利用率 (%)',
-    nr_1400M_ul_prb DECIMAL(5,2) COMMENT 'NR 1400M 上行PRB利用率 (%)',
-    -- NR 1800M 频段指标
-    nr_1800M_dl_rate DECIMAL(10,2) COMMENT 'NR 1800M 下行速率 (Mbps)',
-    nr_1800M_ul_rate DECIMAL(10,2) COMMENT 'NR 1800M 上行速率 (Mbps)',
-    nr_1800M_dl_prb DECIMAL(5,2) COMMENT 'NR 1800M 下行PRB利用率 (%)',
-    nr_1800M_ul_prb DECIMAL(5,2) COMMENT 'NR 1800M 上行PRB利用率 (%)',
-    -- NR 2100M 频段指标
-    nr_2100M_dl_rate DECIMAL(10,2) COMMENT 'NR 2100M 下行速率 (Mbps)',
-    nr_2100M_ul_rate DECIMAL(10,2) COMMENT 'NR 2100M 上行速率 (Mbps)',
-    nr_2100M_dl_prb DECIMAL(5,2) COMMENT 'NR 2100M 下行PRB利用率 (%)',
-    nr_2100M_ul_prb DECIMAL(5,2) COMMENT 'NR 2100M 上行PRB利用率 (%)',
-    -- NR 2600M 频段指标
-    nr_2600M_dl_rate DECIMAL(10,2) COMMENT 'NR 2600M 下行速率 (Mbps)',
-    nr_2600M_ul_rate DECIMAL(10,2) COMMENT 'NR 2600M 上行速率 (Mbps)',
-    nr_2600M_dl_prb DECIMAL(5,2) COMMENT 'NR 2600M 下行PRB利用率 (%)',
-    nr_2600M_ul_prb DECIMAL(5,2) COMMENT 'NR 2600M 上行PRB利用率 (%)',
-    -- NR 3500M 频段指标
-    nr_3500M_dl_rate DECIMAL(10,2) COMMENT 'NR 3500M 下行速率 (Mbps)',
-    nr_3500M_ul_rate DECIMAL(10,2) COMMENT 'NR 3500M 上行速率 (Mbps)',
-    nr_3500M_dl_prb DECIMAL(5,2) COMMENT 'NR 3500M 下行PRB利用率 (%)',
-    nr_3500M_ul_prb DECIMAL(5,2) COMMENT 'NR 3500M 上行PRB利用率 (%)',
-    -- NR 4900M 频段指标
-    nr_4900M_dl_rate DECIMAL(10,2) COMMENT 'NR 4900M 下行速率 (Mbps)',
-    nr_4900M_ul_rate DECIMAL(10,2) COMMENT 'NR 4900M 上行速率 (Mbps)',
-    nr_4900M_dl_prb DECIMAL(5,2) COMMENT 'NR 4900M 下行PRB利用率 (%)',
-    nr_4900M_ul_prb DECIMAL(5,2) COMMENT 'NR 4900M 上行PRB利用率 (%)',
-    -- NR 2300M 频段指标
-    nr_2300M_dl_rate DECIMAL(10,2) COMMENT 'NR 2300M 下行速率 (Mbps)',
-    nr_2300M_ul_rate DECIMAL(10,2) COMMENT 'NR 2300M 上行速率 (Mbps)',
-    nr_2300M_dl_prb DECIMAL(5,2) COMMENT 'NR 2300M 下行PRB利用率 (%)',
-    nr_2300M_ul_prb DECIMAL(5,2) COMMENT 'NR 2300M 上行PRB利用率 (%)',
+    operator_id BIGINT NOT NULL COMMENT '运营商ID',
+    band_id BIGINT NOT NULL COMMENT '频段ID',
+    data_month VARCHAR(7) NOT NULL COMMENT '数据月份 YYYY-MM',
+    technology VARCHAR(10) NOT NULL COMMENT '技术制式 LTE/NR',
 
-    lte_avg_dl_rate DECIMAL(10,2) COMMENT 'LTE 平均下行速率 (Mbps)',
-    lte_avg_prb DECIMAL(5,2) COMMENT 'LTE 平均PRB利用率 (%)',
-    nr_avg_dl_rate DECIMAL(10,2) COMMENT 'NR 平均下行速率 (Mbps)',
-    nr_avg_prb DECIMAL(5,2) COMMENT 'NR 平均PRB利用率 (%)',
-    
-    traffic_ratio DECIMAL(5,2) COMMENT '分流比 (%)',
-    traffic_campratio DECIMAL(5,2) COMMENT '流量驻留比 (%)',
-    terminal_penetration DECIMAL(5,2) COMMENT '终端渗透率 (%)',
-    duration_campratio DECIMAL(5,2) COMMENT '时长驻留比 (%)',
-    fallback_ratio DECIMAL(5,2) COMMENT '回流比 (%)',
-    created_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    -- PRB指标
+    dl_prb DECIMAL(10,5) COMMENT '下行PRB利用率',
+    ul_prb DECIMAL(10,5) COMMENT '上行PRB利用率',
+
+    -- 吞吐量指标
+    dl_rate DECIMAL(10,2) COMMENT '下行速率 Mbps',
+    ul_rate DECIMAL(10,2) COMMENT '上行速率 Mbps',
+
+    -- 流量指标
+    total_traffic DECIMAL(15,2) COMMENT '总流量 MB',
+    dl_traffic DECIMAL(15,2) COMMENT '下行流量 MB',
+    ul_traffic DECIMAL(15,2) COMMENT '上行流量 MB',
+
+    -- 用户指标
+    online_users DECIMAL(10,2) COMMENT '在线用户数',
+    nr_users DECIMAL(10,2) COMMENT 'NR用户数',
+
+    -- 终端指标
+    terminal_penetration_ratio DECIMAL(10,4) COMMENT '终端渗透率',
+
     FOREIGN KEY (operator_id) REFERENCES operator_info(id),
-    UNIQUE KEY uk_operator_month (operator_id, data_month)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='指标信息表';
+    FOREIGN KEY (band_id) REFERENCES band_info(id),
+    UNIQUE KEY uk_op_band_month (operator_id, band_id, data_month),
+    INDEX idx_op_month (operator_id, data_month)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ============================================================================
--- 全球运营商信息表数据 (按华为区域划分标准)
--- 区域划分: 亚太、欧洲、美洲、中东、非洲(北非、南非)
--- 总计: 180个运营商
+-- 运营商月度站点聚合表
 -- ============================================================================
+DROP TABLE IF EXISTS operator_total_site;
+CREATE TABLE operator_total_site (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    operator_id BIGINT NOT NULL COMMENT '运营商ID',
+    data_month VARCHAR(7) NOT NULL COMMENT '数据月份 YYYY-MM',
+    technology VARCHAR(10) NOT NULL COMMENT '技术制式 LTE/NR/ALL',
 
--- 亚太地区 (Asia Pacific) - 43个运营商
-INSERT INTO operator_info (operator_name, country, region, network_type, data_month) VALUES
--- 中国 (4个)
-('中国移动', '中国', '亚太', '5G', '2026-03'),
-('中国电信', '中国', '亚太', '5G', '2026-03'),
-('中国联通', '中国', '亚太', '5G', '2026-03'),
-('中国铁塔', '中国', '亚太', '5G', '2026-03'),
--- 日本 (3个)
-('NTT DOCOMO', '日本', '亚太', '5G', '2026-03'),
-('软银', '日本', '亚太', '5G', '2026-03'),
-('KDDI', '日本', '亚太', '5G', '2026-03'),
--- 韩国 (3个)
-('KT Corporation', '韩国', '亚太', '5G', '2026-03'),
-('SK电讯', '韩国', '亚太', '5G', '2026-03'),
-('LG Uplus', '韩国', '亚太', '5G', '2026-03'),
--- 新加坡 (3个)
-('Singtel', '新加坡', '亚太', '5G', '2026-03'),
-('StarHub', '新加坡', '亚太', '5G', '2026-03'),
-('M1 Limited', '新加坡', '亚太', '5G', '2026-03'),
--- 泰国 (3个)
-('AIS', '泰国', '亚太', '5G', '2026-03'),
-('True Corporation', '泰国', '亚太', '5G', '2026-03'),
-('DTAC', '泰国', '亚太', '5G', '2026-03'),
--- 菲律宾 (2个)
-('Globe Telecom', '菲律宾', '亚太', '5G', '2026-03'),
-('Smart Communications', '菲律宾', '亚太', '5G', '2026-03'),
--- 马来西亚 (2个)
-('Celcom', '马来西亚', '亚太', '5G', '2026-03'),
-('Digi.com', '马来西亚', '亚太', '5G', '2026-03'),
--- 印度尼西亚 (3个)
-('Telkom Indonesia', '印度尼西亚', '亚太', '5G', '2026-03'),
-('Indosat Ooredoo Hutchison', '印度尼西亚', '亚太', '5G', '2026-03'),
-('XL Axiata', '印度尼西亚', '亚太', '5G', '2026-03'),
--- 越南 (3个)
-('Viettel Group', '越南', '亚太', '5G', '2026-03'),
-('VNPT', '越南', '亚太', '5G', '2026-03'),
-('Mobifone', '越南', '亚太', '5G', '2026-03'),
--- 印度 (4个)
-('Bharti Airtel', '印度', '亚太', '5G', '2026-03'),
-('BSNL', '印度', '亚太', '4G', '2026-03'),
-('Reliance Jio', '印度', '亚太', '5G', '2026-03'),
-('Vodafone Idea', '印度', '亚太', '4G', '2026-03'),
--- 巴基斯坦 (2个)
-('Telenor Pakistan', '巴基斯坦', '亚太', '4G', '2026-03'),
-('Jazz', '巴基斯坦', '亚太', '4G', '2026-03'),
--- 孟加拉国 (2个)
-('Grameenphone', '孟加拉国', '亚太', '4G', '2026-03'),
-('Robi Axiata', '孟加拉国', '亚太', '4G', '2026-03'),
--- 澳大利亚 (3个)
-('Telstra', '澳大利亚', '亚太', '5G', '2026-03'),
-('Optus', '澳大利亚', '亚太', '5G', '2026-03'),
-('TPG Telecom', '澳大利亚', '亚太', '5G', '2026-03'),
--- 新西兰 (2个)
-('Spark New Zealand', '新西兰', '亚太', '5G', '2026-03'),
-('Vodafone New Zealand', '新西兰', '亚太', '5G', '2026-03');
+    -- LTE和NR小区数（汇总）
+    nr_physical_cell_num INT DEFAULT 0 COMMENT 'NR物理小区数',
+    lte_physical_cell_num INT DEFAULT 0 COMMENT 'LTE物理小区数',
 
--- 欧洲地区 (Europe) - 40个运营商
-INSERT INTO operator_info (operator_name, country, region, network_type, data_month) VALUES
--- 德国 (3个)
-('Deutsche Telekom', '德国', '欧洲', '5G', '2026-03'),
-('Vodafone Germany', '德国', '欧洲', '5G', '2026-03'),
-('O2 Germany', '德国', '欧洲', '5G', '2026-03'),
--- 西班牙 (3个)
-('Telefonica', '西班牙', '欧洲', '5G', '2026-03'),
-('Vodafone Spain', '西班牙', '欧洲', '5G', '2026-03'),
-('Orange Spain', '西班牙', '欧洲', '5G', '2026-03'),
--- 法国 (3个)
-('Orange France', '法国', '欧洲', '5G', '2026-03'),
-('SFR', '法国', '欧洲', '5G', '2026-03'),
-('Bouygues Telecom', '法国', '欧洲', '5G', '2026-03'),
--- 意大利 (3个)
-('TIM', '意大利', '欧洲', '5G', '2026-03'),
-('Vodafone Italy', '意大利', '欧洲', '5G', '2026-03'),
-('Wind Tre', '意大利', '欧洲', '5G', '2026-03'),
--- 英国 (5个)
-('BT Group', '英国', '欧洲', '5G', '2026-03'),
-('Vodafone UK', '英国', '欧洲', '5G', '2026-03'),
-('O2 UK', '英国', '欧洲', '5G', '2026-03'),
-('EE', '英国', '欧洲', '5G', '2026-03'),
-('Three UK', '英国', '欧洲', '5G', '2026-03'),
--- 荷兰 (2个)
-('KPN', '荷兰', '欧洲', '5G', '2026-03'),
-('Vodafone Netherlands', '荷兰', '欧洲', '5G', '2026-03'),
--- 比利时 (2个)
-('Proximus', '比利时', '欧洲', '5G', '2026-03'),
-('Orange Belgium', '比利时', '欧洲', '5G', '2026-03'),
--- 瑞士 (2个)
-('Swisscom', '瑞士', '欧洲', '5G', '2026-03'),
-('Sunrise Communications', '瑞士', '欧洲', '5G', '2026-03'),
--- 奥地利 (1个)
-('A1 Telekom Austria', '奥地利', '欧洲', '5G', '2026-03'),
--- 俄罗斯 (4个)
-('MTS', '俄罗斯', '欧洲', '5G', '2026-03'),
-('Beeline', '俄罗斯', '欧洲', '5G', '2026-03'),
-('MegaFon', '俄罗斯', '欧洲', '5G', '2026-03'),
-('Tele2 Russia', '俄罗斯', '欧洲', '4G', '2026-03'),
--- 波兰 (3个)
-('Play', '波兰', '欧洲', '5G', '2026-03'),
-('Orange Polska', '波兰', '欧洲', '5G', '2026-03'),
-('T-Mobile Polska', '波兰', '欧洲', '5G', '2026-03'),
--- 捷克 (2个)
-('O2 Czech Republic', '捷克', '欧洲', '5G', '2026-03'),
-('T-Mobile Czech Republic', '捷克', '欧洲', '5G', '2026-03'),
--- 匈牙利 (1个)
-('Magyar Telekom', '匈牙利', '欧洲', '5G', '2026-03'),
--- 罗马尼亚 (2个)
-('Orange Romania', '罗马尼亚', '欧洲', '5G', '2026-03'),
-('Vodafone Romania', '罗马尼亚', '欧洲', '5G', '2026-03'),
--- 土耳其 (3个)
-('Turkcell', '土耳其', '欧洲', '5G', '2026-03'),
-('Turk Telekom', '土耳其', '欧洲', '5G', '2026-03'),
-('Vodafone Turkey', '土耳其', '欧洲', '5G', '2026-03'),
--- 乌克兰 (2个)
-('Kyivstar', '乌克兰', '欧洲', '5G', '2026-03'),
-('Vodafone Ukraine', '乌克兰', '欧洲', '5G', '2026-03');
+    -- LTE和NR物理站点（确定值，非汇总）
+    lte_physical_site_num INT DEFAULT 0 COMMENT 'LTE物理站点数',
+    nr_physical_site_num INT DEFAULT 0 COMMENT 'NR物理站点数',
+    
+    -- 总计
+    total_site_num INT DEFAULT 0 COMMENT '总站点数',
+    total_cell_num INT DEFAULT 0 COMMENT '总小区数',
 
--- 美洲地区 (Americas) - 33个运营商
-INSERT INTO operator_info (operator_name, country, region, network_type, data_month) VALUES
--- 美国 (5个)
-('AT&T', '美国', '美洲', '5G', '2026-03'),
-('Verizon Communications', '美国', '美洲', '5G', '2026-03'),
-('T-Mobile US', '美国', '美洲', '5G', '2026-03'),
-('Sprint', '美国', '美洲', '5G', '2026-03'),
-('US Cellular', '美国', '美洲', '5G', '2026-03'),
--- 加拿大 (4个)
-('Bell Canada', '加拿大', '美洲', '5G', '2026-03'),
-('Rogers Communications', '加拿大', '美洲', '5G', '2026-03'),
-('Telus', '加拿大', '美洲', '5G', '2026-03'),
-('Videotron', '加拿大', '美洲', '5G', '2026-03'),
--- 墨西哥 (3个)
-('Telcel', '墨西哥', '美洲', '5G', '2026-03'),
-('AT&T Mexico', '墨西哥', '美洲', '5G', '2026-03'),
-('Movistar Mexico', '墨西哥', '美洲', '5G', '2026-03'),
--- 巴西 (4个)
-('Vivo', '巴西', '美洲', '5G', '2026-03'),
-('Claro Brazil', '巴西', '美洲', '5G', '2026-03'),
-('TIM Brasil', '巴西', '美洲', '5G', '2026-03'),
-('Oi', '巴西', '美洲', '4G', '2026-03'),
--- 阿根廷 (3个)
-('Claro Argentina', '阿根廷', '美洲', '5G', '2026-03'),
-('Movistar Argentina', '阿根廷', '美洲', '5G', '2026-03'),
-('Personal', '阿根廷', '美洲', '5G', '2026-03'),
--- 智利 (3个)
-('Entel Chile', '智利', '美洲', '5G', '2026-03'),
-('Claro Chile', '智利', '美洲', '5G', '2026-03'),
-('WOM Chile', '智利', '美洲', '5G', '2026-03'),
--- 哥伦比亚 (3个)
-('Claro Colombia', '哥伦比亚', '美洲', '5G', '2026-03'),
-('Movistar Colombia', '哥伦比亚', '美洲', '5G', '2026-03'),
-('Tigo Colombia', '哥伦比亚', '美洲', '5G', '2026-03'),
--- 秘鲁 (3个)
-('Claro Peru', '秘鲁', '美洲', '5G', '2026-03'),
-('Entel Peru', '秘鲁', '美洲', '5G', '2026-03'),
-('Movistar Peru', '秘鲁', '美洲', '5G', '2026-03'),
--- 其他拉美 (5个)
-('Claro Ecuador', '厄瓜多尔', '美洲', '5G', '2026-03'),
-('Movilnet', '委内瑞拉', '美洲', '4G', '2026-03'),
-('CNT', '厄瓜多尔', '美洲', '5G', '2026-03'),
-('Conecel', '厄瓜多尔', '美洲', '5G', '2026-03'),
-('Bitel', '秘鲁', '美洲', '4G', '2026-03');
+    FOREIGN KEY (operator_id) REFERENCES operator_info(id),
+    UNIQUE KEY uk_op_month_tech (operator_id, data_month, technology),
+    INDEX idx_month (data_month)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- 中东地区 (Middle East) - 25个运营商
-INSERT INTO operator_info (operator_name, country, region, network_type, data_month) VALUES
--- 阿联酋 (2个)
-('Etisalat UAE', '阿联酋', '中东', '5G', '2026-03'),
-('du', '阿联酋', '中东', '5G', '2026-03'),
--- 沙特阿拉伯 (3个)
-('STC', '沙特阿拉伯', '中东', '5G', '2026-03'),
-('Mobily', '沙特阿拉伯', '中东', '5G', '2026-03'),
-('Zain Saudi Arabia', '沙特阿拉伯', '中东', '5G', '2026-03'),
--- 卡塔尔 (2个)
-('Ooredoo Qatar', '卡塔尔', '中东', '5G', '2026-03'),
-('Vodafone Qatar', '卡塔尔', '中东', '5G', '2026-03'),
--- 科威特 (2个)
-('Zain Kuwait', '科威特', '中东', '5G', '2026-03'),
-('Ooredoo Kuwait', '科威特', '中东', '5G', '2026-03'),
--- 巴林 (1个)
-('Batelco', '巴林', '中东', '5G', '2026-03'),
--- 阿曼 (2个)
-('Omantel', '阿曼', '中东', '5G', '2026-03'),
-('Ooredoo Oman', '阿曼', '中东', '5G', '2026-03'),
--- 以色列 (3个)
-('Cellcom Israel', '以色列', '中东', '5G', '2026-03'),
-('Partner Communications', '以色列', '中东', '5G', '2026-03'),
-('Pelephone', '以色列', '中东', '5G', '2026-03'),
--- 伊朗 (2个)
-('MCI', '伊朗', '中东', '5G', '2026-03'),
-('Irancell', '伊朗', '中东', '5G', '2026-03'),
--- 伊拉克 (3个)
-('Zain Iraq', '伊拉克', '中东', '5G', '2026-03'),
-('Asiacell', '伊拉克', '中东', '5G', '2026-03'),
-('Korek Telecom', '伊拉克', '中东', '4G', '2026-03'),
--- 约旦 (2个)
-('Zain Jordan', '约旦', '中东', '5G', '2026-03'),
-('Orange Jordan', '约旦', '中东', '5G', '2026-03'),
--- 黎巴嫩 (2个)
-('Alfa', '黎巴嫩', '中东', '5G', '2026-03'),
-('Touch', '黎巴嫩', '中东', '5G', '2026-03');
-
--- 非洲-北非地区 (North Africa) - 13个运营商
-INSERT INTO operator_info (operator_name, country, region, network_type, data_month) VALUES
--- 埃及 (4个)
-('Orange Egypt', '埃及', '非洲-北非', '5G', '2026-03'),
-('Vodafone Egypt', '埃及', '非洲-北非', '5G', '2026-03'),
-('Etisalat Misr', '埃及', '非洲-北非', '5G', '2026-03'),
-('WE', '埃及', '非洲-北非', '5G', '2026-03'),
--- 摩洛哥 (3个)
-('Maroc Telecom', '摩洛哥', '非洲-北非', '5G', '2026-03'),
-('Orange Morocco', '摩洛哥', '非洲-北非', '5G', '2026-03'),
-('inwi', '摩洛哥', '非洲-北非', '5G', '2026-03'),
--- 阿尔及利亚 (3个)
-('Djezzy', '阿尔及利亚', '非洲-北非', '5G', '2026-03'),
-('Ooredoo Algeria', '阿尔及利亚', '非洲-北非', '5G', '2026-03'),
-('Mobilis', '阿尔及利亚', '非洲-北非', '5G', '2026-03'),
--- 突尼斯 (2个)
-('Orange Tunisia', '突尼斯', '非洲-北非', '5G', '2026-03'),
-('Tunisiana', '突尼斯', '非洲-北非', '5G', '2026-03'),
--- 利比亚 (1个)
-('Libya Tel', '利比亚', '非洲-北非', '4G', '2026-03');
-
--- 非洲-南非地区 (Sub-Saharan Africa) - 26个运营商
-INSERT INTO operator_info (operator_name, country, region, network_type, data_month) VALUES
--- 南非 (3个)
-('MTN South Africa', '南非', '非洲-南非', '5G', '2026-03'),
-('Vodacom', '南非', '非洲-南非', '5G', '2026-03'),
-('Cell C', '南非', '非洲-南非', '4G', '2026-03'),
--- 尼日利亚 (3个)
-('MTN Nigeria', '尼日利亚', '非洲-南非', '5G', '2026-03'),
-('Airtel Nigeria', '尼日利亚', '非洲-南非', '5G', '2026-03'),
-('Globacom', '尼日利亚', '非洲-南非', '5G', '2026-03'),
--- 肯尼亚 (3个)
-('Safaricom', '肯尼亚', '非洲-南非', '5G', '2026-03'),
-('Airtel Kenya', '肯尼亚', '非洲-南非', '5G', '2026-03'),
-('Telekom Kenya', '肯尼亚', '非洲-南非', '4G', '2026-03'),
--- 埃塞俄比亚 (1个)
-('Ethio Telecom', '埃塞俄比亚', '非洲-南非', '4G', '2026-03'),
--- 坦桑尼亚 (3个)
-('Vodacom Tanzania', '坦桑尼亚', '非洲-南非', '5G', '2026-03'),
-('Airtel Tanzania', '坦桑尼亚', '非洲-南非', '5G', '2026-03'),
-('Tigo Tanzania', '坦桑尼亚', '非洲-南非', '5G', '2026-03'),
--- 乌干达 (2个)
-('MTN Uganda', '乌干达', '非洲-南非', '5G', '2026-03'),
-('Airtel Uganda', '乌干达', '非洲-南非', '5G', '2026-03'),
--- 加纳 (3个)
-('MTN Ghana', '加纳', '非洲-南非', '5G', '2026-03'),
-('Vodafone Ghana', '加纳', '非洲-南非', '5G', '2026-03'),
-('AirtelTigo', '加纳', '非洲-南非', '5G', '2026-03'),
--- 科特迪瓦 (2个)
-('MTN Ivory Coast', '科特迪瓦', '非洲-南非', '5G', '2026-03'),
-('Orange Ivory Coast', '科特迪瓦', '非洲-南非', '5G', '2026-03'),
--- 塞内加尔 (2个)
-('Orange Senegal', '塞内加尔', '非洲-南非', '5G', '2026-03'),
-('Tigo Senegal', '塞内加尔', '非洲-南非', '5G', '2026-03'),
--- 喀麦隆 (2个)
-('MTN Cameroon', '喀麦隆', '非洲-南非', '5G', '2026-03'),
-('Orange Cameroon', '喀麦隆', '非洲-南非', '5G', '2026-03'),
--- 刚果民主共和国 (2个)
-('Airtel DRC', '刚果民主共和国', '非洲-南非', '5G', '2026-03'),
-('Vodacom DRC', '刚果民主共和国', '非洲-南非', '5G', '2026-03');
-
--- ============================================================================
--- 全球运营商站点数据和指标数据
--- 注意: 请执行以下命令加载生成的测试数据
--- SOURCE generated_test_data.sql;
--- 或手动导入 generated_test_data.sql 文件
--- ============================================================================
-
--- 站点和指标数据已移至 generated_test_data.sql
--- 请在初始化数据库后执行: SOURCE generated_test_data.sql;
+SET FOREIGN_KEY_CHECKS=1;
