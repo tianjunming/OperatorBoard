@@ -64,7 +64,8 @@ public class OperatorQueryService {
     // ==================== Site Statistics (using SiteStatisticsMapper) ====================
 
     public List<SiteCellSummary> getOperatorSitesLatest(Long operatorId) {
-        return siteStatisticsMapper.findSiteCellSummaryByOperatorId(operatorId);
+        SiteCellSummary result = siteStatisticsMapper.findSiteCellSummaryLatestByOperatorId(operatorId);
+        return result != null ? List.of(result) : List.of();
     }
 
     public List<SiteCellSummary> getAllOperatorsSitesLatest() {

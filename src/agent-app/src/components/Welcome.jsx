@@ -24,14 +24,57 @@ const FEATURES = [
 function Welcome({ onExampleClick }) {
   const { locale } = useI18n();
 
+  // 18 key query functions for operator network data
   const examples = locale === 'zh' ? [
-    '中国联通站点有多少',
-    '显示最新的网络指标数据',
-    '有哪些运营商客户？',
+    // 站点数据查询
+    '北京联通有多少站点和小区？',
+    '显示中国移动的站点分布',
+    '查询所有运营商的最新站点数据',
+    '中国电信各频段站点数量统计',
+    // 最新数据查询
+    '最新月份各运营商站点汇总',
+    '显示最新的网络指标',
+    '获取所有运营商最新指标数据',
+    // 历史数据查询
+    '查询中国联通站点历史变化',
+    '北京移动近6个月指标趋势',
+    '显示运营商站点随时间变化',
+    // 指标对比分析
+    '对比两家运营商的覆盖效果',
+    '比较不同时期的网络质量',
+    '各运营商流量占比分析',
+    // 频段专项查询
+    'NR 2600M频段站点分布',
+    'LTE 1800M小区数量统计',
+    '各运营商5G频段覆盖对比',
+    // 自然语言查询
+    '哪些运营商在2100M频段有部署？',
+    '查询各运营商站点总数排名',
   ] : [
-    'How many sites does China Unicom have?',
-    'Show the latest network indicator data',
-    'What operators do we have?',
+    // Site data queries
+    'How many sites and cells does China Unicom have?',
+    'Show site distribution for China Mobile',
+    'Get latest sites data for all operators',
+    'Statistics of China Telecom sites by band',
+    // Latest data queries
+    'Latest month sites summary for all operators',
+    'Show latest network indicators',
+    'Get all operators latest indicators',
+    // History data queries
+    'Query China Unicom site history',
+    'Beijing Mobile indicators trend for 6 months',
+    'Show operator sites over time',
+    // Indicator comparison
+    'Compare coverage of two operators',
+    'Compare network quality across periods',
+    'Traffic ratio analysis by operator',
+    // Band-specific queries
+    'NR 2600M band site distribution',
+    'LTE 1800M cell count statistics',
+    'Compare 5G band coverage across operators',
+    // Natural language queries
+    'Which operators have 2100M deployment?',
+    'Query operator site totals ranking',
   ];
 
   return (

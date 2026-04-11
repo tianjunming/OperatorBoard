@@ -97,6 +97,14 @@ class SiteCellsQuery(BaseModel):
     band: Optional[str] = None
 
 
+class OperatorSitesLatestQuery(BaseModel):
+    operatorName: str
+
+
+class OperatorIndicatorsLatestQuery(BaseModel):
+    operatorName: str
+
+
 async def get_agent() -> OperatorAgent:
     """Get or create the agent instance."""
     global _agent
@@ -278,6 +286,108 @@ async def get_site_cells(query: SiteCellsQuery, _: bool = Depends(verify_api_key
 
     if result.get("error"):
         raise HTTPException(status_code=500, detail=get_error_response(GET_SITE_CELLS_FAILED, locale, result["error"]))
+
+    return result
+
+
+@app.get("/api/operator/operators/{operator_name}/sites/latest")
+async def get_operator_sites_latest(operator_name: str, _: bool = Depends(verify_api_key), locale: str = Depends(get_locale)):
+    """Get latest site cell summary for a specific operator by name."""
+    agent = await get_agent()
+
+    result = await agent.call_java_service(
+        service_name="nl2sql-service",
+        endpoint=f"/operators/{operator_name}/sites/latest",
+        method="GET",
+    )
+
+    if result.get("error"):
+        raise HTTPException(status_code=500, detail=get_error_response(GET_SITE_CELLS_FAILED, locale, result["error"]))
+
+    return result
+
+
+@app.get("/api/operator/operators/{operator_name}/sites/history")
+async def get_operator_sites_history(operator_name: str, _: bool = Depends(verify_api_key), locale: str = Depends(get_locale)):
+    """Get site cell summary history for a specific operator by name."""
+    agent = await get_agent()
+
+    result = await agent.call_java_service(
+        service_name="nl2sql-service",
+        endpoint=f"/operators/{operator_name}/sites/history",
+        method="GET",
+    )
+
+    if result.get("error"):
+        raise HTTPException(status_code=500, detail=get_error_response(GET_SITE_CELLS_FAILED, locale, result["error"]))
+
+    return result
+
+
+@app.get("/api/operator/operators/all/sites/latest")
+async def get_all_operators_sites_latest(_: bool = Depends(verify_api_key), locale: str = Depends(get_locale)):
+    """Get latest site cell summary for all operators."""
+    agent = await get_agent()
+
+    result = await agent.call_java_service(
+        service_name="nl2sql-service",
+        endpoint="/operators/all/sites/latest",
+        method="GET",
+    )
+
+    if result.get("error"):
+        raise HTTPException(status_code=500, detail=get_error_response(GET_SITE_CELLS_FAILED, locale, result["error"]))
+
+    return result
+
+
+@app.get("/api/operator/operators/{operator_name}/indicators/latest")
+async def get_operator_indicators_latest(operator_name: str, _: bool = Depends(verify_api_key), locale: str = Depends(get_locale)):
+    """Get latest indicators for a specific operator by name."""
+    agent = await get_agent()
+
+    result = await agent.call_java_service(
+        service_name="nl2sql-service",
+        endpoint=f"/operators/{operator_name}/indicators/latest",
+        method="GET",
+    )
+
+    if result.get("error"):
+        raise HTTPException(status_code=500, detail=get_error_response(GET_INDICATORS_FAILED, locale, result["error"]))
+
+    return result
+
+
+@app.get("/api/operator/operators/{operator_name}/indicators/history")
+async def get_operator_indicators_history(operator_name: str, _: bool = Depends(verify_api_key), locale: str = Depends(get_locale)):
+    """Get indicator history for a specific operator by name."""
+    agent = await get_agent()
+
+    result = await agent.call_java_service(
+        service_name="nl2sql-service",
+        endpoint=f"/operators/{operator_name}/indicators/history",
+        method="GET",
+    )
+
+    if result.get("error"):
+        raise HTTPException(status_code=500, detail=get_error_response(GET_INDICATORS_FAILED, locale, result["error"]))
+
+    return result
+
+
+@app.get("/api/operator/operators/all/indicators/latest")
+async def get_all_operators_indicators_latest(_: bool = Depends(verify_api_key), locale: str = Depends(get_locale)):
+    """Get latest indicators for all operators."""
+    agent = await get_agent()
+
+    result = await agent.call_java_service(
+        service_name="nl2sql-service",
+        endpoint="/operators/all/indicators/latest",
+        method="GET",
+    )
+
+    if result.get("error"):
+        raise HTTPException(status_code=500, detail=get_error_response(GET_INDICATORS_FAILED, locale, result["error"]))
 
     return result
 
