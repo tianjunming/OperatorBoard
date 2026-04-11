@@ -37,6 +37,7 @@ export function parseStructuredBlocks(content) {
     { regex: /:::metrics\s*\n([\s\S]*?)\n:::/, type: 'metrics', parse: parseMetricsBlock },
     { regex: /:::steps\s*\n([\s\S]*?)\n:::/, type: 'steps', parse: parseStepsBlock },
     { regex: /:::sql\s*\n([\s\S]*?)\n:::/, type: 'sql', parse: parseSqlBlock },
+    { regex: /\[toggle\]\n([\s\S]*?)\n\[\/toggle\]/, type: 'toggle', parse: parseToggleBlock },
   ];
 
   // Process thinking chain first
@@ -45,18 +46,24 @@ export function parseStructuredBlocks(content) {
     blocks.push({ type: 'thinking', content: thinking });
   }
 
-  // Find and extract special blocks
+  // Find and extract special blocks - use while loop to process ALL matches
   let textContent = mainContent;
-  for (const { regex, type, parse } of blockPatterns) {
-    const match = textContent.match(regex);
-    if (match) {
-      const before = textContent.slice(0, match.index);
-      if (before.trim()) {
-        blocks.push({ type: 'text', content: before.trim() });
+  let foundMatch = true;
+  while (foundMatch) {
+    foundMatch = false;
+    for (const { regex, type, parse } of blockPatterns) {
+      const match = textContent.match(regex);
+      if (match) {
+        foundMatch = true;
+        const before = textContent.slice(0, match.index);
+        if (before.trim()) {
+          blocks.push({ type: 'text', content: before.trim() });
+        }
+        const parsed = parse(match);
+        blocks.push({ type, ...parsed });
+        textContent = textContent.slice(match.index + match[0].length);
+        break; // Restart from first pattern after successful match
       }
-      const parsed = parse(match);
-      blocks.push({ type, ...parsed });
-      textContent = textContent.slice(match.index + match[0].length);
     }
   }
 
@@ -186,6 +193,101 @@ function parseStepsBlock(match) {
 
 function parseSqlBlock(match) {
   return { sql: match[1].trim() };
+}
+
+/**
+ * Parse toggle block with key-value structure
+ * Format:
+ * [toggle]
+ * [key::value]
+ * [key2::value2]
+ * [/toggle]
+ */
+function parseToggleBlock(match) {
+  try {
+    const content = match[1];
+    if (typeof content !== 'string') {
+      console.error('parseToggleBlock: content is not a string', typeof content, content);
+      return { title: '数据', subtitle: '', summary: {}, table: { columns: [], data: [] }, chart: { type: 'bar', data: [], keys: [] } };
+    }
+    const lines = content.split('\n');
+    const data = {};
+    let section = 'main';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed === '[toggle]' || trimmed === '[/toggle]') continue;
+
+      const match = trimmed.match(/^\[([^\:]+)\:\:([\s\S]*)\]$/);
+      if (match) {
+        const key = match[1];
+        const value = match[2];
+
+        if (key === 'table_columns') {
+          data.table = { columns: value.split(','), data: [] };
+        } else if (key === 'table_data' && data.table) {
+          const rows = value.split(';').filter(r => r.trim());
+          data.table.data = rows.map(row => {
+            const cells = row.split('|');
+            const obj = {};
+            data.table.columns.forEach((col, i) => {
+              obj[col] = cells[i] || '';
+            });
+            return obj;
+          });
+        } else if (key === 'chart_keys') {
+          data.chartKeys = value.split(',');
+        } else if (key === 'chart_data') {
+          const entries = value.split(';').filter(r => r.trim());
+          data.chartData = entries.map(entry => {
+            const cells = entry.split(',');
+            const obj = {};
+            if (data.chartKeys && data.chartKeys[0]) {
+              obj[data.chartKeys[0]] = cells[0] || ''; // 月份
+              data.chartKeys.slice(1).forEach((k, i) => {
+                obj[k] = parseFloat(cells[i + 1]) || 0;
+              });
+            }
+            return obj;
+          });
+        } else if (key === 'summary') {
+          const pairs = value.split(';').filter(p => p.trim());
+          data.summary = {};
+          pairs.forEach(pair => {
+            const [k, v] = pair.split('=');
+            if (k && v) data.summary[k.trim()] = parseFloat(v) || 0;
+          });
+        } else {
+          data[key] = value;
+        }
+      }
+    }
+
+    // Build chart structure
+    const chart = {
+      type: 'bar',
+      column: data.chartKeys?.[0] || '月份',
+      keys: data.chartKeys?.slice(1) || ['总站点', '总小区'],
+      data: data.chartData || []
+    };
+
+    return {
+      title: data.title || '站点数据',
+      subtitle: data.subtitle || '',
+      summary: data.summary || {},
+      table: data.table || { columns: [], data: [] },
+      chart
+    };
+  } catch (e) {
+    console.error('Failed to parse toggle block:', e);
+    return {
+      title: '站点数据',
+      subtitle: '',
+      summary: {},
+      table: { columns: [], data: [] },
+      chart: { type: 'bar', data: [], keys: [] }
+    };
+  }
 }
 
 /**
