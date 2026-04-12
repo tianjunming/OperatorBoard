@@ -1,11 +1,12 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
   Copy, Check, RotateCcw, ThumbsUp, ThumbsDown,
   User, Bot, AlertCircle, CheckCircle, AlertTriangle, Info,
   ChevronDown, ChevronUp, ChevronRight, MessageSquare, Database,
   BarChart3, Table2, Code2, Sparkles, Eye, EyeOff,
-  Clock, ArrowRight, Search, Cpu, Loader2, Download, Filter, ArrowUp, ArrowDown, X
+  Clock, ArrowRight, Search, Cpu, Loader2, Download, Filter, ArrowUp, ArrowDown, X,
+  ChevronLeft, ChevronFirst, ChevronLast, Layers, MapPin
 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, AreaChart, Area,
@@ -22,7 +23,7 @@ import './MessageItem.css';
 // Message feedback state
 const MESSAGE_FEEDBACK = { NONE: 'none', LIKED: 'liked', DISLIKED: 'disliked' };
 
-// Table Block Renderer (独立组件，封装表格状态)
+// Table Block Renderer (增强版 - 支持区域分组和分页)
 function TableBlock({ block }) {
   const {
     sortedData,
@@ -35,15 +36,83 @@ function TableBlock({ block }) {
     totalCount
   } = useTableSort(block.data || [], block.columns || []);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [activeRegion, setActiveRegion] = useState('全部');
+  const [pageSize] = useState(10);
+
+  // 检测是否有region列
+  const regionColumn = useMemo(() => {
+    const cols = block.columns || [];
+    const regionPatterns = ['region', '区域', '地区', '省份', '城市'];
+    return cols.find(col => regionPatterns.some(p => col.toLowerCase().includes(p.toLowerCase())));
+  }, [block.columns]);
+
+  // 获取所有区域
+  const regions = useMemo(() => {
+    if (!regionColumn) return ['全部'];
+    const uniqueRegions = [...new Set((block.data || []).map(row => row[regionColumn]).filter(Boolean))];
+    return ['全部', ...uniqueRegions];
+  }, [block.data, regionColumn]);
+
+  // 根据区域过滤数据
+  const regionFilteredData = useMemo(() => {
+    if (activeRegion === '全部' || !regionColumn) return filteredCount > 0 ? sortedData : [];
+    return sortedData.filter(row => row[regionColumn] === activeRegion);
+  }, [sortedData, activeRegion, regionColumn, filteredCount]);
+
+  // 分页数据
+  const totalPages = Math.ceil(regionFilteredData.length / pageSize);
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return regionFilteredData.slice(start, start + pageSize);
+  }, [regionFilteredData, currentPage, pageSize]);
+
+  // 区域变化时重置页码
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeRegion]);
+
   if (!block.data || block.data.length === 0) return null;
+
+  // 计算区域统计
+  const regionStats = useMemo(() => {
+    if (!regionColumn) return null;
+    const stats = {};
+    (block.data || []).forEach(row => {
+      const region = row[regionColumn] || '未知';
+      if (!stats[region]) stats[region] = 0;
+      stats[region]++;
+    });
+    return stats;
+  }, [block.data, regionColumn]);
 
   return (
     <div className="structured-table" data-testid="structured-table">
       <div className="table-header">
         <Table2 size={14} />
         <span>数据表格</span>
-        <span className="table-count">{filteredCount} / {totalCount} 条记录</span>
+        {regionColumn && (
+          <div className="table-region-tabs">
+            {regions.slice(0, 5).map(region => (
+              <button
+                key={region}
+                className={`region-tab ${activeRegion === region ? 'active' : ''}`}
+                onClick={() => setActiveRegion(region)}
+              >
+                {region}
+                {regionStats && regionStats[region] && (
+                  <span className="region-count">{regionStats[region]}</span>
+                )}
+              </button>
+            ))}
+            {regions.length > 5 && (
+              <span className="region-more">+{regions.length - 5}</span>
+            )}
+          </div>
+        )}
+        <span className="table-count">{regionFilteredData.length} / {totalCount} 条</span>
       </div>
+
       <div className="table-controls">
         <div className="table-search-wrapper">
           <Filter size={12} className="table-filter-icon" />
@@ -66,6 +135,7 @@ function TableBlock({ block }) {
           <span>导出</span>
         </button>
       </div>
+
       <div className="table-scroll">
         <table className="data-table" data-testid="data-table">
           <thead>
@@ -85,7 +155,7 @@ function TableBlock({ block }) {
             </tr>
           </thead>
           <tbody data-testid="table-body">
-            {sortedData.map((row, idx) => (
+            {paginatedData.map((row, idx) => (
               <tr key={idx} data-testid={`table-row-${idx}`}>
                 {block.columns.map((col, cidx) => (
                   <td key={cidx} data-testid={`table-cell-${idx}-${cidx}`}>{row[col]}</td>
@@ -95,6 +165,50 @@ function TableBlock({ block }) {
           </tbody>
         </table>
       </div>
+
+      {/* 分页器 */}
+      {totalPages > 1 && (
+        <div className="table-pagination">
+          <div className="pagination-info">
+            <Layers size={12} />
+            <span>第 {currentPage} / {totalPages} 页</span>
+          </div>
+          <div className="pagination-buttons">
+            <button
+              className="pagination-btn"
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+            >
+              <ChevronFirst size={14} />
+            </button>
+            <button
+              className="pagination-btn"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span className="pagination-current">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              className="pagination-btn"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight size={14} />
+            </button>
+            <button
+              className="pagination-btn"
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+            >
+              <ChevronLast size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {block.citations && block.citations.length > 0 && (
         <div className="citation-list" data-testid="citation-list">
           {block.citations.map((cite) => (
