@@ -46,10 +46,10 @@
   color: var(--text-tertiary);
 }
 
-/* Features - 2x2 Grid */
+/* Features - 1x4 Horizontal */
 .welcome-features {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-md);
   width: 100%;
   margin-bottom: var(--space-2xl);
@@ -57,13 +57,15 @@
 
 .feature-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-lg);
+  gap: var(--space-sm);
+  padding: var(--space-lg) var(--space-md);
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-light);
   transition: all var(--transition-fast);
+  text-align: center;
 }
 
 .feature-card:hover {
@@ -182,8 +184,11 @@
 }
 
 /* Responsive */
-@media (max-width: 480px) {
-  .welcome-features,
+@media (max-width: 640px) {
+  .welcome-features {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .examples-categories {
     grid-template-columns: 1fr;
   }
