@@ -5,6 +5,7 @@
   overflow-y: auto;
   padding: var(--space-lg);
   scroll-behavior: smooth;
+  position: relative;
 }
 
 .message-list-inner {
@@ -217,7 +218,7 @@
 }
 
 /* Quick Scroll to Bottom Button */
-.scroll-to-bottom {
+.scroll-to-bottom-btn {
   position: absolute;
   bottom: 100px;
   right: 50%;
@@ -225,8 +226,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
+  gap: 4px;
+  min-width: 40px;
   height: 40px;
+  padding: 0 12px;
   border-radius: var(--radius-full);
   background: var(--bg-primary);
   border: 1px solid var(--border-light);
@@ -235,14 +238,30 @@
   opacity: 0;
   visibility: hidden;
   transition: all var(--transition-fast);
+  animation: slideUp 0.2s ease-out;
 }
 
-.scroll-to-bottom.visible {
+.scroll-to-bottom-btn.visible {
   opacity: 1;
   visibility: visible;
 }
 
-.scroll-to-bottom:hover {
+.scroll-to-bottom-btn:hover {
   background: var(--bg-hover);
   transform: translateX(50%) scale(1.05);
+  border-color: var(--color-primary);
+}
+
+.new-message-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background: var(--color-primary);
+  color: white;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  border-radius: var(--radius-full);
 }

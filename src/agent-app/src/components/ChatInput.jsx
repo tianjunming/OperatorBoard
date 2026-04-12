@@ -20,7 +20,28 @@ function ChatInput({ onSend, disabled, placeholder, messages, onClear }) {
   } = useCommandInput(onSend, onClear);
 
   const textareaRef = inputRef;
+  const commandPanelRef = useRef(null);
+  const [panelDirection, setPanelDirection] = useState('up');
   const canSend = input.trim().length > 0 && !disabled;
+
+  // Detect viewport boundary for command panel direction
+  const updatePanelDirection = useCallback(() => {
+    if (commandPanelRef.current) {
+      const rect = commandPanelRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      // If not enough space above, flip to down
+      if (rect.top < 100) {
+        setPanelDirection('down');
+      } else {
+        setPanelDirection('up');
+      }
+    }
+  }, []);
+
+  // Update direction when command panel shows
+  const handleCommandPanelShow = useCallback(() => {
+    setTimeout(updatePanelDirection, 0);
+  }, [updatePanelDirection]);
 
   const handleSubmit = useCallback((e) => {
     e?.preventDefault();
@@ -58,7 +79,11 @@ function ChatInput({ onSend, disabled, placeholder, messages, onClear }) {
     <form className="chat-input-wrapper" onSubmit={handleSubmit}>
       {/* Command Panel */}
       {showCommandPanel && filteredCommands.length > 0 && (
-        <div className="command-panel">
+        <div
+          ref={commandPanelRef}
+          className={`command-panel ${panelDirection === 'down' ? 'panel-down' : ''}`}
+          style={panelDirection === 'down' ? { top: 'calc(100% + 8px)', bottom: 'auto' } : {}}
+        >
           <div className="command-header">
             <Command size={12} />
             <span>命令</span>
@@ -69,6 +94,8 @@ function ChatInput({ onSend, disabled, placeholder, messages, onClear }) {
                 key={cmd.id}
                 className={`command-item ${selectedIndex === idx ? 'selected' : ''}`}
                 onClick={() => selectCommand(cmd)}
+                role="option"
+                aria-selected={selectedIndex === idx}
               >
                 <span className="command-label">{cmd.label}</span>
                 <span className="command-hint">{cmd.hint}</span>

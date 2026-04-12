@@ -239,8 +239,11 @@ export default function OperatorDashboard() {
             <input
               type="month"
               value={currentMonth}
+              min="2020-01"
+              max="2030-12"
               onChange={(e) => setCurrentMonth(e.target.value)}
               className="month-input"
+              aria-label="选择月份"
             />
           </div>
           <button className="btn btn-icon" onClick={fetchAllOperatorsData} title="刷新数据">
@@ -358,10 +361,10 @@ export default function OperatorDashboard() {
                   </div>
                   <div className="metric-content">
                     <div className="metric-label">站点总数</div>
-                    <div className="metric-value">{totals.totalSite}</div>
+                    <div className="metric-value">{totals.totalSite || '--'}</div>
                     <div className="metric-sub">
-                      <span className="badge lte">4G: {totals.lteTotalSite}</span>
-                      <span className="badge nr">5G: {totals.nrTotalSite}</span>
+                      <span className="badge lte">4G: {totals.lteTotalSite || '--'}</span>
+                      <span className="badge nr">5G: {totals.nrTotalSite || '--'}</span>
                     </div>
                   </div>
                 </div>
@@ -373,10 +376,10 @@ export default function OperatorDashboard() {
                   </div>
                   <div className="metric-content">
                     <div className="metric-label">小区总数</div>
-                    <div className="metric-value">{totals.totalCell}</div>
+                    <div className="metric-value">{totals.totalCell || '--'}</div>
                     <div className="metric-sub">
-                      <span className="badge lte">4G: {totals.lteTotalCell}</span>
-                      <span className="badge nr">5G: {totals.nrTotalCell}</span>
+                      <span className="badge lte">4G: {totals.lteTotalCell || '--'}</span>
+                      <span className="badge nr">5G: {totals.nrTotalCell || '--'}</span>
                     </div>
                   </div>
                 </div>

@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import MessageItem from './MessageItem';
 import './MessageList.css';
 
@@ -14,6 +15,8 @@ function MessageList({
   const listRef = useRef(null);
   const shouldAutoScroll = useRef(true);
   const [validationStatus, setValidationStatus] = useState(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [newMessageCount, setNewMessageCount] = useState(0);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -22,6 +25,9 @@ function MessageList({
         top: listRef.current.scrollHeight,
         behavior: 'smooth',
       });
+    } else if (!shouldAutoScroll.current && messages.length > 0) {
+      // User has scrolled up, count new messages
+      setNewMessageCount(prev => prev + 1);
     }
   }, [messages, streamingContent]);
 
@@ -29,7 +35,28 @@ function MessageList({
   const handleScroll = useCallback(() => {
     if (!listRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = listRef.current;
-    shouldAutoScroll.current = scrollHeight - scrollTop - clientHeight < 100;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+    shouldAutoScroll.current = isNearBottom;
+
+    // Show scroll-to-bottom button if user scrolls up
+    if (!isNearBottom && messages.length > 0) {
+      setShowScrollButton(true);
+    } else {
+      setShowScrollButton(false);
+      setNewMessageCount(0);
+    }
+  }, [messages.length]);
+
+  // Scroll to bottom
+  const scrollToBottom = useCallback(() => {
+    if (listRef.current) {
+      listRef.current.scrollTo({
+        top: listRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+      setShowScrollButton(false);
+      setNewMessageCount(0);
+    }
   }, []);
 
   // Validate message content
@@ -159,6 +186,21 @@ function MessageList({
           </div>
         )}
       </div>
+
+      {/* Scroll to Bottom Button */}
+      {showScrollButton && (
+        <button
+          className="scroll-to-bottom-btn"
+          onClick={scrollToBottom}
+          aria-label="滚动到最新消息"
+          title="滚动到最新消息"
+        >
+          <ChevronDown size={18} />
+          {newMessageCount > 0 && (
+            <span className="new-message-badge">{newMessageCount > 99 ? '99+' : newMessageCount}</span>
+          )}
+        </button>
+      )}
     </div>
   );
 }

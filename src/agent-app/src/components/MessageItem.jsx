@@ -603,11 +603,30 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
   );
 
   // SQL Renderer
+  const [sqlCopied, setSqlCopied] = useState(false);
+  const handleSqlCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(block.sql);
+      setSqlCopied(true);
+      setTimeout(() => setSqlCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy SQL:', err);
+    }
+  }, [block.sql]);
+
   const renderSql = (block) => (
     <div className="structured-sql">
       <div className="sql-header">
         <Code2 size={14} />
         <span>SQL 查询</span>
+        <button
+          className="sql-copy-btn"
+          onClick={handleSqlCopy}
+          aria-label={sqlCopied ? '已复制' : '复制SQL'}
+          title={sqlCopied ? '已复制' : '复制SQL'}
+        >
+          {sqlCopied ? <Check size={12} /> : <Copy size={12} />}
+        </button>
       </div>
       <pre className="sql-content">{block.sql}</pre>
     </div>
@@ -718,17 +737,37 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
 
           {isAssistant && !isStreaming && (
             <div className="message-actions">
-              <button className={`action-btn ${feedback === MESSAGE_FEEDBACK.LIKED ? 'liked' : ''}`} onClick={() => handleFeedback(MESSAGE_FEEDBACK.LIKED)} title={t('helpful')}>
+              <button
+                className={`action-btn ${feedback === MESSAGE_FEEDBACK.LIKED ? 'liked' : ''}`}
+                onClick={() => handleFeedback(MESSAGE_FEEDBACK.LIKED)}
+                aria-label={t('helpful')}
+                title={t('helpful')}
+              >
                 <ThumbsUp size={14} />
               </button>
-              <button className={`action-btn ${feedback === MESSAGE_FEEDBACK.DISLIKED ? 'disliked' : ''}`} onClick={() => handleFeedback(MESSAGE_FEEDBACK.DISLIKED)} title={t('notHelpful')}>
+              <button
+                className={`action-btn ${feedback === MESSAGE_FEEDBACK.DISLIKED ? 'disliked' : ''}`}
+                onClick={() => handleFeedback(MESSAGE_FEEDBACK.DISLIKED)}
+                aria-label={t('notHelpful')}
+                title={t('notHelpful')}
+              >
                 <ThumbsDown size={14} />
               </button>
               <div className="action-divider" />
-              <button className="action-btn" onClick={handleCopy} title={copied ? t('copied') : t('copy')}>
+              <button
+                className="action-btn"
+                onClick={handleCopy}
+                aria-label={copied ? t('copied') : t('copy')}
+                title={copied ? t('copied') : t('copy')}
+              >
                 {copied ? <Check size={14} /> : <Copy size={14} />}
               </button>
-              <button className="action-btn" onClick={() => onResend?.(content)} title={t('regenerate')}>
+              <button
+                className="action-btn"
+                onClick={() => onResend?.(content)}
+                aria-label={t('regenerate')}
+                title={t('regenerate')}
+              >
                 <RotateCcw size={14} />
               </button>
             </div>
@@ -736,7 +775,12 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
 
           {isUser && onResend && (
             <div className="message-actions">
-              <button className="action-btn" onClick={() => onResend?.(content)} title={t('resend')}>
+              <button
+                className="action-btn"
+                onClick={() => onResend?.(content)}
+                aria-label={t('resend')}
+                title={t('resend')}
+              >
                 <RotateCcw size={14} />
               </button>
             </div>
