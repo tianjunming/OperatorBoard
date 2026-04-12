@@ -80,9 +80,17 @@
 
 ### 2.1 数据库Schema (MySQL)
 
-**表: site_info**
+**物理表结构** (规范化):
+- `operator_info`: 运营商维度表
+- `band_info`: 频段维度表 (21个频段)
+- `site_info`: 站点事实表 (operator_id, band_id, site_num, cell_num)
+- `indicator_info`: 指标事实表 (operator_id, band_id, dl_rate, ul_rate, etc.)
 
-| 数据库字段 | 类型 | 说明 |
+**查询结果宽表** (SQL JOIN + PIVOT):
+
+**site_info 查询结果字段**:
+
+| 字段 | 类型 | 说明 |
 |-----------|------|------|
 | lte_700M_site | INT | LTE 700M 物理站点数 |
 | lte_700M_cell | INT | LTE 700M 物理小区数 |
@@ -91,9 +99,9 @@
 | nr_2300M_site | INT | NR 2300M 物理站点数 |
 | nr_2300M_cell | INT | NR 2300M 物理小区数 |
 
-**表: indicator_info**
+**indicator_info 查询结果字段**:
 
-| 数据库字段 | 类型 | 说明 |
+| 字段 | 类型 | 说明 |
 |-----------|------|------|
 | lte_700M_dl_rate | DECIMAL(10,2) | LTE 700M 下行速率 |
 | lte_700M_ul_rate | DECIMAL(10,2) | LTE 700M 上行速率 |

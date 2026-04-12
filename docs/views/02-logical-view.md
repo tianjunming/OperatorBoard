@@ -469,60 +469,60 @@ public class IndicatorQueryService {
 | created_time | DATETIME | 创建时间 |
 | updated_time | DATETIME | 更新时间 |
 
-### 7.2 site_info (站点信息表 - 宽表)
+### 7.2 site_info (站点信息表)
 
-每行代表一个运营商在一个月的数据，频段作为列。
-
-| 字段 | 类型 | 描述 |
-|------|------|------|
-| id | BIGINT PK | 主键 |
-| operator_id | BIGINT FK | 外键关联 operator_info.id |
-| data_month | VARCHAR(7) | 数据月份 (YYYY-MM) |
-| lte_700M_site/cell | INT | LTE 700M 站点/小区数 |
-| lte_800M_site/cell | INT | LTE 800M 站点/小区数 |
-| lte_900M_site/cell | INT | LTE 900M 站点/小区数 |
-| lte_1400M_site/cell | INT | LTE 1400M 站点/小区数 |
-| lte_1800M_site/cell | INT | LTE 1800M 站点/小区数 |
-| lte_2100M_site/cell | INT | LTE 2100M 站点/小区数 |
-| lte_2600M_site/cell | INT | LTE 2600M 站点/小区数 |
-| nr_700M_site/cell | INT | NR 700M 站点/小区数 |
-| nr_800M_site/cell | INT | NR 800M 站点/小区数 |
-| nr_900M_site/cell | INT | NR 900M 站点/小区数 |
-| nr_1400M_site/cell | INT | NR 1400M 站点/小区数 |
-| nr_1800M_site/cell | INT | NR 1800M 站点/小区数 |
-| nr_2100M_site/cell | INT | NR 2100M 站点/小区数 |
-| nr_2600M_site/cell | INT | NR 2600M 站点/小区数 |
-| nr_3500M_site/cell | INT | NR 3500M 站点/小区数 |
-| nr_4900M_site/cell | INT | NR 4900M 站点/小区数 |
-| nr_2300M_site/cell | INT | NR 2300M 站点/小区数 |
-| lte_total_site/cell | INT (Generated) | LTE 站点/小区总数 |
-| nr_total_site/cell | INT (Generated) | NR 站点/小区总数 |
-| created_time | DATETIME | 创建时间 |
-| updated_time | DATETIME | 更新时间 |
-
-**唯一索引**: `uk_operator_month (operator_id, data_month)`
-
-### 7.3 indicator_info (指标信息表 - 宽表)
-
-每行代表一个运营商在一个月的数据，频段指标作为列。
+规范化事实表，每行代表一个运营商在特定频段和月份的数据。
 
 | 字段 | 类型 | 描述 |
 |------|------|------|
 | id | BIGINT PK | 主键 |
 | operator_id | BIGINT FK | 外键关联 operator_info.id |
+| band_id | BIGINT FK | 外键关联 band_info.id |
+| band_name | VARCHAR(50) | 频段名称 (如 LTE 700M FDD) |
 | data_month | VARCHAR(7) | 数据月份 (YYYY-MM) |
-| lte_XXX_dl_rate/ul_rate | DECIMAL(10,2) | LTE 各频段下行/上行速率 (Mbps) |
-| lte_XXX_dl_prb/ul_prb | DECIMAL(5,2) | LTE 各频段下行/上行 PRB 利用率 (%) |
-| nr_XXX_dl_rate/ul_rate | DECIMAL(10,2) | NR 各频段下行/上行速率 (Mbps) |
-| nr_XXX_dl_prb/ul_prb | DECIMAL(5,2) | NR 各频段下行/上行 PRB 利用率 (%) |
-| lte_avg_dl_rate/prb | DECIMAL | LTE 平均下行速率/PRB 利用率 |
-| nr_avg_dl_rate/prb | DECIMAL | NR 平均下行速率/PRB 利用率 |
-| split_ratio | DECIMAL(5,2) | 分流比 (%) |
-| dwell_ratio | DECIMAL(5,2) | 驻留比 (%) |
-| terminal_penetration | DECIMAL(5,2) | 终端渗透率 (%) |
-| duration_dwell_ratio | DECIMAL(5,2) | 时长驻留比 (%) |
-| fallback_ratio | DECIMAL(5,2) | 回流比 (%) |
-| created_time | DATETIME | 创建时间 |
-| updated_time | DATETIME | 更新时间 |
+| site_num | INT | 站点数量 |
+| cell_num | INT | 小区数量 |
+| technology | VARCHAR(10) | 技术制式 LTE/NR |
 
-**唯一索引**: `uk_operator_month (operator_id, data_month)`
+**唯一索引**: `uk_operator_band_month (operator_id, band_id, data_month)`
+
+### 7.3 band_info (频段维度表)
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| id | BIGINT PK | 主键 |
+| band_code | VARCHAR(20) | 频段代码 (如 LTE700M_FDD) |
+| band_name | VARCHAR(50) | 频段名称 (如 LTE 700M FDD) |
+| technology | VARCHAR(10) | 技术制式 LTE/NR |
+| frequency_mhz | INT | 中心频率 MHz |
+| duplex_mode | VARCHAR(10) | 双工模式 FDD/TDD |
+| band_group | VARCHAR(20) | 频段组 700M/800M等 |
+
+**频段列表** (21个频段):
+- LTE: LTE700M_FDD, LTE800M_FDD, LTE900M_FDD, LTE1400M_FDD, LTE1800M_FDD, LTE2100M_FDD, LTE2300M_FDD, LTE2300M_TDD, LTE2600M_FDD, LTE2600M_TDD
+- NR: NR700M_FDD, NR800M_FDD, NR900M_FDD, NR1400M_FDD, NR1800M_FDD, NR2100M_FDD, NR2300M_FDD, NR2300M_TDD, NR2600M_FDD, NR2600M_TDD, NR3500M_TDD, NR4900M_TDD
+
+### 7.4 indicator_info (指标信息表)
+
+规范化事实表，每行代表一个运营商在特定频段和月份的网络指标。
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| id | BIGINT PK | 主键 |
+| operator_id | BIGINT FK | 外键关联 operator_info.id |
+| band_id | BIGINT FK | 外键关联 band_info.id |
+| band_name | VARCHAR(50) | 频段名称 (如 LTE 700M FDD) |
+| data_month | VARCHAR(7) | 数据月份 (YYYY-MM) |
+| technology | VARCHAR(10) | 技术制式 LTE/NR |
+| dl_prb | DECIMAL(10,5) | 下行PRB利用率 (%) |
+| ul_prb | DECIMAL(10,5) | 上行PRB利用率 (%) |
+| dl_rate | DECIMAL(10,2) | 下行速率 (Mbps) |
+| ul_rate | DECIMAL(10,2) | 上行速率 (Mbps) |
+| total_traffic | DECIMAL(15,2) | 总流量 (MB) |
+| dl_traffic | DECIMAL(15,2) | 下行流量 (MB) |
+| ul_traffic | DECIMAL(15,2) | 上行流量 (MB) |
+| online_users | DECIMAL(10,2) | 在线用户数 |
+| nr_users | DECIMAL(10,2) | NR用户数 |
+| terminal_penetration_ratio | DECIMAL(10,4) | 终端渗透率 (%) |
+
+**唯一索引**: `uk_operator_band_month (operator_id, band_id, data_month)`

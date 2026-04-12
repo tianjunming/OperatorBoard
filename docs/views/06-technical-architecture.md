@@ -351,9 +351,11 @@ private boolean isSqlSafe(String sql) {
 
 | 实体 | 说明 | 关键字段 |
 |------|------|----------|
-| OperatorInfo | 运营商信息 | id, operator_name, country, region, network_type, data_month |
-| SiteCellSummary | 频段站点汇总(宽表) | id, operator_id, data_month, lte*{band}*Site, lte*{band}*Cell, nr*{band}*Site, nr*{band}*Cell |
-| IndicatorInfo | 频段指标(宽表) | id, operator_id, data_month, lte*{band}*DlRate/UlRate/DlPrb/UlPrb, nr*{band}*DlRate/UlRate/DlPrb/UlPrb, 汇总指标 |
+| OperatorInfo | 运营商维度表 | id, operator_code, operator_name, country, region, network_type, status |
+| BandInfo | 频段维度表 | id, band_code, band_name, technology, frequency_mhz, duplex_mode, band_group |
+| SiteInfo | 站点事实表 | id, operator_id, band_id, band_name, data_month, site_num, cell_num, technology |
+| IndicatorInfo | 指标事实表 | id, operator_id, band_id, band_name, data_month, technology, dl_prb, ul_prb, dl_rate, ul_rate, traffic, users |
+| OperatorTotalSite | 站点聚合表 | id, operator_id, data_month, technology, nr/lte_physical_site_num, nr/lte_physical_cell_num, total_site_num, total_cell_num |
 
 ### 6.2 指标体系 (宽表设计)
 
@@ -528,7 +530,7 @@ private boolean isSqlSafe(String sql) {
 
 ### 11.1 新增频段
 
-1. 在 `site_info` / `indicator_info` 表添加新频段列 (如 lte2300MDlRate)
+1. 在 `band_info` 表添加新频段记录
 2. 更新 `SchemaCache` 的 schema 描述
 3. 更新 `IndicatorSqlBuilder` / `OperatorSqlBuilder` 的频段常量
 4. 前端自动识别并支持展示

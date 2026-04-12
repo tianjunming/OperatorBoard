@@ -71,7 +71,7 @@ operator-service 已从传统三层架构迁移到 MVC+CQRS 架构:
 - **Controller Layer**: Nl2SqlController (Command) + OperatorQueryController/IndicatorQueryController (Query)
 - **Service Layer**: Nl2SqlCommandService (Command) + OperatorQueryService/IndicatorQueryService (Query)
 - **Repository Layer**: OperatorRepository + IndicatorRepository (MyBatis)
-- **数据模型**: operator_info (运营商) + site_info (站点宽表) + indicator_info (指标宽表)
+- **数据模型**: operator_info (运营商) + band_info (频段) + site_info (站点) + indicator_info (指标) + operator_total_site (聚合)
 
 ### LLM-based Intent Detection
 

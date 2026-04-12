@@ -61,9 +61,11 @@ Accepted
 #### 4. SQL代码块
 ```
 :::sql
-SELECT operator_name, nr_total_site
-FROM site_info
-WHERE data_month = '2026-03'
+SELECT o.operator_name, ss.band_name, ss.site_num, ss.cell_num
+FROM site_info ss
+JOIN operator_info o ON ss.operator_id = o.id
+JOIN band_info b ON ss.band_id = b.id
+WHERE ss.data_month = '2026-03'
 LIMIT 10
 :::
 ```

@@ -448,21 +448,25 @@ public class PromptSanitizer {
 
 ### 4.5 数据库 Schema
 
-**宽表设计:**
+**星型模型设计:**
 
-| 表 | 主键 | 说明 |
-|----|------|------|
-| `operator_info` | id | 运营商信息 |
-| `site_info` | id | 站点宽表 (频段 × 站点数/小区数) |
-| `indicator_info` | id | 指标宽表 (频段 × 速率/PRB) |
+| 表 | 主键 | 类型 | 说明 |
+|----|------|------|------|
+| `operator_info` | id | 维度表 | 运营商信息 |
+| `band_info` | id | 维度表 | 频段信息 (21个频段) |
+| `site_info` | id | 事实表 | 站点数据 (按运营商/频段/月) |
+| `indicator_info` | id | 事实表 | 指标数据 (按运营商/频段/月) |
+| `operator_total_site` | id | 聚合表 | 运营商月度站点汇总 |
 
-**site_info 频段列:**
-- LTE: 700M, 800M, 900M, 1400M, 1800M, 2100M, 2600M
-- NR: 700M, 800M, 900M, 1400M, 1800M, 2100M, 2600M, 3500M, 4900M, 2300M
+**site_info 事实表字段:**
+- id, operator_id, band_id, band_name, data_month, site_num, cell_num, technology
 
-**indicator_info 指标列:**
-- 每频段: dl_rate, ul_rate, dl_prb, ul_prb
-- 汇总: lte_avg_dl_rate, nr_avg_dl_rate, split_ratio, dwell_ratio
+**indicator_info 事实表字段:**
+- id, operator_id, band_id, band_name, data_month, technology, dl_prb, ul_prb, dl_rate, ul_rate, traffic, users, etc.
+
+**band_info 频段列表:**
+- LTE: LTE700M_FDD, LTE800M_FDD, LTE900M_FDD, LTE1400M_FDD, LTE1800M_FDD, LTE2100M_FDD, LTE2300M_FDD, LTE2300M_TDD, LTE2600M_FDD, LTE2600M_TDD
+- NR: NR700M_FDD, NR800M_FDD, NR900M_FDD, NR1400M_FDD, NR1800M_FDD, NR2100M_FDD, NR2300M_FDD, NR2300M_TDD, NR2600M_FDD, NR2600M_TDD, NR3500M_TDD, NR4900M_TDD
 
 ---
 
