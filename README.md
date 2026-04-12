@@ -285,6 +285,53 @@ npm install
 npm run dev
 ```
 
+## 测试
+
+### E2E 测试 (Playwright)
+
+```bash
+cd src/agent-app
+
+# 安装依赖和浏览器
+npm install
+npx playwright install chromium
+
+# 运行所有E2E测试
+npx playwright test --project=chromium --reporter=line
+
+# 运行特定测试文件
+npx playwright test tests/18-functions-e2e.spec.js --project=chromium --reporter=line
+
+# UI模式运行
+npx playwright test --ui
+
+# 查看测试报告
+npx playwright show-report
+```
+
+### 测试文件
+
+| 文件 | 描述 | 测试数 |
+|------|------|--------|
+| `tests/18-functions-e2e.spec.js` | 18个核心功能E2E测试 + 数据库一致性验证 | 29 |
+| `tests/ui-optimizations-e2e.spec.js` | UI优化功能测试套件 | 20 |
+
+### 测试配置
+
+`playwright.config.js`:
+- timeout: 180000ms (3分钟)
+- expect timeout: 30000ms
+- screenshot: always (开发) / only-on-failure (CI)
+- video: retain-on-failure (开发) / off (CI)
+- trace: retain-on-failure (开发) / on-first-retry (CI)
+
+### 数据库一致性验证
+
+测试通过以下方式验证UI结果与数据库数据一致性：
+- 通过 mysql2/promise 直接查询数据库
+- 使用正则表达式提取UI内容中的数值
+- 对比UI结果与数据库预期值
+
 ## API 调用流程
 
 ```

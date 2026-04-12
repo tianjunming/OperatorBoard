@@ -1,7 +1,8 @@
 # OperatorBoard 系统规格说明书 (SPEC)
 
-**文档版本**: 1.3
+**文档版本**: 1.4
 **编制日期**: 2026-04-12
+**更新日期**: 2026-04-12
 **项目代号**: OperatorBoard
 **文档状态**: 正式版
 **参考标准**: Google API Design Guide | OpenAPI 3.0 | Stripe Error Format | GitHub RFC 7807
@@ -66,8 +67,9 @@
 5. [数据模型](#5-数据模型)
 6. [安全规格](#6-安全规格)
 7. [非功能性需求](#7-非功能性需求)
-8. [架构决策记录(ADR)](#8-架构决策记录adr)
-9. [附录](#9-附录)
+8. [测试规格](#8-测试规格)
+9. [架构决策记录(ADR)](#9-架构决策记录adr)
+10. [附录](#10-附录)
 
 ---
 
@@ -1300,11 +1302,122 @@ java_services:
 
 ---
 
-## 8. 架构决策记录(ADR)
+## 8. 测试规格
+
+### 9.1 E2E测试框架
+
+| 项目 | 说明 |
+|------|------|
+| 框架 | Playwright |
+| 测试目录 | `src/agent-app/tests/` |
+| 配置文件 | `playwright.config.js` |
+| 默认超时 | 180000ms (3分钟) |
+
+### 9.2 测试套件
+
+| 测试文件 | 描述 | 测试数 |
+|----------|------|--------|
+| `18-functions-e2e.spec.js` | 18个核心功能E2E测试 + 数据库一致性验证 | 29 |
+| `ui-optimizations-e2e.spec.js` | UI优化功能测试套件 | 20 |
+
+### 9.3 测试覆盖范围
+
+#### 功能测试 (18-functions-e2e.spec.js)
+- **前置条件验证**: 系统可访问、登录功能、数据库连接、中国运营商数据存在
+- **功能1-7**: 单运营商站点/小区/指标查询
+  - 功能1: 中国联通有多少站点
+  - 功能2: 中国联通有多少小区
+  - 功能3: 中国联通小区上行负载
+  - 功能4: 中国联通小区下行负载
+  - 功能5: 中国联通小区上行速率
+  - 功能6: 中国联通小区下行速率
+  - 功能7: 中国联通小区指标
+- **功能8-11**: 多运营商查询
+  - 功能8: 查看所有运营商
+  - 功能9: 查看所有运营商站点
+  - 功能10: 查看所有运营商下行速率
+  - 功能11: 查看所有运营商上行速率
+- **功能12-18**: 历史数据查询
+  - 功能12-18: 各种历史数据查询
+
+#### UI优化测试 (ui-optimizations-e2e.spec.js)
+- 可访问性验证 (ARIA标签)
+- SQL块复制功能
+- 空数据展示 ("--" vs "0")
+- 滚动到底部按钮
+- 月份选择器范围限制
+- 命令面板功能
+
+### 9.4 数据库一致性验证
+
+测试通过以下方式验证UI结果与数据库数据一致性：
+
+```javascript
+// 直接数据库查询
+async function getSiteCellData(operatorId, dataMonth = '2026-03') {
+  const conn = await mysql.createConnection(DB_CONFIG);
+  const [rows] = await conn.execute(`
+    SELECT * FROM operator_total_site
+    WHERE operator_id = ? AND data_month = ?
+  `, [operatorId, dataMonth]);
+  return rows[0] || null;
+}
+
+// UI结果对比
+const uiValue = extractNumberFromContent(messageContent);
+const dbValue = dbResult.lte_physical_site_num + dbResult.nr_physical_site_num;
+expect(uiValue).toBeCloseTo(dbValue, 0);
+```
+
+### 9.5 测试配置
+
+```javascript
+// playwright.config.js
+export default defineConfig({
+  testDir: './tests',
+  timeout: 180000,
+  expect: { timeout: 30000 },
+  fullyParallel: true,
+  retries: process.env.CI ? 2 : 0,
+  reporter: [
+    ['html', { outputFolder: 'playwright-report' }],
+    ['list'],
+    ['json', { outputFile: 'test-results/results.json' }],
+  ],
+  use: {
+    baseURL: 'http://localhost:3000',
+    trace: process.env.CI ? 'on-first-retry' : 'retain-on-failure',
+    screenshot: process.env.CI ? 'only-on-failure' : 'always',
+    video: process.env.CI ? 'off' : 'retain-on-failure',
+  },
+});
+```
+
+### 9.6 运行测试
+
+```bash
+cd src/agent-app
+
+# 安装浏览器
+npx playwright install chromium
+
+# 运行所有测试
+npx playwright test --project=chromium --reporter=line
+
+# 运行特定测试文件
+npx playwright test tests/18-functions-e2e.spec.js --project=chromium
+
+# 查看报告
+npx playwright show-report
+```
+
+---
+
+## 9. 架构决策记录(ADR)
 
 **说明**: 本节记录项目中的关键架构决策，采用MADR (Markdown Any Decision Record)格式，便于追溯和审查。
 
-### 8.1 ADR-001: FastAPI框架选择
+### 9.1 ADR-001: FastAPI框架选择
 
 **标题**: 采用FastAPI作为Agent API框架
 
@@ -1339,7 +1452,7 @@ java_services:
 
 ---
 
-### 8.2 ADR-002: CQRS架构采用
+### 9.2 ADR-002: CQRS架构采用
 
 **标题**: 在NL2SQL服务中采用CQRS模式
 
@@ -1366,7 +1479,7 @@ java_services:
 
 ---
 
-### 8.3 ADR-003: Intent Detection路由策略
+### 9.3 ADR-003: Intent Detection路由策略
 
 **标题**: 采用MiniMax M2-her LLM进行意图识别与路由
 
@@ -1398,7 +1511,7 @@ java_services:
 
 ---
 
-### 8.4 ADR-004: NL2SQL SQLCoder方案
+### 9.4 ADR-004: NL2SQL SQLCoder方案
 
 **标题**: 采用SQLCoder自托管模型实现NL2SQL
 
@@ -1431,7 +1544,7 @@ java_services:
 
 ---
 
-### 8.5 ADR-005: 前端消息格式块协议
+### 9.5 ADR-005: 前端消息格式块协议
 
 **标题**: 采用Markdown扩展块实现结构化消息渲染
 
@@ -1482,9 +1595,9 @@ SELECT * FROM table_name
 
 ---
 
-## 9. 附录
+## 10. 附录
 
-### 8.1 文件结构
+### 9.1 文件结构
 
 ```
 OperatorBoard/

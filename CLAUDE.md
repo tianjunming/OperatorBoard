@@ -122,3 +122,44 @@ get_error_response(GET_SITE_CELLS_FAILED, locale="zh", detail="timeout")
 - `operator-service/src/main/resources/schema.sql` - Database schema with sample data
 - `agent-framework/src/agent_framework/api/` - Framework API base classes
 - `docs/views/` - Architecture documentation
+
+## Testing
+
+### E2E Testing (Playwright)
+```bash
+cd agent-app
+
+# Install dependencies and browsers
+npm install
+npx playwright install chromium
+
+# Run all E2E tests
+npx playwright test --project=chromium --reporter=line
+
+# Run specific test file
+npx playwright test tests/18-functions-e2e.spec.js --project=chromium --reporter=line
+
+# Run with UI
+npx playwright test --ui
+
+# View test report
+npx playwright show-report
+```
+
+### E2E Test Files
+- `tests/18-functions-e2e.spec.js` - 18个核心功能E2E测试 + 数据库一致性验证 (29 tests, 28+ passing)
+- `tests/ui-optimizations-e2e.spec.js` - UI优化功能测试套件 (20 tests)
+
+### Test Configuration
+- `playwright.config.js` - Playwright全局配置
+  - timeout: 180000ms (3分钟)
+  - expect timeout: 30000ms
+  - screenshot: always (开发) / only-on-failure (CI)
+  - video: retain-on-failure (开发) / off (CI)
+  - trace: retain-on-failure (开发) / on-first-retry (CI)
+
+### Database Consistency Validation
+Tests validate UI results match database data by:
+- Direct MySQL queries via mysql2/promise
+- Comparing extracted values with UI content
+- Using regex patterns for numeric extraction
