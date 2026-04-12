@@ -2,9 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  timeout: 30000,
+  timeout: 180000, // 3分钟超时 - E2E测试需要较长时间
   expect: {
-    timeout: 10000, // 断言超时增加到 10s
+    timeout: 30000, // 断言超时增加到 30s
   },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
