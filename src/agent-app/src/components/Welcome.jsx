@@ -6,6 +6,7 @@ import {
   Radio,
   TrendingUp,
   Globe,
+  CellTower,
 } from 'lucide-react';
 import { useI18n } from '../i18n';
 import './Welcome.css';
@@ -26,6 +27,14 @@ const EXAMPLE_CATEGORIES = [
     examples: [
       '北京联通有多少站点？',
       '各运营商5G站点排名',
+    ],
+  },
+  {
+    label: '小区查询',
+    icon: CellTower,
+    examples: [
+      '各运营商小区数量统计',
+      'NR 2600M频段小区分布',
     ],
   },
   {
