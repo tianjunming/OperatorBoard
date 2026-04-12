@@ -4,8 +4,16 @@
 **编制日期**: 2026-04-12
 **更新日期**: 2026-04-12
 **项目代号**: OperatorBoard
-**文档状态**: 正式版
+**文档状态**: 已拆分
 **参考标准**: Google API Design Guide | OpenAPI 3.0 | Stripe Error Format | GitHub RFC 7807
+
+---
+
+> **文档拆分说明**: 本文档已拆分为以下分文档，请参考各专项文档：
+> - [PRD.md](docs/PRD.md) - 需求分析文档
+> - [SDD.md](docs/SDD.md) - 软件设计文档
+> - [STD.md](docs/STD.md) - 测试设计文档
+> - [CDD.md](docs/CDD.md) - 代码设计文档
 
 ---
 
