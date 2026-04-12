@@ -149,6 +149,7 @@ function MessageList({
             }}
             onResend={undefined}
             isStreaming
+            streamingContent={streamingContent}
           />
         )}
 

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect } from 'react';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 import Welcome from './Welcome';
+import QueryConfirmationDialog from './QueryConfirmationDialog';
 import { useChat } from '../context/ChatContext';
 import { useI18n } from '../i18n';
 import { useStreamingAgent } from '../hooks/useStreamingAgent';
@@ -11,7 +12,17 @@ function ChatView() {
   const { messages, currentSession, saveMessage, clearCurrentSession } = useChat();
   const { locale, t } = useI18n();
 
-  const { streamingContent, streamingChart, isStreaming, sendMessage, abort } = useStreamingAgent({
+  const {
+    streamingContent,
+    streamingChart,
+    isStreaming,
+    showConfirmation,
+    clarificationOptions,
+    sendMessage,
+    abort,
+    handleConfirmationConfirm,
+    handleConfirmationCancel
+  } = useStreamingAgent({
     onStreamStart: () => console.log('[ChatView] Streaming started'),
     onStreamEnd: () => console.log('[ChatView] Streaming ended'),
   });
@@ -74,6 +85,15 @@ function ChatView() {
             : 'Enter your query...'}
         />
       </div>
+
+      {/* 查询确认对话框 */}
+      <QueryConfirmationDialog
+        isOpen={showConfirmation}
+        options={clarificationOptions}
+        selectedOptions={{}}
+        onConfirm={handleConfirmationConfirm}
+        onCancel={handleConfirmationCancel}
+      />
     </div>
   );
 }

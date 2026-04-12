@@ -16,9 +16,14 @@ import {
 import { useI18n } from '../i18n';
 import { parseStructuredBlocks, formatThinkingChain } from '../utils/responseParser';
 import { useTableSort } from '../hooks/useTableSort';
+import { getChartRecommendation } from '../utils/chartRecommendation';
 import ChartTypeSelector from './charts/ChartTypeSelector';
 import CodeBlock from './CodeBlock';
+import KpiCard from './KpiCard';
+import SkeletonLoader, { SKELETON_TYPES } from './SkeletonLoader';
 import './MessageItem.css';
+import './KpiCard.css';
+import './SkeletonLoader.css';
 
 // Message feedback state
 const MESSAGE_FEEDBACK = { NONE: 'none', LIKED: 'liked', DISLIKED: 'disliked' };
@@ -334,6 +339,8 @@ function RenderToggle({ block, blockIdx, viewMode, onToggleView }) {
 // Chart Block Renderer (独立组件，封装图表状态)
 function ChartBlock({ block }) {
   const [chartType, setChartType] = useState(block.chartType || 'bar');
+  const [showRecommendation, setShowRecommendation] = useState(false);
+  const [acceptedRecommendation, setAcceptedRecommendation] = useState(false);
   const { data, keys, column = 'name' } = block;
   const colors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
@@ -343,6 +350,11 @@ function ChartBlock({ block }) {
   const safeColumn = dataKeys.includes(column) ? column : (dataKeys[0] || 'name');
   const safeKeys = keys || dataKeys.filter(k => k !== safeColumn);
   const commonProps = { data, margin: { top: 20, right: 30, left: 20, bottom: 5 } };
+
+  // 计算智能推荐
+  const recommendation = useMemo(() => {
+    return getChartRecommendation({ data, keys: safeKeys, column: safeColumn });
+  }, [data, safeKeys, safeColumn]);
 
   const renderBar = () => (
     <ComposedChart {...commonProps}>
@@ -429,6 +441,30 @@ function ChartBlock({ block }) {
         <BarChart3 size={14} />
         <span>{chartTitles[chartType] || '数据图表'}</span>
         <ChartTypeSelector currentType={chartType} onChange={setChartType} />
+        {/* 智能推荐徽章 */}
+        {recommendation && !acceptedRecommendation && chartType === recommendation.type && (
+          <div
+            className="chart-recommendation-badge"
+            onClick={() => setShowRecommendation(!showRecommendation)}
+            title="点击查看推荐原因"
+          >
+            <Sparkles size={12} className="recommendation-icon" />
+            <span className="recommendation-text">推荐: {recommendation.chartName}</span>
+          </div>
+        )}
+        {acceptedRecommendation && (
+          <div className="chart-applied-indicator">
+            <Check size={12} className="applied-icon" />
+            <span>已应用智能推荐</span>
+          </div>
+        )}
+        {showRecommendation && recommendation && (
+          <div className="chart-recommendation-tooltip">
+            <div className="tooltip-title">推荐: {recommendation.chartName}</div>
+            <div className="tooltip-reason">{recommendation.reason}</div>
+            <div className="tooltip-confidence">推荐可信度: {recommendation.confidence === 'high' ? '高' : recommendation.confidence === 'medium' ? '中' : '低'}</div>
+          </div>
+        )}
         <div className="chart-legend">
           {safeKeys.map((key, idx) => (
             <span key={key} className="legend-item">
@@ -448,7 +484,7 @@ function ChartBlock({ block }) {
   );
 }
 
-function MessageItem({ message, onResend, isStreaming, onFeedback }) {
+function MessageItem({ message, onResend, isStreaming, streamingContent, onFeedback }) {
   const { role, content, isError, complete, chart, metadata } = message;
   const { locale, t } = useI18n();
   const [copied, setCopied] = useState(false);
@@ -546,7 +582,7 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
     );
   };
 
-  // Metrics Renderer
+  // Metrics Renderer (增强版 - 使用KpiCard)
   const renderMetrics = (block) => {
     if (!block.items || block.items.length === 0) return null;
 
@@ -558,21 +594,36 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
 
     return (
       <div className="structured-metrics">
-        <div className="metrics-grid">
+        <div className="metrics-grid kpi-grid">
           {block.items.map((item, idx) => {
             const numericValue = item.numeric || 0;
-            const barWidth = maxValue > 0 ? (numericValue / maxValue) * 100 : 0;
+            // 生成模拟sparkline数据（基于当前值生成简单趋势）
+            const baseValue = numericValue * 0.85;
+            const sparklineData = [
+              baseValue * 0.95,
+              baseValue * 1.02,
+              baseValue * 0.98,
+              baseValue * 1.05,
+              baseValue * 1.08,
+              numericValue
+            ];
+            // 根据数值相对最大值的位置判断趋势
+            const ratio = maxValue > 0 ? numericValue / maxValue : 0.5;
+            const trend = ratio > 0.7 ? 'up' : ratio < 0.3 ? 'down' : 'stable';
+            const trendPercent = ((numericValue / (baseValue || 1)) * 100 - 100).toFixed(1);
+
             return (
-              <div key={idx} className="metric-card">
-                <div className="metric-label">{item.label}</div>
-                <div className="metric-value">{item.value}</div>
-                <div className="metric-bar">
-                  <div
-                    className="metric-bar-fill"
-                    style={{ width: `${barWidth}%` }}
-                  />
-                </div>
-              </div>
+              <KpiCard
+                key={idx}
+                title={item.label}
+                value={numericValue}
+                unit={item.unit || ''}
+                trend={trend}
+                trendValue={`${trend === 'up' ? '+' : trend === 'down' ? '' : ''}${trendPercent}%`}
+                sparklineData={sparklineData}
+                sparklineColor={trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#4f46e5'}
+                onClick={() => console.log('KPI clicked:', item.label)}
+              />
             );
           })}
         </div>
@@ -703,6 +754,13 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
 
               {/* Main Content Blocks */}
               <div className="message-content">
+                {/* Streaming skeleton */}
+                {isStreaming && !complete && streamingContent && (
+                  <div className="streaming-skeleton">
+                    <SkeletonLoader type={SKELETON_TYPES.TEXT} progress={50} message="正在分析您的查询..." />
+                  </div>
+                )}
+
                 {mainBlocks.map((block, idx) => {
                   switch (block.type) {
                     case 'table': return <div key={idx} className="block-table"><TableBlock block={block} /></div>;

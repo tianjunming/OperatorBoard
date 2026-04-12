@@ -5,13 +5,17 @@ import { useState, useCallback, useRef } from 'react';
  * @param {Object} options - Configuration options
  * @param {Function} options.onStreamStart - Callback when streaming starts
  * @param {Function} options.onStreamEnd - Callback when streaming ends
+ * @param {Function} options.onConfirmation - Callback when confirmation is needed
  * @returns {Object} Streaming state and controls
  */
-export function useStreamingAgent({ onStreamStart, onStreamEnd } = {}) {
+export function useStreamingAgent({ onStreamStart, onStreamEnd, onConfirmation } = {}) {
   const [streamingContent, setStreamingContent] = useState('');
   const [streamingChart, setStreamingChart] = useState(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [clarificationOptions, setClarificationOptions] = useState({});
   const abortControllerRef = useRef(null);
+  const pendingMessageRef = useRef(null);
 
   const abort = useCallback(() => {
     if (abortControllerRef.current) {
@@ -67,7 +71,15 @@ export function useStreamingAgent({ onStreamStart, onStreamEnd } = {}) {
             if (data.startsWith('{') && data.endsWith('}')) {
               try {
                 const parsed = JSON.parse(data);
-                if (parsed.type === 'chart' && parsed.chart) {
+                if (parsed.type === 'confirmation' && parsed.options) {
+                  // 收到确认请求，暂停流式输出
+                  setClarificationOptions(parsed.options);
+                  setShowConfirmation(true);
+                  setIsStreaming(false);
+                  pendingMessageRef.current = { text, saveMessage };
+                  onConfirmation?.(parsed.options);
+                  return; // 等待用户确认
+                } else if (parsed.type === 'chart' && parsed.chart) {
                   chartData = parsed.chart;
                   setStreamingChart(parsed.chart);
                 } else if (parsed.content) {
@@ -96,14 +108,39 @@ export function useStreamingAgent({ onStreamStart, onStreamEnd } = {}) {
       abortControllerRef.current = null;
       onStreamEnd?.();
     }
-  }, [abort, onStreamStart, onStreamEnd]);
+  }, [abort, onStreamStart, onStreamEnd, onConfirmation]);
+
+  // 处理确认对话框确认
+  const handleConfirmationConfirm = useCallback(async (options) => {
+    setShowConfirmation(false);
+    if (pendingMessageRef.current) {
+      const { text, saveMessage } = pendingMessageRef.current;
+      // 将用户选择的选项添加到消息中
+      const enhancedText = `${text} [用户确认: ${JSON.stringify(options)}]`;
+      pendingMessageRef.current = null;
+      // 重新发送消息
+      setClarificationOptions({});
+      await sendMessage(enhancedText, saveMessage);
+    }
+  }, [sendMessage]);
+
+  // 处理确认对话框取消
+  const handleConfirmationCancel = useCallback(() => {
+    setShowConfirmation(false);
+    setClarificationOptions({});
+    pendingMessageRef.current = null;
+  }, []);
 
   return {
     streamingContent,
     streamingChart,
     isStreaming,
+    showConfirmation,
+    clarificationOptions,
     sendMessage,
     abort,
+    handleConfirmationConfirm,
+    handleConfirmationCancel,
   };
 }
 

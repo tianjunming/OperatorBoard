@@ -511,7 +511,93 @@ useEffect(on operatorId)
 | 分组柱状图 | 速率对比 | `{name, "下行速率", "上行速率"}` |
 | 饼图 | 小区分布 | `{name, value}` |
 
-### 5.3 流式处理
+### 5.3 交互体验优化组件
+
+#### 5.3.1 智能图表推荐引擎
+
+**文件**: `src/utils/chartRecommendation.js`
+
+基于数据特征自动推荐最佳图表类型：
+
+| 检测函数 | 功能 |
+|---------|------|
+| `hasTimeDimension()` | 检测时间维度（月份、日期等） |
+| `hasRatioMetrics()` | 检测比率指标（0-100范围） |
+| `isPartToWhole()` | 检测占比关系 |
+
+**推荐规则**:
+
+| 条件 | 推荐类型 | 理由 |
+|------|----------|------|
+| 时间序列 + 单指标 | line | 展示趋势变化 |
+| 时间序列 + 多指标 | area | 多指标对比 |
+| 3+类别 + 单指标 | bar | 分类对比 |
+| 2类别 + 多指标 | bar | 多指标对比 |
+| 占比数据 (2-8类) | pie | 展示分布 |
+| 类别>5 + 单指标 | line | 避免柱状图拥挤 |
+
+#### 5.3.2 KPI卡片组件
+
+**文件**: `src/components/KpiCard.jsx`
+
+增强版KPI卡片，带Sparkline迷你趋势图：
+
+```jsx
+<KpiCard
+  title="LTE平均下行"
+  value={126.87}
+  unit="Mbps"
+  trend="up"        // "up" | "down" | "stable"
+  trendValue="+5.2%"
+  sparklineData={[120, 122, 125, 124, 126, 127]}
+  sparklineColor="#10b981"
+/>
+```
+
+特性：
+- Sparkline迷你趋势图（基于Recharts AreaChart）
+- 趋势指示（上升/下降/稳定）
+- 点击展开详情（预留接口）
+
+#### 5.3.3 模糊查询确认对话框
+
+**文件**: `src/components/QueryConfirmationDialog.jsx`
+
+当用户查询模糊时，弹出对话框确认查询条件：
+
+```jsx
+<QueryConfirmationDialog
+  isOpen={showConfirmation}
+  options={{
+    operators: [{id: 1, name: '中国联通'}, ...],
+    bands: ['LTE', 'NR', '全部'],
+    months: ['2026-03', '2026-02', ...]
+  }}
+  onConfirm={(options) => handleConfirm(options)}
+  onCancel={() => handleCancel()}
+/>
+```
+
+流程：
+1. Agent检测到模糊查询
+2. 返回`confirmation`类型事件
+3. 前端弹出确认对话框
+4. 用户选择后重新发送带选项的消息
+
+#### 5.3.4 骨架屏组件
+
+**文件**: `src/components/SkeletonLoader.jsx`
+
+支持流式加载时的渐进式展示：
+
+| 类型 | 用途 |
+|------|------|
+| `chart` | 图表骨架（柱状图动画） |
+| `table` | 表格骨架 |
+| `metrics` | KPI卡片骨架 |
+| `text` | 文本骨架 |
+
+### 5.4 流式处理
 
 ```javascript
 // useAgentStream.js
@@ -531,9 +617,21 @@ while (true) {
 |------|------|
 | `data: [DONE]` | 调用 `onComplete()` |
 | `data: [AUTO_CONFIRM]` | 100ms 后自动确认 |
+| `data: {"type": "confirmation", "options": {...}}` | 弹出确认对话框 |
 | `data: {"content": "..."}` | 调用 `onMessage()` |
 
-### 5.4 Node 代理路由
+**useStreamingAgent Hook 新增功能**:
+
+```javascript
+{
+    showConfirmation,        // 是否显示确认对话框
+    clarificationOptions,    // 确认选项 {operators, bands, months}
+    handleConfirmationConfirm, // 确认回调
+    handleConfirmationCancel,  // 取消回调
+}
+```
+
+### 5.5 Node 代理路由
 
 ```
 /api/agent/stream      → operator-agent (主端点)
@@ -541,6 +639,19 @@ while (true) {
 /api/query/*           → NL2SQL Service (查询端)
 /api/nl2sql/*          → NL2SQL Service (命令端)
 ```
+
+### 5.6 新增组件清单
+
+| 组件 | 文件 | 说明 |
+|------|------|------|
+| `chartRecommendation.js` | `src/utils/` | 智能图表推荐引擎 |
+| `KpiCard.jsx` | `src/components/` | KPI卡片组件（带Sparkline） |
+| `KpiCard.css` | `src/components/` | KPI卡片样式 |
+| `QueryConfirmationDialog.jsx` | `src/components/` | 模糊查询确认对话框 |
+| `QueryConfirmationDialog.css` | `src/components/` | 对话框样式 |
+| `SkeletonLoader.jsx` | `src/components/` | 骨架屏组件 |
+| `SkeletonLoader.css` | `src/components/` | 骨架屏样式 |
+| `MessageItem.css` | `src/components/` | 新增推荐徽章样式 |
 
 ---
 

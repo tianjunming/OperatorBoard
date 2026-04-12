@@ -593,6 +593,10 @@
   gap: var(--space-md);
 }
 
+.metrics-grid.kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
 .metric-card {
   padding: var(--space-md);
   background: var(--bg-tertiary);
@@ -1067,6 +1071,111 @@
   font-family: var(--font-mono);
 }
 
+/* ========== Chart Recommendation Badge ========== */
+.chart-recommendation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  animation: recommendationPulse 2s ease-in-out infinite;
+}
+
+.chart-recommendation-badge:hover {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(59, 130, 246, 0.25) 100%);
+  border-color: rgba(139, 92, 246, 0.5);
+  transform: translateY(-1px);
+}
+
+.chart-recommendation-badge.accepted {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: var(--color-success);
+  animation: none;
+}
+
+.chart-recommendation-badge .recommendation-icon {
+  display: flex;
+  align-items: center;
+}
+
+.chart-recommendation-badge .recommendation-text {
+  font-weight: var(--font-weight-medium);
+}
+
+@keyframes recommendationPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.2); }
+  50% { box-shadow: 0 0 0 4px rgba(139, 92, 246, 0); }
+}
+
+/* Recommendation Tooltip */
+.chart-recommendation-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 200px;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  z-index: 100;
+  animation: tooltipFadeIn 0.2s ease-out;
+}
+
+.chart-recommendation-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 20px;
+  width: 10px;
+  height: 10px;
+  background: var(--bg-primary);
+  border-left: 1px solid var(--border-light);
+  border-top: 1px solid var(--border-light);
+  transform: rotate(45deg);
+}
+
+@keyframes tooltipFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tooltip-title {
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.tooltip-reason {
+  line-height: var(--line-height-relaxed);
+}
+
+/* Applied Recommendation Indicator */
+.chart-applied-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  color: var(--color-success);
+}
+
+.chart-applied-indicator .applied-icon {
+  display: flex;
+  align-items: center;
+}
+
 /* ========== Chart Type Selector ========== */
 .chart-type-selector {
   display: flex;
@@ -1099,6 +1208,11 @@
   background: var(--bg-primary);
   color: var(--color-primary);
   box-shadow: var(--shadow-sm);
+}
+
+/* ========== Streaming Skeleton ========== */
+.streaming-skeleton {
+  margin-bottom: var(--space-md);
 }
 
 /* Responsive */
