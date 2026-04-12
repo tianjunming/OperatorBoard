@@ -1,6 +1,6 @@
 # OperatorBoard 系统规格说明书 (SPEC)
 
-**文档版本**: 1.4
+**文档版本**: 1.5
 **编制日期**: 2026-04-12
 **更新日期**: 2026-04-12
 **项目代号**: OperatorBoard
@@ -467,6 +467,17 @@ private static final Pattern[] INJECTION_PATTERNS = {
 | steps | renderSteps() | `:::steps...:::` |
 | sql | renderSql() | `:::sql...:::` |
 | text | renderText() | Markdown渲染 |
+| metrics | renderMetrics() | 指标卡片渲染（KpiCard组件） |
+
+**ChartBlock增强**:
+- 智能图表推荐徽章（基于数据特征自动推荐）
+- 推荐原因Tooltip提示
+- "已应用智能推荐"指示器
+
+**Metrics渲染增强**:
+- 使用KpiCard组件替代原有卡片
+- 支持Sparkline迷你趋势图
+- 趋势指示（上升/下降/稳定）
 
 #### 3.5.2 图表类型
 
@@ -484,9 +495,129 @@ private static final Pattern[] INJECTION_PATTERNS = {
 data: {"type": "start"}
 data: {"type": "content", "content": "..."}
 data: {"type": "chart", "chart": {...}}
+data: {"type": "confirmation", "options": {...}}
 data: {"type": "error", "code": "...", "message": "..."}
 data: [DONE]
 ```
+
+**SSE事件类型**:
+
+| 事件类型 | data内容 | 说明 |
+|----------|----------|------|
+| start | {type, request_id} | 流开始，携带请求ID |
+| content | {type, content} | 文本内容片段 |
+| chart | {type, chart} | 图表数据 |
+| confirmation | {type, options} | 模糊查询确认请求 |
+| error | {type, code, message} | 错误信息 |
+| done | {type, request_id} | 流结束 |
+
+### 3.6 交互体验优化
+
+#### 3.6.1 智能图表推荐引擎
+
+**功能**: 基于数据特征自动推荐最佳图表类型
+
+**检测函数**:
+
+| 函数 | 功能 |
+|------|------|
+| `hasTimeDimension()` | 检测时间维度（月份、日期等） |
+| `hasRatioMetrics()` | 检测比率指标（0-100范围） |
+| `isPartToWhole()` | 检测占比关系 |
+| `recommendChartType()` | 推荐最佳图表类型 |
+
+**推荐规则**:
+
+| 条件 | 推荐类型 | 理由 |
+|------|----------|------|
+| 时间序列 + 单指标 | line | 展示趋势变化 |
+| 时间序列 + 多指标 | area | 多指标对比 |
+| 3+类别 + 单指标 | bar | 分类对比 |
+| 2类别 + 多指标 | bar | 多指标对比 |
+| 占比数据 (2-8类) | pie | 展示分布 |
+| 类别>5 + 单指标 | line | 避免柱状图拥挤 |
+
+**文件位置**: `src/utils/chartRecommendation.js`
+
+#### 3.6.2 KPI卡片组件
+
+**功能**: 增强版KPI卡片，支持Sparkline迷你趋势图
+
+**组件接口**:
+```jsx
+<KpiCard
+  title="LTE平均下行"
+  value={126.87}
+  unit="Mbps"
+  trend="up"        // "up" | "down" | "stable"
+  trendValue="+5.2%"
+  sparklineData={[120, 122, 125, 124, 126, 127]}
+  sparklineColor="#10b981"
+  onClick={() => onExpand()}
+/>
+```
+
+**特性**:
+- Sparkline迷你趋势图（基于Recharts AreaChart）
+- 趋势指示（上升/下降/稳定）
+- 点击展开详情（预留接口）
+
+**文件位置**: `src/components/KpiCard.jsx`
+
+#### 3.6.3 模糊查询确认对话框
+
+**功能**: 当用户查询模糊时，弹出对话框确认查询条件
+
+**组件接口**:
+```jsx
+<QueryConfirmationDialog
+  isOpen={showConfirmation}
+  options={{
+    operators: [{id: 1, name: '中国联通'}, ...],
+    bands: ['LTE', 'NR', '全部'],
+    months: ['2026-03', '2026-02', ...]
+  }}
+  onConfirm={(options) => handleConfirm(options)}
+  onCancel={() => handleCancel()}
+/>
+```
+
+**流程**:
+1. Agent检测到模糊查询
+2. 返回`confirmation`类型SSE事件
+3. 前端弹出确认对话框
+4. 用户选择后重新发送带选项的消息
+
+**文件位置**: `src/components/QueryConfirmationDialog.jsx`
+
+#### 3.6.4 骨架屏组件
+
+**功能**: 支持流式加载时的渐进式展示
+
+**骨架类型**:
+
+| 类型 | 用途 |
+|------|------|
+| `chart` | 图表骨架（柱状图动画） |
+| `table` | 表格骨架 |
+| `metrics` | KPI卡片骨架 |
+| `text` | 文本骨架 |
+
+**文件位置**: `src/components/SkeletonLoader.jsx`
+
+#### 3.6.5 useStreamingAgent Hook增强
+
+**新增功能**:
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `showConfirmation` | boolean | 是否显示确认对话框 |
+| `clarificationOptions` | object | 确认选项 {operators, bands, months} |
+| `handleConfirmationConfirm` | function | 确认回调 |
+| `handleConfirmationCancel` | function | 取消回调 |
+
+**新增SSE事件处理**:
+- `confirmation` 事件类型：弹出确认对话框，暂停流式输出
 
 ---
 
@@ -1166,11 +1297,55 @@ interface Message {
 interface ChartData {
     type: 'bar' | 'line' | 'pie' | 'area';
     column: string;
+    keys?: string[];  // 多指标键数组
     data: Array<{
         name: string;
         value: number;
+        [key: string]: any;  // 多指标数据
     }>;
     title?: string;
+}
+
+// 智能推荐结果
+interface ChartRecommendation {
+    type: 'bar' | 'line' | 'pie' | 'area';
+    reason: string;
+    confidence: 'high' | 'medium' | 'low';
+    chartName: string;
+}
+```
+
+#### 5.2.3 KPI卡片数据模型
+
+```typescript
+interface KpiData {
+    title: string;           // KPI标题
+    value: number;          // KPI值
+    unit?: string;          // 单位（如 Mbps, %）
+    trend?: 'up' | 'down' | 'stable';  // 趋势方向
+    trendValue?: string;     // 趋势变化值（如 +5.2%）
+    sparklineData?: number[];  // Sparkline数据点
+    sparklineColor?: string;  // Sparkline颜色
+}
+```
+
+#### 5.2.4 确认对话框选项
+
+```typescript
+interface ClarificationOptions {
+    operators?: Array<{id: number | string, name: string}>;
+    bands?: string[];
+    months?: string[];
+}
+
+interface ConfirmationState {
+    isOpen: boolean;
+    options: ClarificationOptions;
+    selectedOptions: {
+        operator?: number | string;
+        band?: string;
+        month?: string;
+    };
 }
 ```
 
@@ -1326,7 +1501,7 @@ java_services:
 
 ## 8. 测试规格
 
-### 9.1 E2E测试框架
+### 8.1 E2E测试框架
 
 | 项目 | 说明 |
 |------|------|
@@ -1335,14 +1510,14 @@ java_services:
 | 配置文件 | `playwright.config.js` |
 | 默认超时 | 180000ms (3分钟) |
 
-### 9.2 测试套件
+### 8.2 测试套件
 
 | 测试文件 | 描述 | 测试数 |
 |----------|------|--------|
 | `18-functions-e2e.spec.js` | 18个核心功能E2E测试 + 数据库一致性验证 | 29 |
 | `ui-optimizations-e2e.spec.js` | UI优化功能测试套件 | 20 |
 
-### 9.3 测试覆盖范围
+### 8.3 测试覆盖范围
 
 #### 功能测试 (18-functions-e2e.spec.js)
 - **前置条件验证**: 系统可访问、登录功能、数据库连接、中国运营商数据存在
@@ -1370,7 +1545,7 @@ java_services:
 - 月份选择器范围限制
 - 命令面板功能
 
-### 9.4 数据库一致性验证
+### 8.4 数据库一致性验证
 
 测试通过以下方式验证UI结果与数据库数据一致性：
 
@@ -1391,7 +1566,7 @@ const dbValue = dbResult.lte_physical_site_num + dbResult.nr_physical_site_num;
 expect(uiValue).toBeCloseTo(dbValue, 0);
 ```
 
-### 9.5 测试配置
+### 8.5 测试配置
 
 ```javascript
 // playwright.config.js
@@ -1415,7 +1590,7 @@ export default defineConfig({
 });
 ```
 
-### 9.6 运行测试
+### 8.6 运行测试
 
 ```bash
 cd src/agent-app
@@ -1619,7 +1794,7 @@ SELECT * FROM table_name
 
 ## 10. 附录
 
-### 9.1 文件结构
+### 10.1 文件结构
 
 ```
 OperatorBoard/
@@ -1656,9 +1831,17 @@ OperatorBoard/
 │   └── agent-app/                # React前端
 │       ├── src/
 │       │   ├── components/       # React组件
+│       │   │   ├── charts/       # 图表组件
+│       │   │   ├── KpiCard.jsx          # KPI卡片组件（带Sparkline）
+│       │   │   ├── QueryConfirmationDialog.jsx  # 模糊查询确认对话框
+│       │   │   ├── SkeletonLoader.jsx     # 骨架屏组件
+│       │   │   ├── MessageItem.jsx        # 消息渲染（含智能推荐）
+│       │   │   └── MessageItem.css       # 消息样式（含推荐徽章）
 │       │   ├── context/          # Context状态
 │       │   ├── hooks/            # 自定义Hooks
+│       │   │   └── useStreamingAgent.js  # 流式Agent Hook（支持确认对话框）
 │       │   ├── utils/            # 工具函数
+│       │   │   └── chartRecommendation.js  # 智能图表推荐引擎
 │       │   └── api/              # API调用
 │       └── server/               # Node代理
 ├── configs/                       # YAML配置
@@ -1669,7 +1852,7 @@ OperatorBoard/
 └── README.md                      # 项目说明
 ```
 
-### 9.2 环境变量
+### 10.2 环境变量
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
@@ -1683,7 +1866,7 @@ OperatorBoard/
 | OPERATOR_AGENT_API_KEYS | Agent API密钥列表 | - |
 | ALLOWED_ORIGINS | CORS允许源 | - |
 
-### 9.3 端口分配
+### 10.3 端口分配
 
 | 端口 | 服务 | 说明 |
 |------|------|------|
@@ -1696,17 +1879,18 @@ OperatorBoard/
 | 3306 | MySQL | 数据库 |
 | 27017 | ChromaDB | 向量存储(可选) |
 
-### 9.4 版本历史
+### 10.4 版本历史
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.5 | 2026-04-12 | 交互体验优化：智能图表推荐、KPI卡片(Sparkline)、模糊查询确认对话框、骨架屏、useStreamingAgent增强 |
 | 1.4 | 2026-04-12 | 新增indicator_info汇总指标字段：lte_avg_*、nr_avg_*、traffic_ratio、duration_campratio、fallback_ratio |
 | 1.3 | 2026-04-12 | 重构数据模型：规范化表结构，新增band_name字段，site_info/indicator_info/band_info表 |
 | 1.2 | 2026-04-11 | 增强错误处理(Stripe+GitHub)、API参数表、响应码矩阵、数据模型约束、ADR架构决策记录 |
 | 1.1 | 2026-04-11 | 更新数据格式：频段完整命名(LTE 700M)、Chart格式(空格分隔)、Toggle块结构 |
 | 1.0 | 2026-04-10 | 初始版本，整合所有模块规格 |
 
-### 9.5 相关文档
+### 10.5 相关文档
 
 | 文档 | 路径 | 说明 |
 |------|------|------|
