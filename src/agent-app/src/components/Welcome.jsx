@@ -6,7 +6,7 @@ import {
   Radio,
   TrendingUp,
   Globe,
-  CellTower,
+  Antenna,
 } from 'lucide-react';
 import { useI18n } from '../i18n';
 import './Welcome.css';
@@ -31,7 +31,7 @@ const EXAMPLE_CATEGORIES = [
   },
   {
     label: '小区查询',
-    icon: CellTower,
+    icon: Antenna,
     examples: [
       '各运营商小区数量统计',
       'NR 2600M频段小区分布',
