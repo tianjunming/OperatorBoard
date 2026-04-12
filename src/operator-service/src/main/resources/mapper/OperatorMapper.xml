@@ -4,7 +4,7 @@
 
 <mapper namespace="com.operator.nl2sql.repository.OperatorRepository">
 
-    <resultMap id="OperatorInfoResultMap" type="com.operator.nl2sql.entity.DimOperator">
+    <resultMap id="OperatorInfoResultMap" type="com.operator.nl2sql.entity.OperatorInfo">
         <id property="id" column="id"/>
         <result property="operatorCode" column="operator_code"/>
         <result property="operatorName" column="operator_name"/>

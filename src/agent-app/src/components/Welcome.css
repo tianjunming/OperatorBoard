@@ -6,8 +6,8 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  padding: var(--space-3xl);
-  max-width: 640px;
+  padding: var(--space-2xl);
+  max-width: 580px;
   margin: 0 auto;
   animation: fadeIn var(--transition-slow) ease-out;
 }
@@ -15,59 +15,55 @@
 /* Header */
 .welcome-header {
   text-align: center;
-  margin-bottom: var(--space-3xl);
+  margin-bottom: var(--space-2xl);
 }
 
 .welcome-logo {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--gradient-primary);
   border-radius: var(--radius-xl);
   color: white;
-  margin: 0 auto var(--space-xl);
+  margin: 0 auto var(--space-lg);
   box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
-  animation: scaleIn var(--transition-bounce) ease-out;
 }
 
 .welcome-title {
-  font-size: var(--font-size-2xl);
+  font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--space-xs);
 }
 
 .welcome-subtitle {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
   color: var(--text-tertiary);
-  max-width: 400px;
 }
 
-/* Features */
+/* Features - 2x2 Grid */
 .welcome-features {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-md);
   width: 100%;
-  margin-bottom: var(--space-3xl);
+  margin-bottom: var(--space-2xl);
 }
 
 .feature-card {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-xl);
+  gap: var(--space-md);
+  padding: var(--space-lg);
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-light);
   transition: all var(--transition-fast);
-  text-align: center;
 }
 
 .feature-card:hover {
@@ -77,14 +73,15 @@
 }
 
 .feature-icon {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--color-primary-light);
   border-radius: var(--radius-md);
   color: var(--color-primary);
+  flex-shrink: 0;
 }
 
 .feature-info h3 {
@@ -100,10 +97,10 @@
   line-height: var(--line-height-normal);
 }
 
-/* Examples */
+/* Examples - Categorized */
 .welcome-examples {
   width: 100%;
-  margin-bottom: var(--space-2xl);
+  margin-bottom: var(--space-xl);
 }
 
 .examples-title {
@@ -114,21 +111,43 @@
   text-align: center;
 }
 
-.examples-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
+.examples-categories {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
 }
 
-.example-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-md) var(--space-lg);
+.example-category {
   background: var(--bg-secondary);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
-  font-size: var(--font-size-sm);
+  padding: var(--space-md);
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.category-examples {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.example-item {
+  display: block;
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
   color: var(--text-secondary);
   text-align: left;
   transition: all var(--transition-fast);
@@ -138,11 +157,6 @@
   background: var(--color-primary-light);
   border-color: var(--color-primary);
   color: var(--color-primary);
-}
-
-.example-item svg {
-  flex-shrink: 0;
-  opacity: 0.6;
 }
 
 /* Hint */
@@ -168,12 +182,9 @@
 }
 
 /* Responsive */
-@media (max-width: 640px) {
-  .welcome {
-    padding: var(--space-xl);
-  }
-
-  .welcome-features {
+@media (max-width: 480px) {
+  .welcome-features,
+  .examples-categories {
     grid-template-columns: 1fr;
   }
 

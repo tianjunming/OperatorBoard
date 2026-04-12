@@ -1,7 +1,7 @@
 # OperatorBoard 系统规格说明书 (SPEC)
 
-**文档版本**: 1.2
-**编制日期**: 2026-04-11
+**文档版本**: 1.3
+**编制日期**: 2026-04-12
 **项目代号**: OperatorBoard
 **文档状态**: 正式版
 **参考标准**: Google API Design Guide | OpenAPI 3.0 | Stripe Error Format | GitHub RFC 7807
@@ -1018,82 +1018,89 @@ Content-Type: application/json
 
 **唯一索引**: `(operator_name, country, data_month)`
 
+#### 5.1.4 band_info (频段维度表)
+
+**说明**: 频段维度表，存储21个支持的频段信息。
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | 主键 |
+| band_code | VARCHAR(20) | UNIQUE, NOT NULL | 频段代码 (如 LTE700M_FDD) |
+| band_name | VARCHAR(50) | NOT NULL | 频段名称 (如 LTE 700M FDD) |
+| technology | VARCHAR(10) | NOT NULL | 技术制式 LTE/NR |
+| frequency_mhz | INT | NOT NULL | 中心频率 MHz |
+| duplex_mode | VARCHAR(10) | NOT NULL | 双工模式 FDD/TDD |
+| band_group | VARCHAR(20) | - | 频段组 700M/800M/900M等 |
+
 **变更历史**:
 | 版本 | 日期 | 变更内容 |
 |------|------|----------|
 | 1.0 | 2026-04-10 | 初始版本 |
 | 1.1 | 2026-04-11 | 增加region字段支持多地区 |
+| 1.2 | 2026-04-12 | 重构数据模型：规范化表结构，新增band_name字段 |
 
-#### 5.1.2 site_info (站点信息宽表)
+#### 5.1.2 site_info (站点信息表)
 
-**说明**: 采用列式存储设计，每行代表单一维度交叉，支持LTE/NR多频段统计
+**说明**: 规范化事实表，每行代表一个运营商在特定频段和月份的数据。通过SQL查询可生成宽表视图。
 
-| 字段类型 | 字段名模式 | 数据类型 | 说明 |
-|----------|------------|----------|------|
-| 主键 | id | BIGINT | 主键 |
-| 外键 | operator_id | BIGINT | 关联operator_info.id |
-| 外键 | data_month | VARCHAR(7) | 数据月份 |
-| LTE站点 | lte_{band}_site | INT | LTE各频段物理站点数 |
-| LTE小区 | lte_{band}_cell | INT | LTE各频段物理小区数 |
-| NR站点 | nr_{band}_site | INT | NR各频段物理站点数 |
-| NR小区 | nr_{band}_cell | INT | NR各频段物理小区数 |
-| 汇总站点 | lte_total_site | INT | LTE总站点数 (Generated) |
-| 汇总站点 | nr_total_site | INT | NR总站点数 (Generated) |
-| 汇总小区 | lte_total_cell | INT | LTE总小区数 (Generated Column) |
-| 汇总小区 | nr_total_cell | INT | NR总小区数 (Generated Column) |
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | 主键 |
+| operator_id | BIGINT | FK → operator_info.id | 运营商ID |
+| band_id | BIGINT | FK → band_info.id | 频段ID |
+| band_name | VARCHAR(50) | NOT NULL | 频段名称 (如 LTE 700M FDD) |
+| data_month | VARCHAR(7) | NOT NULL | 数据月份 (YYYY-MM) |
+| site_num | INT | DEFAULT 0 | 站点数量 |
+| cell_num | INT | DEFAULT 0 | 小区数量 |
+| technology | VARCHAR(10) | NOT NULL | 技术制式 LTE/NR |
 
-**频段枚举值**（采纳自OpenAPI enum定义）:
+**唯一索引**: `(operator_id, band_id, data_month)`
+
+**频段信息** (关联 band_info 表):
 
 | 网络类型 | 支持频段 |
 |----------|----------|
-| LTE | 700M, 800M, 900M, 1400M, 1800M, 2100M, 2600M |
-| NR (5G) | 700M, 800M, 900M, 1400M, 1800M, 2100M, 2600M, 3500M, 4900M, 2300M |
+| LTE | LTE700M_FDD, LTE800M_FDD, LTE900M_FDD, LTE1400M_FDD, LTE1800M_FDD, LTE2100M_FDD, LTE2300M_FDD, LTE2300M_TDD, LTE2600M_FDD, LTE2600M_TDD |
+| NR | NR700M_FDD, NR800M_FDD, NR900M_FDD, NR1400M_FDD, NR1800M_FDD, NR2100M_FDD, NR2300M_FDD, NR2300M_TDD, NR2600M_FDD, NR2600M_TDD, NR3500M_TDD, NR4900M_TDD |
 
-**Generated Column示例**（采纳自Google数据模型设计）:
+**宽表查询示例** (通过 JOIN 生成宽表视图):
 ```sql
-lte_total_cell INT GENERATED ALWAYS AS (
-    lte_700M_cell + lte_800M_cell + lte_900M_cell +
-    lte_1400M_cell + lte_1800M_cell + lte_2100M_cell + lte_2600M_cell
-) STORED
-
-nr_total_cell INT GENERATED ALWAYS AS (
-    nr_700M_cell + nr_800M_cell + nr_900M_cell +
-    nr_1400M_cell + nr_1800M_cell + nr_2100M_cell + nr_2600M_cell +
-    nr_3500M_cell + nr_4900M_cell + nr_2300M_cell
-) STORED
+SELECT
+    o.id AS operator_id,
+    ss.data_month,
+    MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN ss.site_num END) AS lte_700M_site,
+    MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN ss.cell_num END) AS lte_700M_cell,
+    ...
+FROM operator_info o
+LEFT JOIN site_info ss ON o.id = ss.operator_id
+LEFT JOIN band_info b ON ss.band_id = b.id
+GROUP BY o.id, ss.data_month
 ```
 
-**字段约束**:
-| 频段字段 | 约束规则 |
-|----------|----------|
-| *_site | >= 0, 表示站点数量 |
-| *_cell | >= 0, 表示小区数量 |
+#### 5.1.3 indicator_info (指标信息表)
 
-#### 5.1.3 indicator_info (指标信息宽表)
+**说明**: 规范化事实表，每行代表一个运营商在特定频段和月份的网络指标数据。
 
-**说明**: 存储网络性能指标，包含速率、PRB利用率、驻留比等关键指标
+| 字段 | 类型 | 约束 | 单位 | 说明 |
+|------|------|------|------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | - | 主键 |
+| operator_id | BIGINT | FK → operator_info.id | - | 运营商ID |
+| band_id | BIGINT | FK → band_info.id | - | 频段ID |
+| band_name | VARCHAR(50) | NOT NULL | - | 频段名称 (如 LTE 700M FDD) |
+| data_month | VARCHAR(7) | NOT NULL | - | 数据月份 (YYYY-MM) |
+| technology | VARCHAR(10) | NOT NULL | - | 技术制式 LTE/NR |
+| dl_prb | DECIMAL(10,5) | - | % | 下行PRB利用率 |
+| ul_prb | DECIMAL(10,5) | - | % | 上行PRB利用率 |
+| dl_rate | DECIMAL(10,2) | - | Mbps | 下行速率 |
+| ul_rate | DECIMAL(10,2) | - | Mbps | 上行速率 |
+| total_traffic | DECIMAL(15,2) | - | MB | 总流量 |
+| dl_traffic | DECIMAL(15,2) | - | MB | 下行流量 |
+| ul_traffic | DECIMAL(15,2) | - | MB | 上行流量 |
+| online_users | DECIMAL(10,2) | - | - | 在线用户数 |
+| nr_users | DECIMAL(10,2) | - | - | NR用户数 |
+| terminal_penetration_ratio | DECIMAL(10,4) | - | % | 终端渗透率 |
 
-| 字段类型 | 字段名模式 | 数据类型 | 单位 | 说明 |
-|----------|------------|----------|------|------|
-| LTE速率 | lte_{band}DlRate | DECIMAL(10,2) | Mbps | LTE各频段下行速率 |
-| LTE速率 | lte_{band}UlRate | DECIMAL(10,2) | Mbps | LTE各频段上行速率 |
-| LTE资源 | lte_{band}DlPrb | DECIMAL(5,2) | % | LTE各频段下行PRB利用率 |
-| LTE资源 | lte_{band}UlPrb | DECIMAL(5,2) | % | LTE各频段上行PRB利用率 |
-| NR速率 | nr_{band}DlRate | DECIMAL(10,2) | Mbps | NR各频段下行速率 |
-| NR速率 | nr_{band}UlRate | DECIMAL(10,2) | Mbps | NR各频段上行速率 |
-| NR资源 | nr_{band}DlPrb | DECIMAL(5,2) | % | NR各频段下行PRB利用率 |
-| NR资源 | nr_{band}UlPrb | DECIMAL(5,2) | % | NR各频段上行PRB利用率 |
-| LTE汇总 | lteAvgDlRate | DECIMAL(5,2) | % | LTE全网平均下行速率 |
-| LTE汇总 | lteAvgUlRate | DECIMAL(5,2) | % | LTE全网平均上行速率 |
-| LTE汇总 | lteAvgPrb | DECIMAL(5,2) | % | LTE全网平均PRB利用率 |
-| NR汇总 | nrAvgDlRate | DECIMAL(10,2) | % | NR全网平均下行速率 |
-| NR汇总 | nrAvgUlRate | DECIMAL(10,2) | % | NR全网平均上行速率 |
-| NR汇总 | nrAvgPrb | DECIMAL(5,2) | % | NR全网平均PRB利用率 |
-| 分流指标 | trafficRatio | DECIMAL(5,2) | % | 4G/5G分流比 |
-| 驻留指标 | dwellRatio | DECIMAL(5,2) | % | 5G驻留比 |
-| 驻留指标 | durationDwellRatio | DECIMAL(5,2) | % | 5G时长驻留比 |
-| 终端指标 | terminalPenetration | DECIMAL(5,2) | % | 5G终端渗透率 |
-| 回流指标 | fallbackRatio | DECIMAL(5,2) | % | 5G回流比 |
+**唯一索引**: `(operator_id, band_id, data_month)`
 
 **指标约束规则**（采纳自Google API Design数据验证）:
 
@@ -1101,20 +1108,7 @@ nr_total_cell INT GENERATED ALWAYS AS (
 |----------|----------|
 | *Rate (速率) | >= 0, <= 10000 Mbps |
 | *Prb (资源) | >= 0, <= 100 % |
-| Ratio/Prb类 | >= 0, <= 100 % |
-
-**示例数据**（采纳自OpenAPI example规范）:
-```json
-{
-    "operatorId": 1,
-    "dataMonth": "2026-03",
-    "lteAvgDlRate": 85.5,
-    "lteAvgPrb": 65.2,
-    "nrAvgDlRate": 420.8,
-    "nrAvgPrb": 58.3,
-    "trafficRatio": 35.5
-}
-```
+| Ratio类 | >= 0, <= 100 % |
 
 ### 5.2 前端数据结构
 
@@ -1571,6 +1565,7 @@ OperatorBoard/
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.3 | 2026-04-12 | 重构数据模型：规范化表结构，新增band_name字段，site_info/indicator_info/band_info表 |
 | 1.2 | 2026-04-11 | 增强错误处理(Stripe+GitHub)、API参数表、响应码矩阵、数据模型约束、ADR架构决策记录 |
 | 1.1 | 2026-04-11 | 更新数据格式：频段完整命名(LTE 700M)、Chart格式(空格分隔)、Toggle块结构 |
 | 1.0 | 2026-04-10 | 初始版本，整合所有模块规格 |
