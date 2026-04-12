@@ -463,7 +463,15 @@ public class PromptSanitizer {
 - id, operator_id, band_id, band_name, data_month, site_num, cell_num, technology
 
 **indicator_info 事实表字段:**
-- id, operator_id, band_id, band_name, data_month, technology, dl_prb, ul_prb, dl_rate, ul_rate, traffic, users, etc.
+- id, operator_id, band_id, band_name, data_month, technology
+- PRB: dl_prb, ul_prb
+- 速率: dl_rate, ul_rate
+- 流量: total_traffic, dl_traffic, ul_traffic
+- 用户: online_users, nr_users
+- 终端: terminal_penetration_ratio
+- **LTE汇总: lte_avg_dl_rate, lte_avg_ul_rate, lte_avg_dl_prb, lte_avg_ul_prb**
+- **NR汇总: nr_avg_dl_rate, nr_avg_ul_rate, nr_avg_dl_prb, nr_avg_ul_prb**
+- **分流比: traffic_ratio, duration_campratio, fallback_ratio**
 
 **band_info 频段列表:**
 - LTE: LTE700M_FDD, LTE800M_FDD, LTE900M_FDD, LTE1400M_FDD, LTE1800M_FDD, LTE2100M_FDD, LTE2300M_FDD, LTE2300M_TDD, LTE2600M_FDD, LTE2600M_TDD

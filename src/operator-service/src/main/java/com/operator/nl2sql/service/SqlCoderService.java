@@ -99,7 +99,7 @@ public class SqlCoderService {
         StringBuilder additionalContext = new StringBuilder();
         if (request != null) {
             if (Boolean.TRUE.equals(request.getLatest())) {
-                additionalContext.append("\nNote: Query the LATEST data (MAX data_time) for each cell.\n");
+                additionalContext.append("\nNote: Query the LATEST data (MAX data_month) for each entity. Use subquery: WHERE data_month = (SELECT MAX(data_month) FROM table_name WHERE ...).\n");
             }
             if (request.getStartTime() != null) {
                 additionalContext.append("\nStart Time: ").append(request.getStartTime().format(DATETIME_FORMATTER)).append("\n");
@@ -128,10 +128,11 @@ public class SqlCoderService {
                 Requirements:
                 - Only generate SELECT statements (no INSERT, UPDATE, DELETE, DROP, TRUNCATE)
                 - Use proper MySQL syntax
-                - Include appropriate JOINs if needed
+                - Include appropriate JOINs if needed (site_info.operator_id = operator_info.id)
                 - Add LIMIT clause to prevent excessive results (default 1000)
                 - Always use table aliases for clarity
-                - For time-based queries, filter on data_time column
+                - For time-based queries, filter on data_month column (format: YYYY-MM)
+                - For site/cell count queries, always filter to the LATEST month using subquery
 
                 Generated SQL:
                 """, schemaContext, additionalContext.toString(), nlQuery);

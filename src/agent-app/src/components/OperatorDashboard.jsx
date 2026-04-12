@@ -143,10 +143,10 @@ export default function OperatorDashboard() {
   const metrics = useMemo(() => {
     if (!latestIndicators.length) return null;
     const item = latestIndicators[0];
-    const avgDlPrb = parseFloat(item.lteAvgPrb || item.nrAvgPrb || 0);
-    const avgUlPrb = avgDlPrb * 1.1;
+    const avgDlPrb = parseFloat(item.lteAvgDlPrb || item.nrAvgDlPrb || 0);
+    const avgUlPrb = parseFloat(item.lteAvgUlPrb || item.nrAvgUlPrb || avgDlPrb * 1.1);
     const avgDlRate = parseFloat(item.lteAvgDlRate || item.nrAvgDlRate || 0);
-    const avgUlRate = avgDlRate * 0.2;
+    const avgUlRate = parseFloat(item.lteAvgUlRate || item.nrAvgUlRate || avgDlRate * 0.2);
     return { avgDlPrb, avgUlPrb, avgDlRate, avgUlRate };
   }, [latestIndicators]);
 

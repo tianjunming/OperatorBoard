@@ -99,9 +99,13 @@ public class IndicatorInfo {
 
     // 汇总指标
     private BigDecimal lteAvgDlRate;
-    private BigDecimal lteAvgPrb;
+    private BigDecimal lteAvgUlRate;
+    private BigDecimal lteAvgDlPrb;
+    private BigDecimal lteAvgUlPrb;
     private BigDecimal nrAvgDlRate;
-    private BigDecimal nrAvgPrb;
+    private BigDecimal nrAvgUlRate;
+    private BigDecimal nrAvgDlPrb;
+    private BigDecimal nrAvgUlPrb;
     private BigDecimal trafficRatio;
     private BigDecimal trafficCampratio;
     private BigDecimal terminalPenetration;

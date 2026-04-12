@@ -2,15 +2,33 @@
 
 本文档描述了 Agent Framework 和 Operator Agent 的 4+1 架构视图。
 
-## 目录
+## 文档概览
 
-1. [场景视图 (Scenario View)](01-scenario-view.md)
-2. [逻辑视图 (Logical View)](02-logical-view.md)
-3. [进程视图 (Process View)](03-process-view.md)
-4. [部署视图 (Deployment View)](04-deployment-view.md)
-5. [开发视图 (Development View)](05-development-view.md)
-6. [技术架构与选型](06-technical-architecture.md)
-7. [架构深度分析](07-architecture-analysis.md)
+### 统一设计文档 (推荐阅读)
+
+| 文档 | 描述 |
+|------|------|
+| [DESIGN.md](../DESIGN.md) | **完整设计文档** - 包含所有 4+1 视图、技术架构、测试规格的完整整合版本 |
+
+### 分章节视图
+
+| 视图 | 文档 |
+|------|------|
+| 场景视图 (Scenario View) | [01-scenario-view.md](01-scenario-view.md) |
+| 逻辑视图 (Logical View) | [02-logical-view.md](02-logical-view.md) |
+| 进程视图 (Process View) | [03-process-view.md](03-process-view.md) |
+| 部署视图 (Deployment View) | [04-deployment-view.md](04-deployment-view.md) |
+| 开发视图 (Development View) | [05-development-view.md](05-development-view.md) |
+| 技术架构与选型 | [06-technical-architecture.md](06-technical-architecture.md) |
+| 架构深度分析 | [07-architecture-analysis.md](07-architecture-analysis.md) |
+
+### 其他参考文档
+
+| 文档 | 描述 |
+|------|------|
+| [SPEC.md](../../SPEC.md) | 系统规格说明书 |
+| [README.md](../../README.md) | 项目自述文件 |
+| [CLAUDE.md](../../CLAUDE.md) | Claude Code 开发指南 |
 
 ---
 

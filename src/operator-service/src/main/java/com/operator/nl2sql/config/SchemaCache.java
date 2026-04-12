@@ -59,7 +59,11 @@ public class SchemaCache {
         sb.append("| updated_time | DATETIME | 更新时间 |\n\n");
 
         sb.append("## site_info (站点信息表-宽表)\n");
-        sb.append("每行 = 1个运营商 × 1个月\n\n");
+        sb.append("每行 = 1个运营商 × 1个月\n");
+        sb.append("| Column | Type | Description |\n");
+        sb.append("|--------|------|-------------|\n");
+        sb.append("| operator_id | BIGINT | 运营商ID (关联operator_info.id) |\n");
+        sb.append("| data_month | VARCHAR(7) | 数据月份 (YYYY-MM格式) |\n\n");
         sb.append("### LTE 频段字段 (站点/小区)\n");
         sb.append("| Column | Type | Description |\n");
         sb.append("|--------|------|-------------|\n");

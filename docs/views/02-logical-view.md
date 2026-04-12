@@ -524,5 +524,16 @@ public class IndicatorQueryService {
 | online_users | DECIMAL(10,2) | 在线用户数 |
 | nr_users | DECIMAL(10,2) | NR用户数 |
 | terminal_penetration_ratio | DECIMAL(10,4) | 终端渗透率 (%) |
+| **lte_avg_dl_rate** | DECIMAL(10,2) | LTE平均下行速率 (Mbps) |
+| **lte_avg_ul_rate** | DECIMAL(10,2) | LTE平均上行速率 (Mbps) |
+| **lte_avg_dl_prb** | DECIMAL(10,5) | LTE平均下行PRB利用率 (%) |
+| **lte_avg_ul_prb** | DECIMAL(10,5) | LTE平均上行PRB利用率 (%) |
+| **nr_avg_dl_rate** | DECIMAL(10,2) | NR平均下行速率 (Mbps) |
+| **nr_avg_ul_rate** | DECIMAL(10,2) | NR平均上行速率 (Mbps) |
+| **nr_avg_dl_prb** | DECIMAL(10,5) | NR平均下行PRB利用率 (%) |
+| **nr_avg_ul_prb** | DECIMAL(10,5) | NR平均上行PRB利用率 (%) |
+| **traffic_ratio** | DECIMAL(10,4) | 流量分流比 (NR流量/总流量) |
+| **duration_campratio** | DECIMAL(10,4) | 时长驻留比 (NR用户/总用户) |
+| **fallback_ratio** | DECIMAL(10,4) | 回流比 (LTE用户/总用户) |
 
 **唯一索引**: `uk_operator_band_month (operator_id, band_id, data_month)`

@@ -77,9 +77,13 @@
         <result property="nr2300MDlPrb" column="nr_2300M_dl_prb"/>
         <result property="nr2300MUlPrb" column="nr_2300M_ul_prb"/>
         <result property="lteAvgDlRate" column="lte_avg_dl_rate"/>
-        <result property="lteAvgPrb" column="lte_avg_prb"/>
+        <result property="lteAvgUlRate" column="lte_avg_ul_rate"/>
+        <result property="lteAvgDlPrb" column="lte_avg_dl_prb"/>
+        <result property="lteAvgUlPrb" column="lte_avg_ul_prb"/>
         <result property="nrAvgDlRate" column="nr_avg_dl_rate"/>
-        <result property="nrAvgPrb" column="nr_avg_prb"/>
+        <result property="nrAvgUlRate" column="nr_avg_ul_rate"/>
+        <result property="nrAvgDlPrb" column="nr_avg_dl_prb"/>
+        <result property="nrAvgUlPrb" column="nr_avg_ul_prb"/>
         <result property="trafficRatio" column="traffic_ratio"/>
         <result property="trafficCampratio" column="traffic_campratio"/>
         <result property="terminalPenetration" column="terminal_penetration"/>
@@ -162,9 +166,18 @@
             MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ni.ul_rate END) AS nr_2300M_ul_rate,
             MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ni.dl_prb END) AS nr_2300M_dl_prb,
             MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ni.ul_prb END) AS nr_2300M_ul_prb,
-            0 AS lte_avg_dl_rate, 0 AS lte_avg_prb, 0 AS nr_avg_dl_rate, 0 AS nr_avg_prb,
-            0 AS traffic_ratio, 0 AS traffic_campratio, 0 AS terminal_penetration,
-            0 AS duration_campratio, 0 AS fallback_ratio,
+            MAX(ni.lte_avg_dl_rate) AS lte_avg_dl_rate,
+            MAX(ni.lte_avg_ul_rate) AS lte_avg_ul_rate,
+            MAX(ni.lte_avg_dl_prb) AS lte_avg_dl_prb,
+            MAX(ni.lte_avg_ul_prb) AS lte_avg_ul_prb,
+            MAX(ni.nr_avg_dl_rate) AS nr_avg_dl_rate,
+            MAX(ni.nr_avg_ul_rate) AS nr_avg_ul_rate,
+            MAX(ni.nr_avg_dl_prb) AS nr_avg_dl_prb,
+            MAX(ni.nr_avg_ul_prb) AS nr_avg_ul_prb,
+            MAX(ni.traffic_ratio) AS traffic_ratio,
+            MAX(ni.duration_campratio) AS duration_campratio,
+            MAX(ni.fallback_ratio) AS fallback_ratio,
+            MAX(ni.terminal_penetration_ratio) AS terminal_penetration,
             NOW() AS created_time, NOW() AS updated_time
         FROM operator_info o
         LEFT JOIN indicator_info ni ON o.id = ni.operator_id
@@ -246,9 +259,18 @@
             MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ni.ul_rate END) AS nr_2300M_ul_rate,
             MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ni.dl_prb END) AS nr_2300M_dl_prb,
             MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ni.ul_prb END) AS nr_2300M_ul_prb,
-            0 AS lte_avg_dl_rate, 0 AS lte_avg_prb, 0 AS nr_avg_dl_rate, 0 AS nr_avg_prb,
-            0 AS traffic_ratio, 0 AS traffic_campratio, 0 AS terminal_penetration,
-            0 AS duration_campratio, 0 AS fallback_ratio,
+            MAX(ni.lte_avg_dl_rate) AS lte_avg_dl_rate,
+            MAX(ni.lte_avg_ul_rate) AS lte_avg_ul_rate,
+            MAX(ni.lte_avg_dl_prb) AS lte_avg_dl_prb,
+            MAX(ni.lte_avg_ul_prb) AS lte_avg_ul_prb,
+            MAX(ni.nr_avg_dl_rate) AS nr_avg_dl_rate,
+            MAX(ni.nr_avg_ul_rate) AS nr_avg_ul_rate,
+            MAX(ni.nr_avg_dl_prb) AS nr_avg_dl_prb,
+            MAX(ni.nr_avg_ul_prb) AS nr_avg_ul_prb,
+            MAX(ni.traffic_ratio) AS traffic_ratio,
+            MAX(ni.duration_campratio) AS duration_campratio,
+            MAX(ni.fallback_ratio) AS fallback_ratio,
+            MAX(ni.terminal_penetration_ratio) AS terminal_penetration,
             NOW() AS created_time, NOW() AS updated_time
         FROM operator_info o
         LEFT JOIN indicator_info ni ON o.id = ni.operator_id
@@ -334,9 +356,18 @@
             MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ni.ul_rate END) AS nr_2300M_ul_rate,
             MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ni.dl_prb END) AS nr_2300M_dl_prb,
             MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ni.ul_prb END) AS nr_2300M_ul_prb,
-            0 AS lte_avg_dl_rate, 0 AS lte_avg_prb, 0 AS nr_avg_dl_rate, 0 AS nr_avg_prb,
-            0 AS traffic_ratio, 0 AS traffic_campratio, 0 AS terminal_penetration,
-            0 AS duration_campratio, 0 AS fallback_ratio,
+            MAX(ni.lte_avg_dl_rate) AS lte_avg_dl_rate,
+            MAX(ni.lte_avg_ul_rate) AS lte_avg_ul_rate,
+            MAX(ni.lte_avg_dl_prb) AS lte_avg_dl_prb,
+            MAX(ni.lte_avg_ul_prb) AS lte_avg_ul_prb,
+            MAX(ni.nr_avg_dl_rate) AS nr_avg_dl_rate,
+            MAX(ni.nr_avg_ul_rate) AS nr_avg_ul_rate,
+            MAX(ni.nr_avg_dl_prb) AS nr_avg_dl_prb,
+            MAX(ni.nr_avg_ul_prb) AS nr_avg_ul_prb,
+            MAX(ni.traffic_ratio) AS traffic_ratio,
+            MAX(ni.duration_campratio) AS duration_campratio,
+            MAX(ni.fallback_ratio) AS fallback_ratio,
+            MAX(ni.terminal_penetration_ratio) AS terminal_penetration,
             NOW() AS created_time, NOW() AS updated_time
         FROM operator_info o
         LEFT JOIN indicator_info ni ON o.id = ni.operator_id
@@ -419,9 +450,18 @@
             MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ni.ul_rate END) AS nr_2300M_ul_rate,
             MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ni.dl_prb END) AS nr_2300M_dl_prb,
             MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ni.ul_prb END) AS nr_2300M_ul_prb,
-            0 AS lte_avg_dl_rate, 0 AS lte_avg_prb, 0 AS nr_avg_dl_rate, 0 AS nr_avg_prb,
-            0 AS traffic_ratio, 0 AS traffic_campratio, 0 AS terminal_penetration,
-            0 AS duration_campratio, 0 AS fallback_ratio,
+            MAX(ni.lte_avg_dl_rate) AS lte_avg_dl_rate,
+            MAX(ni.lte_avg_ul_rate) AS lte_avg_ul_rate,
+            MAX(ni.lte_avg_dl_prb) AS lte_avg_dl_prb,
+            MAX(ni.lte_avg_ul_prb) AS lte_avg_ul_prb,
+            MAX(ni.nr_avg_dl_rate) AS nr_avg_dl_rate,
+            MAX(ni.nr_avg_ul_rate) AS nr_avg_ul_rate,
+            MAX(ni.nr_avg_dl_prb) AS nr_avg_dl_prb,
+            MAX(ni.nr_avg_ul_prb) AS nr_avg_ul_prb,
+            MAX(ni.traffic_ratio) AS traffic_ratio,
+            MAX(ni.duration_campratio) AS duration_campratio,
+            MAX(ni.fallback_ratio) AS fallback_ratio,
+            MAX(ni.terminal_penetration_ratio) AS terminal_penetration,
             NOW() AS created_time, NOW() AS updated_time
         FROM operator_info o
         LEFT JOIN indicator_info ni ON o.id = ni.operator_id
@@ -503,9 +543,18 @@
             MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ni.ul_rate END) AS nr_2300M_ul_rate,
             MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ni.dl_prb END) AS nr_2300M_dl_prb,
             MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN ni.ul_prb END) AS nr_2300M_ul_prb,
-            0 AS lte_avg_dl_rate, 0 AS lte_avg_prb, 0 AS nr_avg_dl_rate, 0 AS nr_avg_prb,
-            0 AS traffic_ratio, 0 AS traffic_campratio, 0 AS terminal_penetration,
-            0 AS duration_campratio, 0 AS fallback_ratio,
+            MAX(ni.lte_avg_dl_rate) AS lte_avg_dl_rate,
+            MAX(ni.lte_avg_ul_rate) AS lte_avg_ul_rate,
+            MAX(ni.lte_avg_dl_prb) AS lte_avg_dl_prb,
+            MAX(ni.lte_avg_ul_prb) AS lte_avg_ul_prb,
+            MAX(ni.nr_avg_dl_rate) AS nr_avg_dl_rate,
+            MAX(ni.nr_avg_ul_rate) AS nr_avg_ul_rate,
+            MAX(ni.nr_avg_dl_prb) AS nr_avg_dl_prb,
+            MAX(ni.nr_avg_ul_prb) AS nr_avg_ul_prb,
+            MAX(ni.traffic_ratio) AS traffic_ratio,
+            MAX(ni.duration_campratio) AS duration_campratio,
+            MAX(ni.fallback_ratio) AS fallback_ratio,
+            MAX(ni.terminal_penetration_ratio) AS terminal_penetration,
             NOW() AS created_time, NOW() AS updated_time
         FROM operator_info o
         LEFT JOIN indicator_info ni ON o.id = ni.operator_id

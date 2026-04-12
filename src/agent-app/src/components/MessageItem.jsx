@@ -603,34 +603,36 @@ function MessageItem({ message, onResend, isStreaming, onFeedback }) {
   );
 
   // SQL Renderer
-  const [sqlCopied, setSqlCopied] = useState(false);
-  const handleSqlCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(block.sql);
-      setSqlCopied(true);
-      setTimeout(() => setSqlCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy SQL:', err);
-    }
-  }, [block.sql]);
+  const renderSql = (block) => {
+    const [sqlCopied, setSqlCopied] = useState(false);
+    const handleSqlCopy = useCallback(async () => {
+      try {
+        await navigator.clipboard.writeText(block.sql);
+        setSqlCopied(true);
+        setTimeout(() => setSqlCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy SQL:', err);
+      }
+    }, [block.sql]);
 
-  const renderSql = (block) => (
-    <div className="structured-sql">
-      <div className="sql-header">
-        <Code2 size={14} />
-        <span>SQL 查询</span>
-        <button
-          className="sql-copy-btn"
-          onClick={handleSqlCopy}
-          aria-label={sqlCopied ? '已复制' : '复制SQL'}
-          title={sqlCopied ? '已复制' : '复制SQL'}
-        >
-          {sqlCopied ? <Check size={12} /> : <Copy size={12} />}
-        </button>
+    return (
+      <div className="structured-sql">
+        <div className="sql-header">
+          <Code2 size={14} />
+          <span>SQL 查询</span>
+          <button
+            className="sql-copy-btn"
+            onClick={handleSqlCopy}
+            aria-label={sqlCopied ? '已复制' : '复制SQL'}
+            title={sqlCopied ? '已复制' : '复制SQL'}
+          >
+            {sqlCopied ? <Check size={12} /> : <Copy size={12} />}
+          </button>
+        </div>
+        <pre className="sql-content">{block.sql}</pre>
       </div>
-      <pre className="sql-content">{block.sql}</pre>
-    </div>
-  );
+    );
+  };
 
   // Text/Markdown Renderer
   const renderText = (text) => (

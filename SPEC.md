@@ -649,10 +649,18 @@ data: {"type": "done", "request_id": "req_abc123"}
         "operatorId": 1,
         "operatorName": "中国联通",
         "dataMonth": "2026-03",
-        "lteAvgDlRate": 85.5,
-        "lteAvgPrb": 65.2,
-        "nrAvgDlRate": 420.8,
-        "nrAvgPrb": 58.3
+        "lteAvgDlRate": 126.87,
+        "lteAvgUlRate": 23.85,
+        "lteAvgDlPrb": 49.04,
+        "lteAvgUlPrb": 50.68,
+        "nrAvgDlRate": 301.74,
+        "nrAvgUlRate": 56.42,
+        "nrAvgDlPrb": 40.21,
+        "nrAvgUlPrb": 40.92,
+        "trafficRatio": 0.7725,
+        "terminalPenetration": 0.8732,
+        "durationCampratio": 0.093,
+        "fallbackRatio": 0.6849
     }
 }
 ```
@@ -885,15 +893,18 @@ GET /api/v1/query/indicators/latest?operatorId=1
         "operatorId": 1,
         "operatorName": "中国联通",
         "dataMonth": "2026-03",
-        "lteAvgDlRate": 85.5,
-        "lteAvgUlRate": 12.3,
-        "lteAvgPrb": 65.2,
-        "nrAvgDlRate": 420.8,
-        "nrAvgUlRate": 58.3,
-        "nrAvgPrb": 58.3,
-        "trafficRatio": 35.5,
-        "dwellRatio": 98.2,
-        "durationDwellRatio": 95.6
+        "lteAvgDlRate": 126.87,
+        "lteAvgUlRate": 23.85,
+        "lteAvgDlPrb": 49.04,
+        "lteAvgUlPrb": 50.68,
+        "nrAvgDlRate": 301.74,
+        "nrAvgUlRate": 56.42,
+        "nrAvgDlPrb": 40.21,
+        "nrAvgUlPrb": 40.92,
+        "trafficRatio": 0.7725,
+        "terminalPenetration": 0.8732,
+        "durationCampratio": 0.093,
+        "fallbackRatio": 0.6849
     }
 }
 ```
@@ -1101,6 +1112,17 @@ GROUP BY o.id, ss.data_month
 | online_users | DECIMAL(10,2) | - | - | 在线用户数 |
 | nr_users | DECIMAL(10,2) | - | - | NR用户数 |
 | terminal_penetration_ratio | DECIMAL(10,4) | - | % | 终端渗透率 |
+| **lte_avg_dl_rate** | DECIMAL(10,2) | - | Mbps | LTE平均下行速率 |
+| **lte_avg_ul_rate** | DECIMAL(10,2) | - | Mbps | LTE平均上行速率 |
+| **lte_avg_dl_prb** | DECIMAL(10,5) | - | % | LTE平均下行PRB利用率 |
+| **lte_avg_ul_prb** | DECIMAL(10,5) | - | % | LTE平均上行PRB利用率 |
+| **nr_avg_dl_rate** | DECIMAL(10,2) | - | Mbps | NR平均下行速率 |
+| **nr_avg_ul_rate** | DECIMAL(10,2) | - | Mbps | NR平均上行速率 |
+| **nr_avg_dl_prb** | DECIMAL(10,5) | - | % | NR平均下行PRB利用率 |
+| **nr_avg_ul_prb** | DECIMAL(10,5) | - | % | NR平均上行PRB利用率 |
+| **traffic_ratio** | DECIMAL(10,4) | - | - | 流量分流比 (NR流量/总流量) |
+| **duration_campratio** | DECIMAL(10,4) | - | - | 时长驻留比 (NR用户/总用户) |
+| **fallback_ratio** | DECIMAL(10,4) | - | - | 回流比 (LTE用户/总用户) |
 
 **唯一索引**: `(operator_id, band_id, data_month)`
 
@@ -1678,6 +1700,7 @@ OperatorBoard/
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.4 | 2026-04-12 | 新增indicator_info汇总指标字段：lte_avg_*、nr_avg_*、traffic_ratio、duration_campratio、fallback_ratio |
 | 1.3 | 2026-04-12 | 重构数据模型：规范化表结构，新增band_name字段，site_info/indicator_info/band_info表 |
 | 1.2 | 2026-04-11 | 增强错误处理(Stripe+GitHub)、API参数表、响应码矩阵、数据模型约束、ADR架构决策记录 |
 | 1.1 | 2026-04-11 | 更新数据格式：频段完整命名(LTE 700M)、Chart格式(空格分隔)、Toggle块结构 |
