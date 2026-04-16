@@ -81,6 +81,12 @@ function AuthLogin() {
             {loading ? '登录中...' : '登录'}
           </button>
         </form>
+
+        <div className="auth-footer">
+          <a href="/register" className="auth-link">立即注册</a>
+          <span className="auth-link-divider">|</span>
+          <span className="auth-hint-text">（注册后需管理员审批）</span>
+        </div>
       </div>
     </div>
   );

@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { Check, X, Clock } from 'lucide-react';
 
 const API_BASE = '/api';
 
 function UserManagement() {
-  const { token, hasPermission } = useAuth();
+  const { token, hasPermission, isSuperuser } = useAuth();
+  const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
+  const [pendingUsers, setPendingUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectingUser, setRejectingUser] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -25,13 +31,17 @@ function UserManagement() {
   const canUpdate = hasPermission('system:user:update');
   const canDelete = hasPermission('system:user:delete');
   const canAssignRoles = hasPermission('system:user:assign-roles');
+  const canApprove = isSuperuser;
 
   useEffect(() => {
     if (canList) {
       fetchUsers();
       fetchRoles();
     }
-  }, [canList]);
+    if (canApprove) {
+      fetchPendingUsers();
+    }
+  }, [canList, canApprove]);
 
   const fetchUsers = async () => {
     try {
@@ -62,6 +72,72 @@ function UserManagement() {
       }
     } catch (err) {
       console.error('Failed to fetch roles:', err);
+    }
+  };
+
+  const fetchPendingUsers = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/approvals/pending`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPendingUsers(data.items || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch pending users:', err);
+    }
+  };
+
+  const handleApprove = async (userId) => {
+    if (!confirm('确定要批准该用户吗？批准后用户即可登录。')) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/auth/approvals/approve/${userId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || '批准失败');
+      }
+
+      fetchPendingUsers();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleRejectClick = (user) => {
+    setRejectingUser(user);
+    setRejectReason('');
+    setShowRejectModal(true);
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!rejectingUser) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/auth/approvals/reject/${rejectingUser.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason: rejectReason || null }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || '拒绝失败');
+      }
+
+      setShowRejectModal(false);
+      setRejectingUser(null);
+      fetchPendingUsers();
+    } catch (err) {
+      setError(err.message);
     }
   };
 
@@ -188,16 +264,37 @@ function UserManagement() {
     <div className="user-management">
       <div className="management-header">
         <h3>用户管理</h3>
-        {canCreate && (
+        {canCreate && activeTab === 'users' && (
           <button className="btn-primary" onClick={handleCreate}>
             创建用户
           </button>
         )}
       </div>
 
+      {canApprove && (
+        <div className="sub-tabs">
+          <button
+            className={`sub-tab ${activeTab === 'users' ? 'active' : ''}`}
+            onClick={() => setActiveTab('users')}
+          >
+            用户列表
+          </button>
+          <button
+            className={`sub-tab ${activeTab === 'pending' ? 'active' : ''}`}
+            onClick={() => setActiveTab('pending')}
+          >
+            注册审批
+            {pendingUsers.length > 0 && (
+              <span className="badge">{pendingUsers.length}</span>
+            )}
+          </button>
+        </div>
+      )}
+
       {error && <div className="error-message">{error}</div>}
 
-      <table className="data-table">
+      {activeTab === 'users' && (
+        <table className="data-table">
         <thead>
           <tr>
             <th>ID</th>
@@ -247,6 +344,63 @@ function UserManagement() {
           ))}
         </tbody>
       </table>
+      )}
+
+      {activeTab === 'pending' && (
+        <div className="pending-approvals">
+          {pendingUsers.length === 0 ? (
+            <div className="empty-state">
+              <p>暂无待审批的用户</p>
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>用户名</th>
+                  <th>姓名</th>
+                  <th>邮箱</th>
+                  <th>注册时间</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingUsers.map((user) => (
+                  <tr key={user.id}>
+                    <td>{user.id}</td>
+                    <td>{user.username}</td>
+                    <td>{user.full_name || '-'}</td>
+                    <td>{user.email || '-'}</td>
+                    <td>{user.created_at ? new Date(user.created_at).toLocaleString('zh-CN') : '-'}</td>
+                    <td>
+                      <span className="status-badge status-pending">
+                        <Clock size={14} /> 待审批
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        className="btn-small btn-success"
+                        onClick={() => handleApprove(user.id)}
+                        title="批准"
+                      >
+                        <Check size={14} /> 批准
+                      </button>
+                      <button
+                        className="btn-small btn-danger"
+                        onClick={() => handleRejectClick(user)}
+                        title="拒绝"
+                      >
+                        <X size={14} /> 拒绝
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {showModal && (
         <div className="modal-overlay">
@@ -333,6 +487,41 @@ function UserManagement() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showRejectModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h4>拒绝用户注册</h4>
+            <p>确定要拒绝用户 <strong>{rejectingUser?.username}</strong> 的注册申请吗？</p>
+            <div className="form-group">
+              <label>拒绝原因（可选）</label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="请输入拒绝原因..."
+                rows={3}
+                style={{ width: '100%', padding: '8px', marginTop: '8px' }}
+              />
+            </div>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowRejectModal(false)}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="btn-danger"
+                onClick={handleRejectConfirm}
+              >
+                确认拒绝
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -266,7 +266,7 @@ test.describe('功能1-7: 单运营商站点/小区/指标查询', () => {
         } else if (query.sqlKey === 'cell_count') {
           uiValue = extractNumberFromContent(content, [/总小区[：:]\s*(\d+)/, /小区数[：:]\s*(\d+)/]);
           if (uiValue !== null) {
-            const dbTotal = (dbResult.lte_total_cell || 0) + (dbResult.nr_total_cell || 0);
+            const dbTotal = (dbResult.lte_physical_cell_num || 0) + (dbResult.nr_physical_cell_num || 0);
             console.log(`  小区数 - UI: ${uiValue}, DB: ${dbTotal}, 一致: ${uiValue === dbTotal}`);
             expect(uiValue).toBe(dbTotal);
           }
@@ -378,8 +378,8 @@ test.describe('完整调用链验证', () => {
     console.log('\n=== 数据库预期结果 ===');
     console.log(`  LTE站点: ${dbSiteData?.lte_total_site || 0}`);
     console.log(`  NR站点: ${dbSiteData?.nr_total_site || 0}`);
-    console.log(`  LTE小区: ${dbSiteData?.lte_total_cell || 0}`);
-    console.log(`  NR小区: ${dbSiteData?.nr_total_cell || 0}`);
+    console.log(`  LTE小区: ${dbSiteData?.lte_physical_cell_num || 0}`);
+    console.log(`  NR小区: ${dbSiteData?.nr_physical_cell_num || 0}`);
 
     // 2. 发送UI查询
     const chatInput = page.locator('textarea').first();
@@ -419,11 +419,11 @@ test.describe('完整调用链验证', () => {
     const testQueries = [
       { name: '中国联通有多少站点', dbCheck: async () => {
         const data = await getSiteCellData(OPERATOR_IDS['中国联通']);
-        return data ? (data.lte_total_site + data.nr_total_site) : null;
+        return data ? (data.lte_physical_site_num + data.nr_physical_site_num) : null;
       }},
       { name: '中国联通有多少小区', dbCheck: async () => {
         const data = await getSiteCellData(OPERATOR_IDS['中国联通']);
-        return data ? (data.lte_total_cell + data.nr_total_cell) : null;
+        return data ? (data.lte_physical_cell_num + data.nr_physical_cell_num) : null;
       }},
       { name: '查看所有运营商', dbCheck: async () => {
         const ops = await getChineseOperators();
@@ -575,8 +575,8 @@ test.describe('数据库一致性端到端验证', () => {
     const operatorId = OPERATOR_IDS['中国联通'];
     const dbData = await getSiteCellData(operatorId);
 
-    const expectedLteCells = dbData.lte_total_cell;
-    const expectedNrCells = dbData.nr_total_cell;
+    const expectedLteCells = dbData.lte_physical_cell_num;
+    const expectedNrCells = dbData.nr_physical_cell_num;
     const expectedTotal = expectedLteCells + expectedNrCells;
 
     console.log('\n=== 功能2: 中国联通小区数 ===');

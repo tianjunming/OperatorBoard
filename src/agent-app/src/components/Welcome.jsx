@@ -25,7 +25,7 @@ const EXAMPLE_CATEGORIES = [
     label: '站点查询',
     icon: Globe,
     examples: [
-      '北京联通有多少站点？',
+      '中国联通有多少站点？',
       '各运营商5G站点排名',
     ],
   },

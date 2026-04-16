@@ -382,3 +382,44 @@ export async function fetchCapabilities() {
     return { error: error.message };
   }
 }
+
+// ============== Band Indicator API ==============
+
+export async function fetchBandIndicator(params) {
+  const query = new URLSearchParams();
+  if (params.operatorId) query.append('operatorId', params.operatorId);
+  if (params.operatorName) query.append('operatorName', params.operatorName);
+  if (params.band) query.append('band', params.band);
+  if (params.networkType) query.append('networkType', params.networkType);
+
+  const response = await fetch(`${API_BASE_ORIG}/nl2sql/indicators/band?${query}`, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || error.error || 'Failed to fetch band indicator');
+  }
+
+  return await response.json();
+}
+
+// ============== Operator Metrics API ==============
+
+export async function fetchOperatorMetrics(params) {
+  const query = new URLSearchParams();
+  if (params.operatorId) query.append('operatorId', params.operatorId);
+  if (params.operatorName) query.append('operatorName', params.operatorName);
+  if (params.dataMonth) query.append('dataMonth', params.dataMonth);
+
+  const response = await fetch(`${API_BASE_ORIG}/nl2sql/indicators/metrics?${query}`, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || error.error || 'Failed to fetch operator metrics');
+  }
+
+  return await response.json();
+}

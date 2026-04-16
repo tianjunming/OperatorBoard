@@ -97,6 +97,96 @@ class AuthAgentServer(BaseAgentServer):
             finally:
                 db.close()
 
+        @auth_router.post("/register")
+        async def register(request: "UserRegisterRequest"):
+            """User self-registration (creates pending user)."""
+            db = self.db.get_session()
+            try:
+                service = UserService(db, self._jwt_manager)
+                # Check if username exists
+                if service.get_user_by_username(request.username):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Username already exists",
+                    )
+                user = service.create_pending_user(request)
+                return {
+                    "message": "Registration submitted. Please wait for admin approval.",
+                    "user_id": user.id,
+                    "status": "pending",
+                }
+            finally:
+                db.close()
+
+        # Approval management routes (superadmin only)
+        @auth_router.get("/approvals/pending")
+        async def list_pending_users(
+            skip: int = 0,
+            limit: int = 100,
+            current_user: CurrentUser = Depends(require_superuser),
+        ):
+            """Get all pending users for approval."""
+            db = self.db.get_session()
+            try:
+                service = UserService(db, self._jwt_manager)
+                users, total = service.get_pending_users(skip, limit)
+                return {
+                    "items": [
+                        {
+                            "id": u.id,
+                            "username": u.username,
+                            "email": u.email,
+                            "full_name": u.full_name,
+                            "approval_status": u.approval_status,
+                            "created_at": u.created_at.isoformat() if u.created_at else None,
+                        }
+                        for u in users
+                    ],
+                    "total": total,
+                }
+            finally:
+                db.close()
+
+        @auth_router.post("/approvals/approve/{user_id}")
+        async def approve_user(
+            user_id: int,
+            current_user: CurrentUser = Depends(require_superuser),
+        ) -> dict:
+            """Approve a pending user."""
+            db = self.db.get_session()
+            try:
+                service = UserService(db, self._jwt_manager)
+                user = service.approve_user(user_id, current_user.id)
+                if not user:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Pending user not found",
+                    )
+                return {"message": "User approved successfully", "user_id": user_id}
+            finally:
+                db.close()
+
+        @auth_router.post("/approvals/reject/{user_id}")
+        async def reject_user(
+            user_id: int,
+            request: "ApprovalRequest" = None,
+            current_user: CurrentUser = Depends(require_superuser),
+        ) -> dict:
+            """Reject a pending user."""
+            db = self.db.get_session()
+            try:
+                service = UserService(db, self._jwt_manager)
+                reason = request.reason if request else None
+                user = service.reject_user(user_id, current_user.id, reason)
+                if not user:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Pending user not found",
+                    )
+                return {"message": "User rejected", "user_id": user_id}
+            finally:
+                db.close()
+
         self._app.include_router(auth_router)
 
         # User management routes
@@ -421,6 +511,7 @@ class AuthAgentServer(BaseAgentServer):
 
 # Import models for type hints
 from .models import (
+    ApprovalRequest,
     ChatMessageCreate,
     ChatMessageListResponse,
     ChatMessageResponse,
@@ -431,6 +522,7 @@ from .models import (
     ChatSessionUpdate,
     LoginRequest,
     LoginResponse,
+    PendingUserListResponse,
     PermissionTreeResponse,
     RefreshTokenRequest,
     RoleCreate,
@@ -440,10 +532,17 @@ from .models import (
     RoleUpdate,
     UserCreate,
     UserListResponse,
+    UserRegisterRequest,
+    UserRegisterResponse,
     UserResponse,
     UserRoleAssign,
     UserUpdate,
 )
+
+# Rebuild models to ensure forward references are resolved
+UserRegisterRequest.model_rebuild()
+UserRegisterResponse.model_rebuild()
+PendingUserListResponse.model_rebuild()
 
 
 def main():

@@ -4,6 +4,7 @@ import ChatView from './components/ChatView';
 import OperatorDashboard from './components/OperatorDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import AuthLogin from './components/AuthLogin';
+import AuthRegister from './components/AuthRegister';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ChatProvider } from './context/ChatContext';
@@ -16,6 +17,9 @@ function AppContent() {
   const [view, setView] = useState('chat');
   const { locale, toggleLocale, t } = useI18n();
 
+  // Handle registration route
+  const isRegisterPage = window.location.pathname === '/register';
+
   const handleNavigate = (newView) => {
     if (newView === 'admin' && !isSuperuser) {
       alert('您没有权限访问管理面板。');
@@ -23,6 +27,10 @@ function AppContent() {
     }
     setView(newView);
   };
+
+  if (isRegisterPage) {
+    return <AuthRegister />;
+  }
 
   if (!isAuthenticated) {
     return <AuthLogin />;

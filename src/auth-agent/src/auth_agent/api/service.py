@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from .auth import JWTManager
 from .models import (
+    ApprovalRequest,
     ChatMessageCreate,
     ChatMessageListResponse,
     ChatMessageResponse,
@@ -16,11 +17,15 @@ from .models import (
     ChatSessionUpdate,
     CurrentUser,
     LoginResponse,
+    PendingUserListResponse,
+    PendingUserResponse,
     RoleCreate,
     RolePermissionAssign,
     RoleUpdate,
     UserCreate,
     UserPasswordUpdate,
+    UserRegisterRequest,
+    UserRegisterResponse,
     UserRoleAssign,
     UserUpdate,
 )
@@ -41,6 +46,8 @@ class AuthService:
         if not user:
             return None
         if not user.is_active:
+            return None
+        if not user.is_approved:
             return None
         if not self.jwt.verify_password(password, user.password_hash):
             return None
@@ -179,6 +186,8 @@ class UserService:
             email=data.email,
             full_name=data.full_name,
             is_active=data.is_active,
+            is_approved=True,
+            approval_status='approved',
         )
         self.db.add(user)
         self.db.flush()
@@ -187,6 +196,64 @@ class UserService:
         if data.role_ids:
             roles = self.db.query(AuthRole).filter(AuthRole.id.in_(data.role_ids)).all()
             user.roles = roles
+
+        self.db.commit()
+        self.db.refresh(user)
+        return user
+
+    def create_pending_user(self, data: UserRegisterRequest) -> AuthUser:
+        """Create a new pending user (for self-registration)."""
+        user = AuthUser(
+            username=data.username,
+            password_hash=self.jwt.hash_password(data.password),
+            email=data.email,
+            full_name=data.full_name,
+            is_active=True,
+            is_approved=False,
+            approval_status='pending',
+        )
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+        return user
+
+    def get_pending_users(self, skip: int = 0, limit: int = 100) -> tuple:
+        """Get all pending users."""
+        query = (
+            self.db.query(AuthUser)
+            .filter(AuthUser.approval_status == 'pending')
+            .filter(AuthUser.is_approved == False)
+        )
+        total = query.count()
+        users = query.offset(skip).limit(limit).all()
+        return users, total
+
+    def approve_user(self, user_id: int, approver_id: int) -> Optional[AuthUser]:
+        """Approve a pending user."""
+        user = self.get_user_by_id(user_id)
+        if not user or user.approval_status != 'pending':
+            return None
+
+        user.is_approved = True
+        user.approval_status = 'approved'
+        user.approved_by = approver_id
+        user.approved_at = datetime.now()
+
+        self.db.commit()
+        self.db.refresh(user)
+        return user
+
+    def reject_user(self, user_id: int, approver_id: int, reason: Optional[str] = None) -> Optional[AuthUser]:
+        """Reject a pending user."""
+        user = self.get_user_by_id(user_id)
+        if not user or user.approval_status != 'pending':
+            return None
+
+        user.is_approved = False
+        user.approval_status = 'rejected'
+        user.approved_by = approver_id
+        user.approved_at = datetime.now()
+        user.rejection_reason = reason
 
         self.db.commit()
         self.db.refresh(user)

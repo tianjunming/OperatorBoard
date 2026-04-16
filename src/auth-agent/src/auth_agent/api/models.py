@@ -27,6 +27,45 @@ class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
 
+class UserRegisterRequest(BaseModel):
+    """User registration request model."""
+    username: str = Field(..., min_length=1, max_length=50)
+    password: str = Field(..., min_length=6)
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+
+
+class UserRegisterResponse(BaseModel):
+    """User registration response model."""
+    message: str
+    user_id: int
+    status: str
+
+
+class ApprovalRequest(BaseModel):
+    """Approval/rejection request model."""
+    reason: Optional[str] = None
+
+
+class PendingUserResponse(BaseModel):
+    """Pending user response model."""
+    id: int
+    username: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    approval_status: str
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PendingUserListResponse(BaseModel):
+    """Pending user list response."""
+    items: List[PendingUserResponse]
+    total: int
+
+
 class TokenPayload(BaseModel):
     """JWT token payload."""
     sub: str  # user_id
@@ -269,3 +308,9 @@ class ChatMessageListResponse(BaseModel):
     """Chat message list response."""
     items: List[ChatMessageResponse]
     total: int
+
+
+# Update forward references
+UserResponse.model_rebuild()
+RoleResponse.model_rebuild()
+PendingUserListResponse.model_rebuild()

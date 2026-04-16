@@ -13,8 +13,8 @@ const DB_CONFIG = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '3306'),
   user: process.env.DB_USERNAME || 'root',
-  password: process.env.DB_PASSWORD || 'password',
-  database: process.env.DB_NAME || 'operator_board',
+  password: process.env.DB_PASSWORD || 'test',
+  database: process.env.DB_NAME || 'operator_db',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -148,6 +148,22 @@ export const INDICATOR_FIELD_MAP = {
   '流量驻留比': 'trafficCampratio',
   '终端渗透率': 'terminalPenetration',
   '切换驻留比': 'fallbackRatio',
+};
+
+// 汇总指标字段映射 (用于 /metrics API 验证)
+export const METRICS_FIELD_MAP = {
+  '分流比': 'trafficRatio',
+  '时长驻留比': 'durationCampRatio',
+  '终端渗透率': 'terminalPenetration',
+  '回流比': 'fallbackRatio',
+  'LTE平均下行速率': 'lteAvgDlRate',
+  'LTE平均上行速率': 'lteAvgUlRate',
+  'LTE平均下行PRB': 'lteAvgDlPrb',
+  'LTE平均上行PRB': 'lteAvgUlPrb',
+  'NR平均下行速率': 'nrAvgDlRate',
+  'NR平均上行速率': 'nrAvgUlRate',
+  'NR平均下行PRB': 'nrAvgDlPrb',
+  'NR平均上行PRB': 'nrAvgUlPrb',
 };
 
 /**
@@ -827,6 +843,143 @@ export async function getAllOperatorsIndicatorsLatestFromDB() {
       GROUP BY o.id, ni.data_month
       ORDER BY o.id
     `);
+    return rows;
+  } finally {
+    conn.release();
+  }
+}
+
+/**
+ * 获取运营商级别汇总指标（分流比、驻留比、终端渗透率等）
+ * 对应 /metrics API 返回的 OperatorMetricsResponse
+ * @param {number} operatorId - 运营商 ID
+ * @param {string} dataMonth - 数据月份 (YYYY-MM)，如果为null则查询最新月份
+ * @returns {Promise<Object|null>}
+ */
+export async function getOperatorMetricsFromDB(operatorId, dataMonth) {
+  const conn = await createConnection();
+  try {
+    let query;
+    let params;
+
+    if (dataMonth && dataMonth.trim() !== '') {
+      query = `
+        SELECT
+          o.id AS operator_id,
+          o.operator_name,
+          ni.data_month,
+          MAX(ni.traffic_ratio) AS trafficRatio,
+          MAX(ni.duration_campratio) AS durationCampRatio,
+          MAX(ni.terminal_penetration_ratio) AS terminalPenetration,
+          MAX(ni.fallback_ratio) AS fallbackRatio,
+          MAX(ni.lte_avg_dl_rate) AS lteAvgDlRate,
+          MAX(ni.lte_avg_ul_rate) AS lteAvgUlRate,
+          MAX(ni.lte_avg_dl_prb) AS lteAvgDlPrb,
+          MAX(ni.lte_avg_ul_prb) AS lteAvgUlPrb,
+          MAX(ni.nr_avg_dl_rate) AS nrAvgDlRate,
+          MAX(ni.nr_avg_ul_rate) AS nrAvgUlRate,
+          MAX(ni.nr_avg_dl_prb) AS nrAvgDlPrb,
+          MAX(ni.nr_avg_ul_prb) AS nrAvgUlPrb
+        FROM operator_info o
+        LEFT JOIN indicator_info ni ON o.id = ni.operator_id
+        WHERE o.id = ? AND ni.data_month = ?
+        GROUP BY o.id, ni.data_month
+      `;
+      params = [operatorId, dataMonth];
+    } else {
+      query = `
+        SELECT
+          o.id AS operator_id,
+          o.operator_name,
+          ni.data_month,
+          MAX(ni.traffic_ratio) AS trafficRatio,
+          MAX(ni.duration_campratio) AS durationCampRatio,
+          MAX(ni.terminal_penetration_ratio) AS terminalPenetration,
+          MAX(ni.fallback_ratio) AS fallbackRatio,
+          MAX(ni.lte_avg_dl_rate) AS lteAvgDlRate,
+          MAX(ni.lte_avg_ul_rate) AS lteAvgUlRate,
+          MAX(ni.lte_avg_dl_prb) AS lteAvgDlPrb,
+          MAX(ni.lte_avg_ul_prb) AS lteAvgUlPrb,
+          MAX(ni.nr_avg_dl_rate) AS nrAvgDlRate,
+          MAX(ni.nr_avg_ul_rate) AS nrAvgUlRate,
+          MAX(ni.nr_avg_dl_prb) AS nrAvgDlPrb,
+          MAX(ni.nr_avg_ul_prb) AS nrAvgUlPrb
+        FROM operator_info o
+        LEFT JOIN indicator_info ni ON o.id = ni.operator_id
+        WHERE o.id = ? AND ni.data_month = (SELECT MAX(ni2.data_month) FROM indicator_info ni2 WHERE ni2.operator_id = o.id)
+        GROUP BY o.id, ni.data_month
+      `;
+      params = [operatorId];
+    }
+
+    const [rows] = await conn.execute(query, params);
+    return rows[0] || null;
+  } finally {
+    conn.release();
+  }
+}
+
+/**
+ * 获取所有运营商的汇总指标
+ * @param {string} dataMonth - 数据月份 (YYYY-MM)，如果为null则查询最新月份
+ * @returns {Promise<Array>}
+ */
+export async function getAllOperatorsMetricsFromDB(dataMonth) {
+  const conn = await createConnection();
+  try {
+    let query;
+
+    if (dataMonth && dataMonth.trim() !== '') {
+      query = `
+        SELECT
+          o.id AS operator_id,
+          o.operator_name,
+          ni.data_month,
+          MAX(ni.traffic_ratio) AS trafficRatio,
+          MAX(ni.duration_campratio) AS durationCampRatio,
+          MAX(ni.terminal_penetration_ratio) AS terminalPenetration,
+          MAX(ni.fallback_ratio) AS fallbackRatio,
+          MAX(ni.lte_avg_dl_rate) AS lteAvgDlRate,
+          MAX(ni.lte_avg_ul_rate) AS lteAvgUlRate,
+          MAX(ni.lte_avg_dl_prb) AS lteAvgDlPrb,
+          MAX(ni.lte_avg_ul_prb) AS lteAvgUlPrb,
+          MAX(ni.nr_avg_dl_rate) AS nrAvgDlRate,
+          MAX(ni.nr_avg_ul_rate) AS nrAvgUlRate,
+          MAX(ni.nr_avg_dl_prb) AS nrAvgDlPrb,
+          MAX(ni.nr_avg_ul_prb) AS nrAvgUlPrb
+        FROM operator_info o
+        LEFT JOIN indicator_info ni ON o.id = ni.operator_id
+        WHERE ni.data_month = ?
+        GROUP BY o.id, ni.data_month
+        ORDER BY o.id
+      `;
+    } else {
+      query = `
+        SELECT
+          o.id AS operator_id,
+          o.operator_name,
+          ni.data_month,
+          MAX(ni.traffic_ratio) AS trafficRatio,
+          MAX(ni.duration_campratio) AS durationCampRatio,
+          MAX(ni.terminal_penetration_ratio) AS terminalPenetration,
+          MAX(ni.fallback_ratio) AS fallbackRatio,
+          MAX(ni.lte_avg_dl_rate) AS lteAvgDlRate,
+          MAX(ni.lte_avg_ul_rate) AS lteAvgUlRate,
+          MAX(ni.lte_avg_dl_prb) AS lteAvgDlPrb,
+          MAX(ni.lte_avg_ul_prb) AS lteAvgUlPrb,
+          MAX(ni.nr_avg_dl_rate) AS nrAvgDlRate,
+          MAX(ni.nr_avg_ul_rate) AS nrAvgUlRate,
+          MAX(ni.nr_avg_dl_prb) AS nrAvgDlPrb,
+          MAX(ni.nr_avg_ul_prb) AS nrAvgUlPrb
+        FROM operator_info o
+        LEFT JOIN indicator_info ni ON o.id = ni.operator_id
+        WHERE ni.data_month = (SELECT MAX(ni2.data_month) FROM indicator_info ni2 WHERE ni2.operator_id = o.id)
+        GROUP BY o.id, ni.data_month
+        ORDER BY o.id
+      `;
+    }
+
+    const [rows] = await conn.execute(query, dataMonth ? [dataMonth] : []);
     return rows;
   } finally {
     conn.release();
