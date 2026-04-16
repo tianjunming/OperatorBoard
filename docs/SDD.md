@@ -1,6 +1,6 @@
 # OperatorBoard 软件设计文档
 
-**文档版本**: 1.0
+**文档版本**: 1.1
 **编制日期**: 2026-04-12
 **参考标准**: IEEE 1012 | ISO/IEC/IEEE 42010
 
@@ -33,30 +33,31 @@
 │                     Port: 3000 / 8000 (Proxy)                       │
 └─────────────────────────────────────────────────────────────────────┘
                                    │
-                                   ▼
+                    ┌──────────────┴──────────────┐
+                    ▼                              ▼
+┌──────────────────────────────────┐  ┌──────────────────────────────────┐
+│       operator-agent (Python)    │  │         auth-agent (Python)      │
+│            Port: 8080           │  │           Port: 8084              │
+│  ┌─────────────┐ ┌────────────┐  │  │  ┌─────────────────────────┐    │
+│  │IntentDetect │ │ NL2SQL     │  │  │  │ User Auth & Approval    │    │
+│  │   Agent     │ │  Client    │  │  │  │ - JWT Management        │    │
+│  └─────────────┘ └────────────┘  │  │  │ - Role/Permission       │    │
+└──────────────────────────────────┘  │  └─────────────────────────┘    │
+                    │                │              │                  │
+                    ▼                │              ▼                  │
+┌───────────────────────────┐  ┌─────┴───────────────────────────────┴─┐
+│   operator-service (Java)  │  │         auth_db (MySQL)              │
+│        Port: 8081         │  │         Database: auth                │
+│  ┌─────────────────────┐  │  └──────────────────────────────────────┘
+│  │   SQLCoder NL2SQL   │  │
+│  │      Service        │  │
+│  └─────────────────────┘  │
+└───────────────────────────┘
+                │
+                ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                      operator-agent (Python)                        │
-│                         Port: 8080                                  │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌────────────┐  │
-│  │IntentDetect │  │ ToolRouter  │  │   RAG       │  │ NL2SQL     │  │
-│  │   Agent     │  │             │  │  Loaders    │  │  Client    │  │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
-                    │                    │
-                    ▼                    ▼
-┌───────────────────────────┐  ┌───────────────────────────────────────┐
-│   operator-service (Java) │  │         predict-agent (Python)        │
-│        Port: 8081         │  │              Port: 8083                │
-│  ┌─────────────────────┐  │  │  ┌─────────────┐  ┌────────────────┐  │
-│  │   SQLCoder NL2SQL   │  │  │  │ CoverageQA  │  │ SimTune        │  │
-│  │      Service        │  │  │  │  Skill      │  │  Skill         │  │
-│  └─────────────────────┘  │  │  └─────────────┘  └────────────────┘  │
-└───────────────────────────┘  └───────────────────────────────────────┘
-                │                              │
-                ▼                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                         MySQL Database                              │
-│                    Port: 3306  |  Database: operator                │
+│                    operator_db (MySQL)                              │
+│               Port: 3306  |  Database: operator                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -140,6 +141,14 @@
   - 图表可视化
   - 用户交互体验
 
+#### Auth Agent
+- **角色**: 用户认证授权服务
+- **职责**:
+  - 用户注册与审批流程
+  - JWT Token管理
+  - 角色权限管理
+  - 会话管理
+
 ---
 
 ## 3. 数据模型设计
@@ -206,6 +215,13 @@ CREATE TABLE indicator_info (
     access_success_rate DECIMAL(5, 2) COMMENT '接入成功率(%)',
     drop_rate DECIMAL(5, 2) COMMENT '掉线率(%)',
     coverage_rate DECIMAL(5, 2) COMMENT '覆盖率(%)',
+    -- 汇总指标字段（2026-04新增）
+    traffic_ratio DECIMAL(5, 2) COMMENT '分流比(%)',
+    duration_camp_ratio DECIMAL(5, 2) COMMENT '时长驻留比(%)',
+    terminal_penetration DECIMAL(5, 2) COMMENT '终端渗透率(%)',
+    fallback_ratio DECIMAL(5, 2) COMMENT '回流比(%)',
+    dl_prb DECIMAL(5, 2) COMMENT '下行PRB利用率(%)',
+    ul_prb DECIMAL(5, 2) COMMENT '上行PRB利用率(%)',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_cell_month (cell_id, data_month),
@@ -231,6 +247,78 @@ SELECT
     ROUND(AVG(drop_rate), 2) as avg_drop_rate
 FROM indicator_info
 GROUP BY operator_name, network_type, band, data_month;
+```
+
+#### auth_user 表 (用户认证)
+```sql
+CREATE TABLE auth_user (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL UNIQUE COMMENT '用户名',
+    password_hash VARCHAR(255) NOT NULL COMMENT '密码哈希',
+    email VARCHAR(100) COMMENT '邮箱',
+    full_name VARCHAR(100) COMMENT '姓名',
+    is_active BOOLEAN DEFAULT TRUE COMMENT '是否激活',
+    is_superuser BOOLEAN DEFAULT FALSE COMMENT '是否超级管理员',
+    is_approved BOOLEAN DEFAULT FALSE COMMENT '是否已审批',
+    approval_status VARCHAR(20) DEFAULT 'pending' COMMENT '审批状态: pending/approved/rejected',
+    approved_by BIGINT COMMENT '审批人ID',
+    approved_at DATETIME COMMENT '审批时间',
+    rejection_reason VARCHAR(255) COMMENT '拒绝原因',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    last_login DATETIME COMMENT '最后登录时间',
+    INDEX idx_username (username),
+    INDEX idx_approval_status (approval_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+#### auth_role 表 (角色)
+```sql
+CREATE TABLE auth_role (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    role_code VARCHAR(50) NOT NULL UNIQUE COMMENT '角色代码',
+    role_name VARCHAR(100) NOT NULL COMMENT '角色名称',
+    description VARCHAR(255) COMMENT '描述',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+#### auth_permission 表 (权限)
+```sql
+CREATE TABLE auth_permission (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    permission_code VARCHAR(100) NOT NULL UNIQUE COMMENT '权限代码',
+    permission_name VARCHAR(100) NOT NULL COMMENT '权限名称',
+    permission_type VARCHAR(20) DEFAULT 'api' COMMENT '权限类型: api/menu/button',
+    resource_path VARCHAR(255) COMMENT '资源路径',
+    parent_id BIGINT DEFAULT 0 COMMENT '父权限ID',
+    sort_order INT DEFAULT 0 COMMENT '排序',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+#### auth_user_role 表 (用户角色关联)
+```sql
+CREATE TABLE auth_user_role (
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+    PRIMARY KEY (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES auth_user(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES auth_role(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+#### auth_role_permission 表 (角色权限关联)
+```sql
+CREATE TABLE auth_role_permission (
+    role_id BIGINT NOT NULL,
+    permission_id BIGINT NOT NULL,
+    PRIMARY KEY (role_id, permission_id),
+    FOREIGN KEY (role_id) REFERENCES auth_role(id) ON DELETE CASCADE,
+    FOREIGN KEY (permission_id) REFERENCES auth_permission(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
 ### 3.2 数据模型 (Python Pydantic)
@@ -519,6 +607,162 @@ data: {"type": "done", "request_id": "req_001"}
 }
 ```
 
+##### GET /api/v1/query/indicators/band
+按频段指标查询
+
+**参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| operator | string | 否 | 运营商名称 |
+| band | string | 否 | 频段 |
+| network_type | string | 否 | 网络类型 |
+| data_month | string | 否 | 数据月份 |
+
+**响应**:
+```json
+{
+  "indicators": [
+    {
+      "operator_id": 1,
+      "operator_name": "China Unicom",
+      "band": "3500M",
+      "network_type": "NR",
+      "data_month": "2026-03",
+      "dl_rate": 126.87,
+      "ul_rate": 45.23,
+      "dl_prb": 35.5,
+      "ul_prb": 28.3
+    }
+  ]
+}
+```
+
+##### GET /api/v1/query/indicators/operator-metrics
+运营商汇总指标查询
+
+**参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| operator | string | 否 | 运营商名称 |
+| data_month | string | 否 | 数据月份 |
+
+**响应**:
+```json
+{
+  "metrics": {
+    "operator_id": 1,
+    "operator_name": "China Unicom",
+    "data_month": "2026-03",
+    "traffic_ratio": 45.2,
+    "duration_camp_ratio": 92.5,
+    "terminal_penetration": 78.3,
+    "fallback_ratio": 5.1,
+    "lte_avg_dl_rate": 58.5,
+    "lte_avg_ul_rate": 22.3,
+    "lte_avg_dl_prb": 42.1,
+    "lte_avg_ul_prb": 35.8,
+    "nr_avg_dl_rate": 386.2,
+    "nr_avg_ul_rate": 98.5,
+    "nr_avg_dl_prb": 65.3,
+    "nr_avg_ul_prb": 52.1
+  }
+}
+```
+
+#### Auth Agent API (Port 8084)
+
+##### POST /api/auth/register
+用户注册（创建待审批用户）
+
+**请求**:
+```json
+{
+    "username": "user1",
+    "password": "password123",
+    "email": "user@example.com",
+    "full_name": "张三"
+}
+```
+
+**响应**:
+```json
+{
+    "message": "Registration submitted. Please wait for admin approval.",
+    "user_id": 123,
+    "status": "pending"
+}
+```
+
+##### POST /api/auth/login
+用户登录
+
+**请求**:
+```json
+{
+    "username": "user1",
+    "password": "password123"
+}
+```
+
+**响应**:
+```json
+{
+    "access_token": "eyJ...",
+    "refresh_token": "eyJ...",
+    "token_type": "bearer",
+    "expires_in": 3600
+}
+```
+
+##### GET /api/auth/approvals/pending
+获取待审批用户列表（需superuser权限）
+
+**响应**:
+```json
+{
+    "items": [
+        {
+            "id": 123,
+            "username": "user1",
+            "email": "user@example.com",
+            "full_name": "张三",
+            "approval_status": "pending",
+            "created_at": "2026-04-16T10:00:00"
+        }
+    ],
+    "total": 1
+}
+```
+
+##### POST /api/auth/approvals/approve/{user_id}
+批准用户（需superuser权限）
+
+**响应**:
+```json
+{
+    "message": "User approved successfully",
+    "user_id": 123
+}
+```
+
+##### POST /api/auth/approvals/reject/{user_id}
+拒绝用户（需superuser权限）
+
+**请求** (可选):
+```json
+{
+    "reason": "拒绝原因（可选）"
+}
+```
+
+**响应**:
+```json
+{
+    "message": "User rejected",
+    "user_id": 123
+}
+```
+
 ### 4.3 前端组件接口
 
 #### ChartBlock Props
@@ -589,6 +833,10 @@ src/components/
 ├── QueryConfirmationDialog.jsx  # 查询确认对话框
 ├── KpiCard.jsx              # KPI卡片组件
 ├── SkeletonLoader.jsx       # 骨架屏组件
+├── AuthLogin.jsx            # 用户登录组件
+├── AuthRegister.jsx         # 用户注册组件
+├── UserManagement.jsx       # 用户管理组件（含审批）
+├── PendingApprovals.jsx     # 待审批用户列表组件
 └── charts/
     ├── ChartContainer.jsx    # 图表容器
     ├── ChartBlock.jsx       # 图表Block
@@ -703,6 +951,110 @@ interface UseStreamingAgentReturn {
 }
 ```
 
+### 6.3 运营商不存在响应
+
+**OperatorNotFoundResponse** 是当查询的运营商不存在时返回的标准化错误响应：
+
+```java
+// Java DTO
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class OperatorNotFoundResponse {
+    private String error;              // 错误码: "OPERATOR_NOT_FOUND"
+    private String message;            // 中文错误信息
+    private String queriedName;        // 用户查询的名称
+    private List<String> suggestions;   // 建议列表
+    private List<String> availableOperators;  // 可用运营商列表
+
+    public static OperatorNotFoundResponse of(
+            String queriedName,
+            List<String> availableOperators,
+            List<String> suggestions) {
+        return OperatorNotFoundResponse.builder()
+                .error("OPERATOR_NOT_FOUND")
+                .message("运营商不存在: " + queriedName)
+                .queriedName(queriedName)
+                .suggestions(suggestions)
+                .availableOperators(availableOperators)
+                .build();
+    }
+}
+```
+
+**BandIndicatorResponse** 是按频段查询指标时的响应DTO：
+
+```java
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class BandIndicatorResponse {
+    private Long operatorId;
+    private String operatorName;
+    private String band;
+    private String networkType;
+    private String dataMonth;
+    private BigDecimal dlRate;    // 下行速率 (Mbps)
+    private BigDecimal ulRate;    // 上行速率 (Mbps)
+    private BigDecimal dlPrb;     // 下行PRB利用率
+    private BigDecimal ulPrb;     // 上行PRB利用率
+}
+```
+
+**OperatorMetricsResponse** 是运营商级别汇总指标的响应DTO：
+
+```java
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class OperatorMetricsResponse {
+    private Long operatorId;
+    private String operatorName;
+    private String dataMonth;
+
+    // 分流比
+    private BigDecimal trafficRatio;
+    private String trafficRatioDesc;
+
+    // 时长驻留比
+    private BigDecimal durationCampRatio;
+    private String durationCampRatioDesc;
+
+    // 终端渗透率
+    private BigDecimal terminalPenetration;
+    private String terminalPenetrationDesc;
+
+    // 回流比
+    private BigDecimal fallbackRatio;
+    private String fallbackRatioDesc;
+
+    // LTE平均指标
+    private BigDecimal lteAvgDlRate;
+    private BigDecimal lteAvgUlRate;
+    private BigDecimal lteAvgDlPrb;
+    private BigDecimal lteAvgUlPrb;
+
+    // NR平均指标
+    private BigDecimal nrAvgDlRate;
+    private BigDecimal nrAvgUlRate;
+    private BigDecimal nrAvgDlPrb;
+    private BigDecimal nrAvgUlPrb;
+}
+```
+
+**建议生成策略**:
+| 策略 | 触发条件 | 示例建议 |
+|------|----------|----------|
+| 相似匹配 | 存在部分匹配的运营商名 | "您是否要查询: Airtel DRC、Airtel Kenya？" |
+| 国家引导 | 存在该国家运营商 | "按国家查询: 查看奥地利的所有运营商" |
+| 时间查询 | 有可用月份数据 | "查看2026-03的最新数据" |
+| 汇总查询 | - | "不带运营商名称查询，获取所有运营商汇总" |
+| 指标查询 | - | "查询关键指标数据，如 '中国电信 指标'" |
+| 数据探索 | - | "查询 'site-summary' 获取基站汇总" |
+
 ---
 
 ## 7. 配置管理
@@ -786,4 +1138,6 @@ nl2sql:
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.2 | 2026-04-16 | 新增频段指标查询(BandIndicatorResponse)、运营商汇总指标(OperatorMetricsResponse)、indicator_info表新增汇总指标字段 |
+| 1.1 | 2026-04-16 | 新增Auth Agent模块、用户注册审批功能、运营商不存在响应DTO |
 | 1.0 | 2026-04-12 | 初始版本，软件设计文档 |

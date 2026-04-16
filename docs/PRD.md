@@ -1,6 +1,6 @@
 # OperatorBoard 需求分析文档
 
-**文档版本**: 1.0
+**文档版本**: 1.1
 **编制日期**: 2026-04-12
 **参考标准**: Google PRD Template | IEEE 830
 
@@ -11,6 +11,16 @@
 ### 1.1 项目背景
 
 OperatorBoard 是一个基于多Agent架构的电信运营商数据管理平台，集成NL2SQL（自然语言转SQL）能力，使用户能够通过自然语言查询运营商的站点、小区、频段分布和性能指标等数据。
+
+### 1.2 系统组成
+
+| 组件 | 技术栈 | 端口 | 职责 |
+|------|--------|------|------|
+| agent-app | React + Vite | 3000 | 前端交互界面 |
+| operator-agent | Python FastAPI | 8080 | 运营商数据查询入口 |
+| auth-agent | Python FastAPI | 8084 | 用户认证授权服务 |
+| predict-agent | Python FastAPI | 8083 | 覆盖预测问答服务 |
+| operator-service | Java Spring Boot | 8081 | NL2SQL核心引擎 |
 
 ### 1.2 系统目标
 
@@ -192,6 +202,8 @@ class BaseSkill:
 | `/api/v1/query/indicators` | GET | 指标列表 |
 | `/api/v1/query/indicators/latest` | GET | 最新指标 |
 | `/api/v1/query/indicators/trend` | GET | 指标趋势 |
+| `/api/v1/query/indicators/band` | GET | 按频段指标查询 |
+| `/api/v1/query/indicators/operator-metrics` | GET | 运营商汇总指标 |
 
 ### 2.4 Predict Agent 功能
 
@@ -286,6 +298,8 @@ data: [DONE]
 
 #### 2.6.1 智能图表推荐引擎
 
+#### 2.6.1 智能图表推荐引擎
+
 **功能**: 基于数据特征自动推荐最佳图表类型
 
 **检测函数**:
@@ -368,6 +382,118 @@ data: [DONE]
 | `handleConfirmationConfirm` | function | 确认回调 |
 | `handleConfirmationCancel` | function | 取消回调 |
 
+### 2.7 用户注册审批功能
+
+#### 2.7.1 注册审批流程
+
+**功能**: 实现用户自助注册+管理员审批的两阶段流程，提高系统安全性。
+
+**流程**:
+```
+用户注册 → pending状态 → 管理员审批 → approved/rejected → 登录
+```
+
+**用户角色**:
+
+| 角色 | 权限 |
+|------|------|
+| 普通用户 | 注册、登录、查询数据 |
+| 超级管理员 | 审批用户、用户管理、角色管理、权限管理 |
+
+#### 2.7.2 API接口
+
+**公开接口** (无需认证):
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| `/api/auth/register` | POST | 用户注册（创建pending用户） |
+| `/api/auth/login` | POST | 用户登录 |
+| `/api/auth/refresh` | POST | 刷新Token |
+
+**管理员接口** (需superuser权限):
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| `/api/auth/approvals/pending` | GET | 获取待审批用户列表 |
+| `/api/auth/approvals/approve/{user_id}` | POST | 批准用户 |
+| `/api/auth/approvals/reject/{user_id}` | POST | 拒绝用户 |
+
+#### 2.7.3 数据模型
+
+**用户注册请求**:
+```json
+{
+    "username": "string",
+    "password": "string",
+    "email": "string (optional)",
+    "full_name": "string (optional)"
+}
+```
+
+**注册响应**:
+```json
+{
+    "message": "Registration submitted. Please wait for admin approval.",
+    "user_id": 123,
+    "status": "pending"
+}
+```
+
+**待审批用户**:
+```json
+{
+    "id": 123,
+    "username": "user1",
+    "email": "user@example.com",
+    "full_name": "张三",
+    "approval_status": "pending",
+    "created_at": "2026-04-16T10:00:00Z"
+}
+```
+
+### 2.8 运营商不存在时的智能提示
+
+#### 2.8.1 功能描述
+
+**功能**: 当用户查询的运营商不存在时，返回友好的错误提示和查询建议。
+
+**错误响应结构**:
+```json
+{
+    "error": "OPERATOR_NOT_FOUND",
+    "message": "运营商不存在: NonExistent",
+    "queriedName": "NonExistent",
+    "suggestions": [
+        "您是否要查询: Airtel DRC、Airtel Kenya、Airtel Nigeria？",
+        "按国家查询: 查看奥地利的所有运营商，例如查询 'China Unicom' 或 '中国移动'",
+        "按时间查询: 查看2026-03的最新数据，例如查询 'Airtel DRC 2026-03'",
+        "汇总查询: 不带运营商名称查询，获取所有运营商的汇总数据",
+        "指标查询: 查询关键指标数据，如 '中国电信 指标' 或 'China Telecom indicators'",
+        "探索数据: 尝试查询 'site-summary' 获取基站汇总，或 'indicators' 获取指标数据"
+    ],
+    "availableOperators": ["A1 Telekom Austria", "Airtel DRC", ...]
+}
+```
+
+#### 2.8.2 建议生成规则
+
+| 规则 | 触发条件 | 建议内容 |
+|------|----------|----------|
+| 相似匹配 | 存在部分匹配的运营商名 | 列出相似运营商供选择 |
+| 国家引导 | 存在该国家运营商 | 按国家查询的建议 |
+| 时间查询 | 有可用月份数据 | 提供最新月份查询示例 |
+| 汇总查询 | - | 提示可查询所有运营商汇总 |
+| 指标查询 | - | 提示可查询指标数据 |
+| 数据探索 | - | 提示可探索不同数据类型 |
+
+#### 2.8.3 影响范围
+
+**涉及接口**:
+- `GET /api/v1/nl2sql/site-summary`
+- `GET /api/v1/nl2sql/operators/{name}/sites/latest`
+- `GET /api/v1/nl2sql/operators/{name}/sites/history`
+- `GET /api/v1/nl2sql/operators/{name}/indicators/latest`
+- `GET /api/v1/nl2sql/operators/{name}/indicators/history`
+- `GET /api/v1/nl2sql/indicators`
+
 ---
 
 ## 3. 非功能性需求
@@ -407,4 +533,6 @@ data: [DONE]
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.2 | 2026-04-16 | 新增PendingApprovals组件、AuthRegister组件、按频段指标查询、运营商汇总指标查询 |
+| 1.1 | 2026-04-16 | 新增用户注册审批功能、智能提示功能 |
 | 1.0 | 2026-04-12 | 初始版本，需求分析文档 |

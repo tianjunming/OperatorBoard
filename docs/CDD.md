@@ -1,6 +1,6 @@
 # OperatorBoard 代码设计文档
 
-**文档版本**: 1.0
+**文档版本**: 1.1
 **编制日期**: 2026-04-12
 **参考标准**: Google Style Guide | SOLID Principles
 
@@ -96,6 +96,19 @@ D:\develop\OperatorBoard\
 │   │   │   │   └── simulation.py
 │   │   │   └── prompts/
 │   │   └── configs/
+│   ├── auth-agent/               # 用户认证Agent
+│   │   ├── src/auth_agent/
+│   │   │   ├── __init__.py
+│   │   │   ├── api/
+│   │   │   │   ├── server.py      # AuthAgentServer
+│   │   │   │   ├── models.py      # Pydantic models
+│   │   │   │   ├── schemas.py      # SQLAlchemy ORM
+│   │   │   │   ├── service.py     # 业务服务
+│   │   │   │   ├── auth.py        # JWT认证
+│   │   │   │   ├── chat_routes.py # 聊天路由
+│   │   │   │   └── dependencies.py # 依赖注入
+│   │   │   └── migrations/
+│   │   │       └── add_approval_fields.sql
 │   ├── operator-service/         # Java微服务
 │   │   └── src/main/java/com/operator/nl2sql/
 │   │       ├── controller/
@@ -116,6 +129,10 @@ D:\develop\OperatorBoard\
 │       │   │   ├── QueryConfirmationDialog.jsx
 │       │   │   ├── KpiCard.jsx
 │       │   │   ├── SkeletonLoader.jsx
+│       │   │   ├── AuthLogin.jsx      # 登录组件
+│       │   │   ├── AuthRegister.jsx   # 注册组件
+│       │   │   ├── UserManagement.jsx # 用户管理（含审批）
+│       │   │   ├── PendingApprovals.jsx # 待审批用户列表组件
 │       │   │   └── charts/
 │       │   │       ├── ChartContainer.jsx
 │       │   │       ├── ChartBlock.jsx
@@ -868,4 +885,6 @@ const examples = {
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.2 | 2026-04-16 | 新增PendingApprovals组件、AuthRegister组件、UserManagement增强 |
+| 1.1 | 2026-04-16 | 新增auth-agent项目结构、AuthRegister、UserManagement组件 |
 | 1.0 | 2026-04-12 | 初始版本，代码设计文档 |
