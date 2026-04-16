@@ -1,7 +1,7 @@
 # OperatorBoard 需求分析文档
 
-**文档版本**: 1.1
-**编制日期**: 2026-04-12
+**文档版本**: 1.2
+**编制日期**: 2026-04-16
 **参考标准**: Google PRD Template | IEEE 830
 
 ---
@@ -196,14 +196,14 @@ class BaseSkill:
 **Query侧** (OperatorQueryController, IndicatorQueryController):
 | 端点 | 方法 | 功能 |
 |------|------|------|
-| `/api/v1/query/operators` | GET | 运营商列表 |
-| `/api/v1/query/operators/{id}` | GET | 运营商详情 |
-| `/api/v1/query/site-summary` | GET | 站点汇总 |
-| `/api/v1/query/indicators` | GET | 指标列表 |
-| `/api/v1/query/indicators/latest` | GET | 最新指标 |
-| `/api/v1/query/indicators/trend` | GET | 指标趋势 |
-| `/api/v1/query/indicators/band` | GET | 按频段指标查询 |
-| `/api/v1/query/indicators/operator-metrics` | GET | 运营商汇总指标 |
+| `/api/v1/nl2sql/operators` | GET | 运营商列表 |
+| `/api/v1/nl2sql/operators/{id}` | GET | 运营商详情 |
+| `/api/v1/nl2sql/query/site-summary` | GET | 站点汇总 |
+| `/api/v1/nl2sql/indicators` | GET | 指标列表 |
+| `/api/v1/nl2sql/indicators/latest` | GET | 最新指标 |
+| `/api/v1/nl2sql/indicators/trend` | GET | 指标趋势 |
+| `/api/v1/nl2sql/indicators/band` | GET | 按频段指标查询(LTE/NR区分) |
+| `/api/v1/nl2sql/indicators/metrics` | GET | 运营商汇总指标(分流比/驻留比/终端渗透率) |
 
 ### 2.4 Predict Agent 功能
 

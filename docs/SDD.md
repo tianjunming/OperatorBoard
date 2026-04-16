@@ -1,7 +1,7 @@
 # OperatorBoard 软件设计文档
 
-**文档版本**: 1.1
-**编制日期**: 2026-04-12
+**文档版本**: 1.2
+**编制日期**: 2026-04-16
 **参考标准**: IEEE 1012 | ISO/IEC/IEEE 42010
 
 ---
@@ -607,66 +607,75 @@ data: {"type": "done", "request_id": "req_001"}
 }
 ```
 
-##### GET /api/v1/query/indicators/band
-按频段指标查询
+##### GET /api/v1/nl2sql/indicators/band
+按频段指标查询(LTE/NR区分，networkType为空时返回双版本)
 
 **参数**:
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| operator | string | 否 | 运营商名称 |
-| band | string | 否 | 频段 |
-| network_type | string | 否 | 网络类型 |
-| data_month | string | 否 | 数据月份 |
+| operatorId | long | 否 | 运营商ID |
+| operatorName | string | 否 | 运营商名称 |
+| band | string | 是 | 频段(如700M, 3500M) |
+| networkType | string | 否 | 网络类型(LTE/NR)，为空时返回双版本 |
 
-**响应**:
+**响应(单版本)**:
 ```json
 {
+  "operatorId": 174,
+  "operatorName": "中国联通",
+  "band": "700M",
+  "networkType": "LTE",
+  "dataMonth": "2026-03",
+  "dlRate": 35.75,
+  "ulRate": 8.28,
+  "dlPrb": 50.12,
+  "ulPrb": 33.5
+}
+```
+
+**响应(双版本networkType为空)**:
+```json
+{
+  "operatorId": 174,
+  "operatorName": "中国联通",
+  "band": "700M",
+  "dataMonth": "2026-03",
   "indicators": [
-    {
-      "operator_id": 1,
-      "operator_name": "China Unicom",
-      "band": "3500M",
-      "network_type": "NR",
-      "data_month": "2026-03",
-      "dl_rate": 126.87,
-      "ul_rate": 45.23,
-      "dl_prb": 35.5,
-      "ul_prb": 28.3
-    }
+    {"networkType": "LTE", "dlRate": 35.75, "ulRate": 8.28, ...},
+    {"networkType": "NR", "dlRate": 110.98, "ulRate": 16.54, ...}
   ]
 }
 ```
 
-##### GET /api/v1/query/indicators/operator-metrics
-运营商汇总指标查询
+##### GET /api/v1/nl2sql/indicators/metrics
+运营商汇总指标查询(分流比/驻留比/终端渗透率)
 
 **参数**:
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| operator | string | 否 | 运营商名称 |
-| data_month | string | 否 | 数据月份 |
+| operatorId | long | 否 | 运营商ID |
+| operatorName | string | 否 | 运营商名称 |
+| dataMonth | string | 否 | 数据月份 |
 
-**响应**:
+**响应(数组)**:
 ```json
-{
-  "metrics": {
-    "operator_id": 1,
-    "operator_name": "China Unicom",
-    "data_month": "2026-03",
-    "traffic_ratio": 45.2,
-    "duration_camp_ratio": 92.5,
-    "terminal_penetration": 78.3,
-    "fallback_ratio": 5.1,
-    "lte_avg_dl_rate": 58.5,
-    "lte_avg_ul_rate": 22.3,
-    "lte_avg_dl_prb": 42.1,
-    "lte_avg_ul_prb": 35.8,
-    "nr_avg_dl_rate": 386.2,
-    "nr_avg_ul_rate": 98.5,
-    "nr_avg_dl_prb": 65.3,
-    "nr_avg_ul_prb": 52.1
+[
+  {
+    "operatorId": 174,
+    "operatorName": "中国联通",
+    "dataMonth": "2026-03",
+    "trafficRatio": 0.7618,
+    "trafficRatioDesc": "NR流量占总流量的比例",
+    "durationCampRatio": 0.0876,
+    "durationCampRatioDesc": "用户在NR网络驻留时长占总时长的比例",
+    "terminalPenetration": 0.8989,
+    "terminalPenetrationDesc": "支持NR的终端占比",
+    "fallbackRatio": 0.7079,
+    "fallbackRatioDesc": "NR用户回落到LTE的比例",
+    "lteAvgDlRate": 113.02,
+    "nrAvgDlRate": 255.40
   }
-}
+]
 ```
 
 #### Auth Agent API (Port 8084)
