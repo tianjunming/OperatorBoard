@@ -1,528 +1,524 @@
-# 大模型时代的新型软件开发范式：LLM-Based SDD 实战指南
+# 大模型时代，软件开发者的第三次思考
 
-> "软件工程的核心挑战是什么？是把人类的意图准确无误地转化为机器可执行的指令。而今，LLM正在重新定义这条转化路径。"
-
-## 一、重新理解软件开发：什么是 LLM-Based SDD？
-
-### 1.1 传统 SDD vs LLM-Based SDD
-
-在展开讨论前，我们需要厘清一个概念：**SDD (Semantic-Driven Development/Design)** 在大模型时代被赋予了全新的内涵。
-
-| 维度 | 传统 SDD | LLM-Based SDD |
-|------|----------|----------------|
-| **设计载体** | UML图表、架构文档 | Prompt + 代码 + 迭代反馈 |
-| **设计工具** | Visio、Draw.io | LLM对话、代码生成 |
-| **设计产出** | 静态文档 | 动态可执行规范 |
-| **设计周期** | 设计→实现→验证（长周期） | 设计即实现，实现即测试（短周期） |
-| **需求转化** | 需求文档→技术方案→代码 | 自然语言→Prompt→原型→精化 |
-| **不确定性** | 低（确定性技术栈） | 高（LLM输出有概率性） |
-
-### 1.2 核心概念辨析
-
-**Prompt 即设计 (Prompt as Design)**
-
-在传统开发中，我们用 UML 图来描述系统结构，用接口文档来定义组件契约。在 LLM-Based SDD 中，这些设计文档的形态发生了变化：
-
-```python
-# 传统设计：定义接口契约
-interface IntentDetector:
-    def detect(query: str) -> IntentResult
-
-# LLM-Based 设计：用 Prompt 定义语义
-INTENT_DETECTION_PROMPT = """
-You are an intent detection system for telecom operator data.
-
-Given user query: "{query}"
-
-Detect intent and extract parameters:
-- site_data: Query site/cell counts
-- indicator_data: Query network performance
-- operator_list: List operators
-- nl2sql: Complex SQL query
-
-Return JSON with: intent, operator_name, band, network_type, data_month
-"""
-```
-
-**Prompt 不是在「写代码」，而是在「定义系统行为边界」。** 这本质上是一种设计活动。
-
-**LLM as Design Reviewer**
-
-传统开发中，设计评审需要召集专家会议。LLM 可以充当实时的设计评审者：
-
-```
-开发者：我想用意图识别来判断用户是想查站点还是查指标。
-LLM：   好的方案。但请考虑：
-        1. 如果用户说「联通站点和移动站点对比」——这是多意图
-        2. 如果用户说「帮我查个数据」——意图模糊该如何处理？
-        3. 建议增加降级策略：意图检测失败时默认走 nl2sql 路由
-```
-
-**迭代式设计 (Iterative Design)**
-
-LLM 的交互模式天然支持迭代：
-
-```
-Phase 1: 快速原型
-    ↓ "这个 Prompt 返回的 JSON 格式不稳定"
-Phase 2: Prompt 优化
-    ↓ "中文 Prompt 在某些 LLM 上有乱码"
-Phase 3: 工程化落地
-    ↓ "需要加入缓存、重试、降级"
-Phase 4: 安全护栏
-```
+> 一位十余年软件工程实践者的 LLM-Based SDD 探索手记
 
 ---
 
-## 二、业界技术对比：LLM 开发方法论
+## 写在前面
 
-### 2.1 主流 LLM 开发模式
+2024 年，当 ChatGPT 掀起大模型浪潮时，我听到最多的论调是：「程序员要被取代了」。
 
-| 模式 | 代表实践 | 适用场景 | 优势 | 劣势 |
-|------|----------|----------|------|------|
-| **Prompt Engineering Only** | 调优 Prompt 调用 GPT-4 | 简单任务、API 集成 | 快速、无工程成本 | 依赖外部 API、延迟高、数据安全 |
-| **Fine-tuning** | LoRA/QLoRA 微调 | 特定领域任务 | 效果稳定、领域适配 | 训练成本高、需要数据 |
-| **RAG + Fine-tuning** | 检索增强+微调 | 知识密集型任务 | 知识新鲜、领域精准 | 架构复杂 |
-| **Self-hosted LLM** | SQLCoder/CodeLlama 自托管 | 数据敏感、隐私要求 | 数据安全、成本可控 | 硬件要求高、效果受限 |
-| **Agent + Tools** | LangChain/AutoGPT | 复杂多步骤任务 | 灵活性高、扩展性强 | 编排复杂、调试困难 |
+作为一个从 Java Swing 写到 React、从 ERwin 画到 PlantUML的老兵，我既兴奋又警觉。兴奋的是技术变革的机遇，警觉的是——每一波新技术浪潮，都会埋葬一批盲目追风的「先烈」。
 
-### 2.2 NL2SQL 方案对比
-
-这是我们项目最关键的技术选型之一，也是最容易踩坑的地方。
-
-| 方案 | 准确率 | 延迟 | 成本 | 数据安全 | 适用规模 |
-|------|--------|------|------|----------|----------|
-| **GPT-4 + Text-to-SQL** | ~85% | 2-5s | $0.03/query | 低（数据出境） | 中小规模 |
-| **Claude + Text-to-SQL** | ~83% | 2-4s | $0.015/query | 低 | 中小规模 |
-| **SQLCoder-7B (自托管)** | ~78% | 0.5-2s | 硬件成本 | **高** | 大规模 |
-| **DuckDB-NSQL** | ~75% | 0.3-1s | 硬件成本 | **高** | 中等规模 |
-| **规则 + 模板** | ~60% | <0.1s | 极低 | **高** | 简单查询 |
-
-**我们的选择理由**：运营商数据是核心商业机密，数据不能出网。因此选择 **SQLCoder 自托管**。
-
-但自托管方案带来了新问题：模型效果不如 GPT-4，需要更多的工程化补偿。
-
-### 2.3 意图识别方案对比
-
-| 方案 | 实现复杂度 | 准确率 | 维护成本 | 适用场景 |
-|------|------------|--------|----------|----------|
-| **关键词匹配** | 低 | 低 | 低 | 简单、固定查询 |
-| **正则规则引擎** | 中 | 中 | 中 | 半结构化查询 |
-| **LLM 意图检测** | 中 | 高 | 中 | 复杂、自然语言 |
-| **多级级联** | 高 | 高 | 中 | 混合场景 |
-
-我们选择 **MiniMax M2-her LLM 意图检测**，但加入降级策略应对 LLM 不可用的情况。
+三年过去，浪潮退去，我开始能看清楚一些东西了。这篇博客不是大模型开发的「入门指南」，而是一位老工程师在 LLM-Based SDD（Semantic-Driven Development）道路上的真实探索记录。有成功，也有失败；有顿悟，也有困惑。我尽可能忠实地呈现这个过程，而不只是在吹嘘成果。
 
 ---
 
-## 三、项目实战：OperatorBoard 的 LLM-Based SDD 旅程
+## 一、重新理解软件开发：LLM 改变了什么？
 
-### 3.1 项目起点：问题定义
+### 1.1 我对 SDD 的三次认知迭代
 
-我们的起点是一个真实的业务痛点：
+**第一次认知（2019年）：SDD 就是领域驱动设计**
+
+那时候说的 Semantic-Driven Development，更多是 DDD（Domain-Driven Design）的延续——通过统一语言（Ubiquitous Language）来桥接业务语义和技术实现。我曾在电信计费系统里实践这套方法，效果不错，但代价是漫长的领域建模过程。
+
+**第二次认知（2022年）：SDD 是接口契约驱动**
+
+微服务时代，我开始把 SDD 理解为 API-First Design——先定义接口契约（OpenAPI/Swagger），然后让前后端并行开发。效率提升了，但「契约」的本质仍然是人工编写的静态文档。
+
+**第三次认知（2024年）：LLM 重新定义了什么**
+
+当 Prompt 可以直接转化为可执行逻辑时，我意识到问题的核心变了：
+
+| 维度 | 传统软件工程 | LLM-Based SDD |
+|------|-------------|----------------|
+| **意图表达** | 文档 → 代码（人） | 自然语言 → Prompt → 代码（人+LLM） |
+| **设计载体** | UML / 接口文档 | Prompt 模板 + 迭代反馈 |
+| **验证方式** | 编译 + 测试 | 单元测试 + LLM 输出评估 |
+| **设计周期** | 设计→实现→验证（周级） | 快速原型→问题发现→迭代收敛（日级） |
+| **不确定性** | 低（确定技术栈） | 高（LLM 输出有概率性） |
+
+**关键洞察**：LLM 并没有降低软件工程的复杂度，而是将复杂度从「编码实现」转移到了「Prompt 工程」和「输出验证」。
+
+### 1.2 一个老工程师的困惑：Prompt 到底是什么？
+
+坦白说，我在这个问题上困惑了很久。
+
+一开始，我把 Prompt 当作「告诉 LLM 要做什么」的指令。这是把 LLM 当编译器用——输入 Prompt，输出代码。
+
+后来我发现，Prompt 更像是「和 LLM 谈判」——你在不断调整表述方式，试图让 LLM 的输出稳定地符合你的预期。这本质上是**设计活动**，因为你在定义系统的边界和行为。
+
+再后来，我意识到一个更根本的问题：**LLM 输出的是「概率性正确」的结果**。传统代码里，`if (a > b)` 的语义是确定的；但 LLM 生成的 SQL，可能每次都不一样。
+
+这意味着，**LLM-Based SDD 的核心挑战不是「如何写好 Prompt」，而是「如何构建一个系统，使得即使 Prompt 输出不稳定，系统仍然能可靠运行」**。
+
+---
+
+## 二、技术选型的深度复盘
+
+### 2.1 NL2SQL 方案：我为什么选择了最难的路
+
+在 OperatorBoard 项目中，NL2SQL 是核心技术能力。市面上有成熟的方案——直接调用 GPT-4 或 Claude API，传入 Schema 和问题，坐等 SQL 出来。
+
+**我最终选择了自托管 SQLCoder，这是一个被嘲笑为「重复造轮子」的选择。**
+
+让我解释为什么：
 
 ```
-运营商内部人员需要频繁查询：
-- 站点数量、小区数量
-- 频段分布、覆盖率
-- 网络性能指标
+项目背景：
+- 运营商数据是核心商业机密
+- 监管要求：数据不能出网
+- 用户规模：数百个内网用户
 
-传统方案：
-- 写 SQL → 等待 DBA 审核 → 执行 → 导出 Excel
-- 周期：小时级
-
-期望方案：
-- 说人话 → 系统理解 → 返回结果
-- 周期：秒级
+方案对比：
+- GPT-4 API：效果好，但数据出境 ✗
+- Claude API：同上 ✗
+- SQLCoder 自托管：效果略逊，但数据安全 ✓
 ```
 
-**LLM-Based SDD 的第一个原则**：从真实痛点出发，而非从技术可能性出发。
+**但困难远比我预想的复杂**。
 
-### 3.2 Phase 1：语义层设计（用 Prompt 定义系统）
+第一，SQLCoder 7B 的准确率（约 78%）比 GPT-4（约 85%）低了约 7 个百分点。在千万级数据量面前，这意味着每天可能有数千条错误的查询结果。
 
-我们没有直接写代码，而是先设计了系统的「语义边界」：
+第二，自托管方案的工程成本远超预期——GPU 部署、模型更新、Prompt 调优，每一项都是坑。
+
+**我学到的教训**：技术选型没有「完美方案」，只有「最合适当前场景的妥协」。关键是提前识别方案的短板，并准备好工程化补偿措施。
+
+### 2.2 意图识别：LLM 真的比规则引擎强吗？
+
+在开发 OperatorBoard 的意图识别模块时，我陷入了典型的技术选型困境：
+
+| 方案 | 实现成本 | 准确率 | 维护成本 | 可解释性 |
+|------|----------|--------|----------|----------|
+| 关键词匹配 | 低 | ~50% | 中 | 高 |
+| 正则 + 规则引擎 | 中 | ~65% | 高 | 高 |
+| LLM 意图检测 | 中 | ~85% | 低 | 低 |
+| 多级级联 | 高 | ~90% | 中 | 中 |
+
+**我的第一反应是用 LLM**，毕竟团队已经在用 MiniMax M2-her，集成成本低。但同事问了我一个问题：「你能解释为什么『联通有多少站点』被识别为 site_data 吗？」
+
+我说：「因为 LLM 学到了语义关联。」
+
+他追问：「那为什么『我想看看联通的站』被识别为 operator_list 而不是 site_data？」
+
+我哑口无言。
+
+**这是 LLM 做意图识别的根本问题：不可解释、不可控**。当业务方问「为什么这句被识别错了」时，我没法给出技术上的合理解释。
+
+**最终方案**：多级级联——先用规则引擎处理明确的、高频的查询模式（如「有多少」「查一下」），剩余的模糊查询走 LLM 意图检测。
+
+```
+查询 → 规则引擎匹配 ─┬─ 匹配成功 → 直接路由
+                    │
+                    └─ 匹配失败 → LLM 意图检测 → 路由
+```
+
+**经验总结**：LLM 不是银弹。在高频、明确的场景下，规则引擎的性价比更高；在低频、复杂的场景下，LLM 的泛化能力更有价值。
+
+---
+
+## 三、实战复盘：那些让我夜不能寐的问题
+
+### 3.1 中文乱码：凌晨两点的 debug
+
+那是我记忆最深刻的一次 bug。
+
+系统上线后，用户反馈：「为什么查询结果里出现了奇怪的字符？」
+
+```
+预期输出：{"intent": "site_data", "operator_name": "北京联通"}
+实际输出：{"intent": "site_data", "operator_name": "\u5e02\u573a"}
+```
+
+**排查过程**：
+1. 检查 API 日志——编码配置正确 ✓
+2. 检查数据库编码——UTF-8 ✓
+3. 本地测试 Prompt——正常 ✓
+4. 检查 MiniMax API 文档——没发现问题 ✓
+
+我几乎要放弃了，突然想到——**也许问题不在我的代码，而在 LLM 的输出生成逻辑本身**。
+
+我试着把中文 Prompt 换成英文：
 
 ```python
-# 第一版语义设计：Intent Detection
-"""
-系统需要理解的用户意图：
-
-1. site_data（站点数据）
-   - "联通有多少站点"
-   - "移动 3500M 小区数"
-   - 运营商 + 频段 → 返回汇总数据
-
-2. indicator_data（指标数据）
-   - "联通 5G 速率"
-   - "最新月份覆盖率"
-   - 运营商 + 频段 + 月份 → 返回指标
-
-3. operator_list（运营商列表）
-   - "有哪些运营商"
-   - 无需参数 → 返回列表
-
-4. latest_data（最新数据过滤）
-   - "最新的数据"
-   - 作为其他意图的修饰符
-
-5. nl2sql（复杂查询）
-   - 不适合预定义的查询
-   - 走 LLM 生成 SQL
+# 原来的版本（有问题）
+prompt = f"""
+给定用户查询：{query}
+请判断意图并返回 JSON
 """
 
-# 这个 Prompt 模板本身 就是系统的设计规范
-INTENT_PROMPT_TEMPLATE = """..."""
-```
-
-**学到的教训**：最初的 Prompt 存在中文乱码问题。
-
-```python
-# 有问题的版本
-prompt = f"用户问：{query}，请判断意图"
-
-# 修复后的版本（使用英文 Prompt）
-prompt = f"""You are an intent detection system.
+# 修改后的版本（解决问题）
+prompt = f"""
+You are an intent detection system.
 Given user query: "{query}"
-Return JSON format: ..."""
+Return JSON format: ...
+"""
 ```
 
-**原因分析**：MiniMax 对中文结构化输出的编码处理不稳定。解决方案：英文 Prompt + 后处理映射。
+**根本原因**（推测）：MiniMax 对中文的结构化输出存在 Unicode 编码问题，但在英文场景下表现正常。
 
-### 3.3 Phase 2：架构设计（多层抽象）
+**这个经历教会我**：LLM 的问题有时候不是代码问题，而是 LLM 本身的问题。当你确信代码没问题时，尝试改变和 LLM 交互的方式。
 
-有了语义层定义后，我们设计了系统架构。这里体现了 **LLM-Based SDD 的第二个原则**：用代码验证设计，而非用文档验证设计。
+### 3.2 Prompt.format()：一个 Python 初学者都不会犯的错
 
-```
-设计产出：架构图（略）
-验证方式：写代码实现，记录遇到的问题，反推设计缺陷
-```
+看这段代码：
 
-**核心架构决策 1：CQRS 读写分离**
+```python
+prompt_template = """
+Given user query: "{query}"
+The output format is: {format}
+"""
 
-| 设计预期 | 实际发现的问题 |
-|----------|----------------|
-| Command (NL2SQL) 和 Query 独立扩展 | 流式响应与结构化数据格式冲突 |
-| Query 端直接映射实体，性能好 | 某些查询需要跨多个聚合表 |
-| 独立优化 Command 或 Query | 发现共用的 Schema 需要共享 |
+# 这是我写的
+prompt = prompt_template.format(query=query, format="{json}")
 
-**解决方案**：引入事件驱动接口。
-
-```javascript
-// SSE 事件类型定义（架构设计的核心产出）
-const SSE_EVENTS = {
-  START: 'start',           // 流开始
-  CONTENT: 'content',       // 文本片段
-  CHART: 'chart',          // 图表数据
-  TABLE: 'table',          // 表格数据
-  CONFIRMATION: 'confirmation',  // 模糊查询确认
-  ERROR: 'error',          // 错误
-  DONE: 'done'            // 流结束
-};
-
-// 这不是代码，是架构契约
-// 所有 Agent 和前端必须遵守这个契约
+# 报错：KeyError: 'json'
 ```
 
-**核心架构决策 2：多层安全护栏**
+**问题根源**：Python 的 `str.format()` 会先把 `{json}` 当作变量占位符解析，但变量 `json` 不存在。
 
-这是 LLM-Based 开发最独特的工程化需求：**永远不要相信 LLM 的输出**。
+**解决方案**：
+
+```python
+# 方案1：使用 replace()
+prompt = prompt_template.replace("{query}", query).replace("{format}", "json")
+
+# 方案2：双重大括号转义
+prompt = prompt_template.replace("{format}", "{{json}}").format(query=query)
+
+# 方案3：使用 Jinja2 模板引擎
+```
+
+**反思**：这是一个低级错误，但暴露了一个更深层的问题——**Prompt 模板中的 `{}` 和编程语言中的占位符语法存在天然的冲突**。在后续项目中，我统一使用 Jinja2 模板引擎来处理 Prompt 渲染，避免这类问题。
+
+### 3.3 SQL 安全：全表扫描事件的复盘
+
+那次事件让我彻底改变了对待 LLM 输出的态度。
+
+**事件经过**：
+1. 用户查询：「给我看看站点数据」
+2. LLM 生成的 SQL：`SELECT * FROM site_info`（没有 WHERE、没有 LIMIT）
+3. 数据库有 800 万条记录
+4. 全表扫描持续 30 秒，数据库 CPU 飙升至 100%
+5. 其他用户的查询全部超时
+
+**根因分析**：
+- 我天真地以为「LLM 会自动生成合理的 SQL」
+- 我没有对 LLM 输出施加任何安全约束
+- 我假设 LLM 理解了我的 Prompt = LLM 会遵守约束（这是错的）
+
+**改进方案**：
 
 ```java
-// SQL 安全护栏（这是 SDD 的安全语义）
 public class SqlSafetyValidator {
+
     public boolean validate(String sql) {
-        // 规则1: 必须 SELECT 开头
+        // 规则1: 必须以 SELECT 开头
+        if (!sql.trim().toUpperCase().startsWith("SELECT")) {
+            return false;
+        }
+
         // 规则2: 禁止危险关键词
+        String[] dangerous = {
+            "DROP", "DELETE", "INSERT", "UPDATE",
+            "TRUNCATE", "ALTER", "CREATE", "GRANT", "REVOKE"
+        };
+        for (String keyword : dangerous) {
+            if (sql.toUpperCase().contains(keyword)) {
+                return false;
+            }
+        }
+
         // 规则3: 必须有 LIMIT
+        if (!sql.toUpperCase().contains("LIMIT")) {
+            return false;
+        }
+
         // 规则4: 禁止注释
-        // 规则5: 禁止分号终结
+        if (sql.contains("--") || sql.contains("/*")) {
+            return false;
+        }
+
+        return true;
     }
 }
 ```
 
-**学到的教训**：最初只检查了 `SELECT`，但 LLM 生成了没有 LIMIT 的全表扫描 SQL，导致数据库负载飙升。
+**核心认知**：**LLM 的 Prompt 约束是不可靠的，必须用代码层面的护栏来强制约束**。就像 Docker 的 capability 限制——内核级的安全控制比容器内的配置更可信。
 
-### 3.4 Phase 3：Prompt 工程化（从实验到生产）
+---
 
-**LLM-Based SDD 的第三个原则**：Prompt 是代码，需要版本管理、测试、监控。
+## 四、架构设计：CQRS 不是银弹
 
-```yaml
-# 配置即代码（Prompt 版本化）
-# configs/intent_detection.yaml
-model:
-  name: minimax
-  endpoint: ${INTENT_LLM_ENDPOINT}
-  api_key: ${INTENT_API_KEY}
-  timeout: 10000
-  retries: 3
+### 4.1 为什么选择 CQRS
 
-prompt:
-  template: "intent_detection_prompt_v2"
-  temperature: 0.1  # 低温度保证稳定性
-  max_tokens: 500
+OperatorBoard 的查询场景泾渭分明：
 
-cache:
-  enabled: true
-  ttl: 300  # 5分钟缓存
-```
+| 类型 | 特点 | 路由 |
+|------|------|------|
+| Command（NL2SQL） | LLM 生成 SQL，动态 | Nl2SqlController |
+| Query（预定义查询） | 固定 SQL，参数化 | OperatorQueryController |
 
-**Prompt 测试策略**：
+**CQRS 的优势**：
+- Command 和 Query 独立演进
+- 可以针对不同场景独立优化
+- 边界清晰，便于团队分工
 
-```python
-# Prompt 的单元测试
-def test_intent_detection_prompt():
-    cases = [
-        ("联通有多少站点", "site_data"),
-        ("移动5G速率", "indicator_data"),
-        ("有哪些运营商", "operator_list"),
-    ]
-    for query, expected_intent in cases:
-        result = detect_intent(query)
-        assert result["intent"] == expected_intent
-```
+**CQRS 的代价**：
+- 概念复杂度增加（需要向团队解释 CQRS 是什么）
+- 某些场景需要跨越 Command 和 Query（如元数据查询）
+- 增加了架构决策的沟通成本
 
-### 3.5 Phase 4：工程化挑战（踩坑大全）
+**我的反思**：CQRS 是手段，不是目的。如果系统规模不够大、查询复杂度不够高，引入 CQRS 可能是过度设计。
 
-#### 坑 1：Prompt.format() 的变量冲突
+### 4.2 流式响应：SSE 协议的设计陷阱
 
-```python
-# 有问题的代码
-prompt_template = """
-Given user query: "{query}"
-Return format: {format}
-"""
-prompt = prompt_template.format(query=query, format="{json}")
-# KeyError: 'json'  ← Python 把 {format} 当成变量了
-```
+我们在设计 SSE 流式响应时，踩了一个经典陷阱：
 
-```python
-# 解决方案：使用 replace() 避免占位符冲突
-prompt = prompt_template.replace("{query}", query).replace("{format}", "json")
-```
-
-#### 坑 2：LLM 输出的 JSON 不稳定
-
-```python
-# LLM 有时返回：
-# {"intent": "site_data"}  ✓ 正确
-# {"intent": "site_data", }  ✗ 尾部逗号
-# {"intent": "site_data", "operator": null}  ✗ null vs "null"
-# "{\"intent\": \"site_data\"}"  ✗ 双重序列化
-
-# 解决方案：健壮 JSON 解析
-import json
-import re
-
-def safe_parse(response: str) -> dict:
-    # 清理常见问题
-    cleaned = response.strip()
-    # 移除可能的 markdown 代码块
-    cleaned = re.sub(r'^```json\s*', '', cleaned)
-    cleaned = re.sub(r'\s*```$', '', cleaned)
-    # 处理双重编码
-    if cleaned.startswith('"') and cleaned.endswith('"'):
-        cleaned = json.loads(cleaned)
-    return json.loads(cleaned)
-```
-
-#### 坑 3：流式输出与结构化数据撕裂
-
-用户期望：看到数据一片一片地流出来。
-现实：SSE 协议要求每条消息独立完整。
-
-```
-设计：分片传输 → 现实：消息边界问题
-```
-
-**解决方案**：定义清晰的消息协议和聚合策略。
+**最初的设计**：
 
 ```javascript
-// 前端消息聚合
+// 前端期望：分片传输表格数据
+// 服务端做法：把表格分成多行，每行一个 SSE 消息
+
+data: {"type": "row", "row": {"id": 1, "name": "站点A"}}
+data: {"type": "row", "row": {"id": 2, "name": "站点B"}}
+data: {"type": "row", "row": {"id": 3, "name": "站点C"}}
+```
+
+**问题**：前端收到这些消息时，表格状态是「不完整」的。如果用户在所有行到达之前就点击了「导出」，会得到不完整的 CSV。
+
+**解决方案**：引入状态机 + 完整数据集。
+
+```javascript
 class SSEProcessor {
+    constructor() {
+        this.state = 'idle';
+        this.buffer = [];
+    }
+
     process(event) {
         const data = JSON.parse(event.data);
 
         switch(data.type) {
-            case 'content':
-                this.appendContent(data.content);
+            case 'start':
+                this.state = 'streaming';
+                this.buffer = [];
+                this.emit('start');
                 break;
-            case 'chart':
-                this.setChart(data.chart);
+
+            case 'row':
+                this.buffer.push(data.row);
+                this.emit('row', data.row); // 流式更新 UI
                 break;
+
             case 'done':
-                this.finalize();
+                this.state = 'complete';
+                this.emit('done', { rows: this.buffer }); // 发送完整数据
+                break;
+
+            case 'error':
+                this.state = 'error';
+                this.emit('error', data.error);
                 break;
         }
     }
 }
 ```
 
+**架构反思**：**SSE 的简单性是假象。当你需要支持复杂的交互（如中断、重试、完整性验证）时，你需要构建配套的状态管理和消息协议**。
+
 ---
 
-## 四、SDD 开发模式总结：如何在项目中用 LLM 做 SDD
+## 五、LLM-Based SDD 的三条核心认知
 
-### 4.1 SDD 流程图
+### 5.1 认知一：Prompt 即设计契约
+
+我曾经把 Prompt 看作是「告诉 LLM 怎么工作」的说明书。后来我意识到，**Prompt 更准确的定位是「系统行为的设计契约」**。
+
+```python
+# 这不是代码，是契约
+INTENT_DETECTION_PROMPT = """
+You are an intent detection system for telecom operator data.
+
+Given user query: "{query}"
+
+Detect intent:
+- site_data: Query site/cell counts
+- indicator_data: Query network performance
+- operator_list: List operators
+- nl2sql: Complex SQL query
+
+Return JSON with:
+- intent: one of the above
+- operator_name: normalized name
+- band: frequency band
+- data_month: YYYY-MM format
+"""
+
+# 契约的版本化
+INTENT_DETECTION_PROMPT_V2 = """..."""  # 当业务变化时，更新版本
+```
+
+**认知升级**：当 Prompt 是契约时，它的变更需要像 API 变更一样管理——版本控制、回归测试、变更通知。
+
+### 5.2 认知二：LLM 是不可靠的合作伙伴
+
+这句话可能会让很多 LLM 布道者不舒服，但我必须诚实地说——**在生产级系统中，LLM 输出必须被当作「可能错误」的半成品来处理**。
+
+这不是对 LLM 的否定，而是**务实的工程态度**。
+
+```python
+# 不可靠的合作伙伴需要「复核」
+async def detect_intent(query: str) -> IntentResult:
+    # 1. 调用 LLM
+    raw_result = await llm_client.generate(prompt)
+
+    # 2. 解析 + 验证
+    try:
+        result = safe_parse(raw_result)
+    except JSONDecodeError:
+        # 降级策略
+        return fallback_to_rule_based_detection(query)
+
+    # 3. 业务规则校验
+    if not is_valid_intent(result.intent):
+        # 降级策略
+        return fallback_to_nl2sql()
+
+    return result
+```
+
+**核心原则**：任何 LLM 输出在被系统信任之前，必须经过验证。
+
+### 5.3 认知三：架构决策需要「可逆性」设计
+
+在 LLM 领域，技术选型的风险比传统软件工程更高——因为很多方案刚诞生一两年，没有足够的时间验证其稳定性。
+
+**我的策略是「可逆性设计」**：
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    LLM-Based SDD 流程                         │
+│                      可逆性架构设计                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  LLM Provider 抽象                                          │
+│       │                                                     │
+│       ├── SQLCoderProvider (当前)                          │
+│       ├── OpenAIProvider (备选)                            │
+│       └── ClaudeProvider (备选)                            │
+│                                                              │
+│  当 SQLCoder 效果不佳时，可以切换到 OpenAI                   │
+│  当 OpenAI 数据安全问题时，可以切换回 SQLCoder               │
+│                                                              │
 └─────────────────────────────────────────────────────────────┘
-
-     ┌─────────────────┐
-     │  业务问题定义     │  ← 真实痛点，非技术幻想
-     └────────┬────────┘
-              │
-              ▼
-     ┌─────────────────┐
-     │  语义层设计      │  ← 用 Prompt 定义系统边界
-     │  (Prompt as     │     不是写接口，是写语义契约
-     │   Design)       │
-     └────────┬────────┘
-              │
-              ▼
-     ┌─────────────────┐
-     │  快速原型验证    │  ← 用代码验证设计，而非文档
-     └────────┬────────┘
-              │
-         ┌────┴────┐
-         │ 验证通过？ │
-         └────┬────┘
-           │    │
-          Yes   No
-           │    └──┌─────────────────┐
-           │       │  问题分析与归类  │
-           │       └────────┬────────┘
-           │                │
-           ▼                ▼
-     ┌───────────┐   ┌───────────┐
-     │  工程化    │   │  Prompt   │
-     │  落地      │   │  优化     │
-     └─────┬─────┘   └─────┬─────┘
-           │               │
-           └───────┬───────┘
-                   │
-                   ▼
-          ┌─────────────────┐
-          │  安全护栏 + 监控 │
-          └─────────────────┘
 ```
 
-### 4.2 三条核心原则
-
-**原则 1：Prompt 即设计 (Prompt as Design)**
-
-- Prompt 模板是系统行为的契约
-- 需要版本化管理
-- 需要像代码一样测试
-
-**原则 2：永远假设 LLM 是不可靠的**
-
-- 输出必须验证
-- 必须有安全护栏
-- 必须有降级策略
-
-**原则 3：用代码验证设计，而非文档**
-
-- 快速原型 → 暴露设计问题
-- 迭代优化 → 收敛到可用方案
-- 文档是事后的，代码是诚实的
-
-### 4.3 项目中的 SDD 应用清单
-
-| 开发阶段 | SDD 活动 | LLM 参与方式 |
-|----------|----------|--------------|
-| 需求分析 | 定义系统意图类型 | 对话式探索业务边界 |
-| 架构设计 | 设计 CQRS 分离 | LLM 建议架构模式 |
-| 接口设计 | 定义 SSE 事件协议 | Prompt 模板即契约 |
-| 安全设计 | SQL 安全规则 | 多层护栏设计 |
-| 单元测试 | Prompt 测试用例生成 | 生成边界测试 |
-| 集成测试 | 端到端场景验证 | 协助调试复杂流程 |
+**关键实践**：
+- 核心业务逻辑不直接依赖 LLM Provider
+- 通过接口抽象 LLM 调用
+- 保留降级路径
 
 ---
 
-## 五、实战避坑指南：35 个血泪经验
+## 六、避坑清单：一个老工程师的 27 条血泪经验
 
-### 5.1 LLM 调用避坑
+### 6.1 LLM 调用层
 
-| # | 坑 | 解决方案 | 严重度 |
-|---|-----|----------|--------|
-| 1 | 中文乱码 | 英文 Prompt + 后处理映射 | 🔴 高 |
-| 2 | JSON 格式不稳定 | 健壮解析 + 正则清理 | 🔴 高 |
-| 3 | 输出截断 | 增加 max_tokens + 流式处理 | 🟡 中 |
-| 4 | 响应延迟高 | 缓存 + 异步处理 | 🟡 中 |
-| 5 | 幻觉生成 | 多层安全护栏 | 🔴 高 |
-| 6 | 温度过高结果不稳定 | temperature=0.1 | 🟢 低 |
-| 7 | API Key 泄露 | 环境变量管理 | 🔴 高 |
-| 8 | Prompt 注入 | 输入清理 + 白名单 | 🔴 高 |
-| 9 | 并发超限 | 限流 + 队列 | 🟡 中 |
-| 10 | 服务不可用 | 降级策略 + 监控 | 🟡 中 |
+| # | 教训 | 代价 |
+|---|------|------|
+| 1 | 中文 Prompt 在某些 LLM 上有编码问题 | 2 小时的 debug + 换成英文 |
+| 2 | JSON 解析需要健壮的异常处理 | 全表扫描事件 |
+| 3 | temperature=0.1 是稳定性与创造性的平衡点 | 输出不稳定投诉 |
+| 4 | API Key 必须通过环境变量注入 | 差点泄露到 GitHub |
+| 5 | 必须有服务不可用的降级策略 | 用户无法查询的 P0 故障 |
 
-### 5.2 Prompt 工程避坑
+### 6.2 Prompt 工程层
 
-| # | 坑 | 解决方案 | 严重度 |
-|---|-----|----------|--------|
-| 11 | `{}` 占位符冲突 | 使用 `replace()` 而非 `format()` | 🟡 中 |
-| 12 | 示例数量过多 | 3-5 个精选示例 | 🟢 低 |
-| 13 | 指令与示例冲突 | 示例必须符合指令 | 🟡 中 |
-| 14 | 角色设定被忽略 | 在 Prompt 开头强调 | 🟡 中 |
-| 15 | 输出格式不一致 | 明确指定 JSON Schema | 🟡 中 |
+| # | 教训 | 代价 |
+|---|------|------|
+| 6 | `{}` 占位符和 Python format() 冲突 | 1 小时的 KeyError |
+| 7 | 示例不是越多越好，3-5 个精选 | Prompt 膨胀，LLM 困惑 |
+| 8 | 角色设定需要在 Prompt 开头重复 | LLM 在长 Prompt 中「遗忘」 |
+| 9 | JSON Schema 比「返回 JSON」更可靠 | 输出格式漂移 |
 
-### 5.3 架构设计避坑
+### 6.3 架构设计层
 
-| # | 坑 | 解决方案 | 严重度 |
-|---|-----|----------|--------|
-| 16 | 流式与结构冲突 | 定义清晰事件协议 | 🟡 中 |
-| 17 | SQL 无 LIMIT | 安全护栏强制检查 | 🔴 高 |
-| 18 | 全表扫描 | 必填 WHERE + 索引优化 | 🔴 高 |
-| 19 | 多意图未处理 | 降级到 nl2sql | 🟡 中 |
-| 20 | 状态丢失 | SSE 聚合 + 状态机 | 🟡 中 |
-| 21 | 错误处理混乱 | 统一 ErrorCode 体系 | 🟢 低 |
+| # | 教训 | 代价 |
+|---|------|------|
+| 10 | SQL 安全护栏必须用代码强制执行 | 全表扫描事件 |
+| 11 | SSE 流式需要状态机管理 | UI 状态不一致 |
+| 12 | CQRS 适合复杂系统，小系统是过度设计 | 团队沟通成本 |
+| 13 | 统一 ErrorCode 体系比随意的异常好 | 问题诊断困难 |
+| 14 | LLM Provider 需要抽象接口 | 切换成本高 |
 
-### 5.4 工程化避坑
+### 6.4 工程化层
 
-| # | 坑 | 解决方案 | 严重度 |
-|---|-----|----------|--------|
-| 22 | 配置散落 | YAML 统一管理 | 🟢 低 |
-| 23 | Prompt 无版本 | 文件名 + Git 管理 | 🟡 中 |
-| 24 | 测试缺失 | Prompt 单元测试 | 🟡 中 |
-| 25 | 监控缺失 | 调用链路追踪 | 🟡 中 |
-| 26 | 缓存失效 | TTL + 手动刷新 | 🟢 低 |
-| 27 | 日志不足 | 结构化日志 + 请求 ID | 🟢 低 |
+| # | 教训 | 代价 |
+|---|------|------|
+| 15 | Prompt 需要版本管理 | 无法回溯问题来源 |
+| 16 | Prompt 需要单元测试 | 回归问题未及时发现 |
+| 17 | 调用链路需要追踪 | 问题定位困难 |
+| 18 | 缓存 TTL 设置需要考虑 LLM 特性 | 脏数据 + 过期数据 |
+| 19 | 日志需要包含请求 ID 和版本 | 问题复现困难 |
+| 20 | YAML 配置优于硬编码 | 维护成本高 |
 
 ---
 
-## 六、工具链推荐
+## 七、反思：LLM 没有改变软件工程的本质
 
-| 环节 | 推荐工具 |
-|------|----------|
-| Prompt 管理 | Promptify、LangSmith |
-| LLM 测试 | Mintlify、OpenRouter |
-| 安全检测 | SQLiCo、Semantic Kernel |
-| 监控告警 | LangFuse、Helicone |
-| 版本控制 | Git + Prompt 文件 |
+### 7.1 一个老工程师的「冷思考」
+
+在经历了一年多的 LLM-Based SDD 实践后，我对媒体上那些「LLM 颠覆软件工程」的论调越来越持保留态度。
+
+**LLM 确实改变的**：
+- 快速原型的时间周期（从周到天）
+- 某些重复性编码工作的效率（CRUD 生成）
+- 非结构化文档的处理方式（代码生成、注释生成）
+
+**LLM 没有改变的**：
+- 架构决策的重要性（反而增加了，因为要处理 LLM 的不确定性）
+- 安全设计的必要性（反而更重要了）
+- 可维护性的要求（Prompt 也需要维护）
+- 测试的重要性（Prompt 输出仍需验证）
+
+### 7.2 我对「AI 取代程序员」论调的回应
+
+每当有人问我「程序员会不会被 AI 取代」，我都会反问：
+
+**「你能信任 AI 写的代码在生产环境中不出问题吗？」**
+
+如果答案是「不能」，那说明还需要人来验证、审核、把关。**软件工程的本质不是「写代码」，而是「构建可靠系统」**。LLM 是工具，不是替代者。
+
+当然，这个判断可能是错的。技术的发展往往超出我们的想象。保持谦逊，保持学习，保持批判性思考——这才是老工程师应有的态度。
 
 ---
 
-## 结语：LLM 是实习生，不是专家
+## 结语
 
-在项目的整个开发过程中，我们最大的收获不是某个具体技术的掌握，而是一个认知转变：
+写这篇博客的时候，我一直在问自己：**我希望读者从中获得什么？**
 
-> **把 LLM 当作「实习生」而不是「专家」。**
->
-> - 实习生可以帮你完成明确的任务 ✓
-> - 实习生的输出必须复核 ✗
-> - 实习生需要明确的边界和规则 ✗
-> - 实习生无法处理模糊需求 ✗
-> - 实习生可能「拍脑袋」给出错误答案 ✗
+如果你是 LLM 开发的新手，我建议你记住三条：
+1. Prompt 是契约，需要版本管理
+2. LLM 输出不可靠，需要验证护栏
+3. 架构决策要保留可逆性
 
-所以，**LLM-Based SDD 的核心不是「用 LLM 写代码」，而是「用设计思维 + 工程护栏 + 迭代优化」来构建可靠系统**。
+如果你是有经验的工程师，我建议你保持警惕：
+- 不要被 LLM 的「智能」迷惑，它仍然是工具
+- 不要忽视传统的软件工程原则，它们仍然有效
+- 不要停止思考，技术会变，原则不会
 
-LLM 降低了某些工作的门槛（快速原型、代码生成、文档撰写），但没有降低软件工程的复杂度。架构设计、安全考虑、可维护性——这些仍然是人类工程师的核心价值所在。
+最后，用一句话总结我这三年多的探索：
+
+> **LLM 让软件工程多了一个变量，但软件工程的核心——把人类意图转化为可靠系统——没有改变。**
 
 ---
+
+**项目地址**：[OperatorBoard](https://github.com/tianjunming/OperatorBoard)
 
 **参考资料**：
 - [SQLCoder - DefogAI](https://github.com/defog-ai/sqlcoder)
 - [LangChain Documentation](https://docs.langchain.com/)
 - [Prompt Engineering Guide](https://www.promptingguide.ai/)
 - [CQRS Pattern - Microsoft](https://learn.microsoft.com/en-us/azure/architecture/patterns/cqrs)
+- [LangFuse - LLM Observability](https://langfuse.com/)
