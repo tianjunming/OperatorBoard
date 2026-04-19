@@ -517,16 +517,47 @@ private boolean isSqlSafe(String sql) {
 | /api/v1/nl2sql/schema | GET | 获取数据库 Schema |
 | /api/v1/nl2sql/health | GET | 健康检查 |
 
-### 8.2 Query API (CQRS Query Side)
+### 8.2 Operator Query API (CQRS Query Side)
 
 | 端点 | 方法 | 参数 | 描述 |
 |------|------|------|------|
-| /api/v1/query/operators | GET | country, operatorName | 运营商列表 |
-| /api/v1/query/operators/{id} | GET | - | 运营商详情 |
-| /api/v1/query/site-summary | GET | operatorId, dataMonth | 站点汇总 (宽表) |
-| /api/v1/query/indicators | GET | operatorId, dataMonth | 指标列表 (宽表) |
-| /api/v1/query/indicators/latest | GET | operatorId | 最新指标 |
-| /api/v1/query/indicators/trend | GET | operatorId | 趋势数据 |
+| /api/v1/nl2sql/operators | GET | country, operatorName | 运营商列表 |
+| /api/v1/nl2sql/operators/{id} | GET | - | 运营商详情 |
+| /api/v1/nl2sql/site-summary | GET | operatorId, operatorName, dataMonth | 站点汇总 |
+| /api/v1/nl2sql/operators/{operatorName}/sites/latest | GET | - | 运营商最新站点 |
+| /api/v1/nl2sql/operators/{operatorName}/sites/history | GET | - | 运营商站点历史 |
+| /api/v1/nl2sql/operators/all/sites/latest | GET | - | 所有运营商最新站点 |
+| /api/v1/nl2sql/operators/{operatorName}/indicators/latest | GET | - | 运营商最新指标 |
+| /api/v1/nl2sql/operators/{operatorName}/indicators/history | GET | - | 运营商指标历史 |
+| /api/v1/nl2sql/operators/all/indicators/latest | GET | - | 所有运营商最新指标 |
+| /api/v1/nl2sql/times | GET | - | 可用时间点列表 |
+
+### 8.3 Indicator Query API (CQRS Query Side)
+
+| 端点 | 方法 | 参数 | 描述 |
+|------|------|------|------|
+| /api/v1/nl2sql/indicators | GET | operatorId, operatorName, dataMonth | 指标列表 |
+| /api/v1/nl2sql/indicators/latest | GET | operatorId, operatorName | 最新指标 |
+| /api/v1/nl2sql/indicators/trend | GET | operatorId, operatorName | 指标趋势 |
+| /api/v1/nl2sql/indicators/band | GET | operatorId, operatorName, band, networkType | 按频段指标 |
+| /api/v1/nl2sql/indicators/metrics | GET | operatorId, operatorName, dataMonth | 运营商汇总指标 |
+
+### 8.4 Auth Agent API (Port 8084)
+
+| 端点 | 方法 | 描述 |
+|------|------|------|
+| /auth/login | POST | 用户登录 |
+| /auth/register | POST | 用户注册（待审批） |
+| /auth/logout | POST | 用户登出 |
+| /auth/me | GET | 当前用户信息 |
+| /auth/refresh | POST | 刷新Token |
+| /auth/approvals/pending | GET | 待审批用户列表（需superuser） |
+| /auth/approvals/approve/{user_id} | POST | 批准用户（需superuser） |
+| /auth/approvals/reject/{user_id} | POST | 拒绝用户（需superuser） |
+| /users | GET/POST | 用户管理 |
+| /users/{id} | GET/PUT/DELETE | 用户CRUD |
+| /roles | GET/POST | 角色管理 |
+| /permissions | GET | 权限列表 |
 
 ## 9. 性能考量
 

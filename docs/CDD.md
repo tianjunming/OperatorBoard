@@ -1,7 +1,7 @@
 # OperatorBoard 代码设计文档
 
-**文档版本**: 1.2
-**编制日期**: 2026-04-16
+**文档版本**: 1.3
+**编制日期**: 2026-04-19
 **参考标准**: Google Style Guide | SOLID Principles
 
 ---
@@ -885,6 +885,7 @@ const examples = {
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.3 | 2026-04-19 | 新增global.css全局样式、UserManagement组件增强、App.jsx集成AuthRegister和PendingApprovals |
 | 1.2 | 2026-04-16 | 新增PendingApprovals组件、AuthRegister组件、UserManagement增强 |
 | 1.1 | 2026-04-16 | 新增auth-agent项目结构、AuthRegister、UserManagement组件 |
 | 1.0 | 2026-04-12 | 初始版本，代码设计文档 |

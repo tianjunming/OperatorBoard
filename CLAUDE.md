@@ -4,11 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OperatorBoard is a multi-agent telecom operator data management system with NL2SQL capabilities. It consists of 5 main components:
+OperatorBoard is a multi-agent telecom operator data management system with NL2SQL capabilities. It consists of 6 main components:
 
 - **agent-framework**: Python core framework with tools, skills, RAG, MCP, and API server base classes
 - **operator-agent**: Python agent that integrates with Java NL2SQL service (port 8080)
 - **predict-agent**: Python agent for coverage prediction Q&A and simulation tuning (port 8083)
+- **auth-agent**: Python FastAPI user authentication and authorization service (port 8084)
 - **operator-service**: Java Spring Boot NL2SQL microservice
 - **agent-app**: React frontend with data dashboard
 - **docs**: 4+1 architecture documentation
@@ -30,10 +31,12 @@ npm run start:all    # Start both
 pip install -e ./src/agent-framework
 pip install -e ./src/operator-agent
 pip install -e ./src/predict-agent
+pip install -e ./src/auth-agent
 
 # Run API servers
 python -m operator_agent.api.server  # port 8080
 python -m predict_agent.api.server   # port 8083
+python -m auth_agent.api.server      # port 8084
 
 # Run tests
 pytest
@@ -56,8 +59,8 @@ mysql -u root -p < src/main/resources/schema.sql
 
 ```
 agent-app (React) → API Proxy → operator-agent (8080) → operator-service (8081) → MySQL
-                                              ↓                      ↓
-                                          SQLCoder LLM         SQLCoder LLM
+                          ↓                                    ↓                    ↓
+                    auth-agent (8084)                    SQLCoder LLM         SQLCoder LLM
 
 predict-agent (8083) → Coverage Prediction Q&A + Simulation Tuning
 ```
@@ -118,6 +121,7 @@ get_error_response(GET_SITE_CELLS_FAILED, locale="zh", detail="timeout")
 ## Key Files
 - `operator-agent/src/operator_agent/api/server.py` - FastAPI endpoints for NL2SQL
 - `predict-agent/src/predict_agent/api/server.py` - FastAPI endpoints for coverage prediction
+- `auth-agent/src/auth_agent/api/server.py` - FastAPI endpoints for user authentication (port 8084)
 - `operator-service/src/main/java/com/operator/nl2sql/` - Java NL2SQL implementation
 - `operator-service/src/main/resources/schema.sql` - Database schema with sample data
 - `agent-framework/src/agent_framework/api/` - Framework API base classes
@@ -149,6 +153,9 @@ npx playwright show-report
 ### E2E Test Files
 - `tests/18-functions-e2e.spec.js` - 18个核心功能E2E测试 + 数据库一致性验证 (29 tests, 28+ passing)
 - `tests/ui-optimizations-e2e.spec.js` - UI优化功能测试套件 (20 tests)
+- `tests/real-e2e.spec.js` - 完整E2E测试套件
+- `tests/e2e/new-features.spec.js` - 新功能测试套件
+- `tests/test_all_queries.spec.js` - 全量查询测试
 
 ### Test Configuration
 - `playwright.config.js` - Playwright全局配置

@@ -883,7 +883,7 @@ npx playwright test --ui
 
 ## 8. 重构完成状态
 
-### 7.1 已完成重构
+### 8.1 已完成重构
 
 #### Phase 1: 高优先级 (安全 & 可靠性)
 
@@ -908,13 +908,13 @@ npx playwright test --ui
 | CSS 样式分离 | ✅ 已完成 | 共享样式移至 `index.css`，Dashboard.css 仅保留看板样式 |
 | 独立请求 Loading 状态 | ✅ 已完成 | `loadingKeys: Set<string>` 替代单一 `loading: boolean` |
 
-### 7.2 待完成项
+### 8.2 待完成项
 
 | 任务 | 优先级 | 说明 |
 |------|--------|------|
 | - | - | 所有计划任务已完成 |
 
-### 7.3 MCP 传输层实现
+### 8.3 MCP 传输层实现
 
 **PlantUML Diagram:** [06-mcp-transport.puml](../diagrams/06-mcp-transport.puml)
 
@@ -942,7 +942,7 @@ WS   /ws/{id} - WebSocket  streaming
 
 **依赖:** `fastapi`, `uvicorn`, `websockets`
 
-### 7.4 配置说明
+### 8.4 配置说明
 
 **Java 服务安全配置 (application.yml):**
 ```yaml
@@ -969,7 +969,7 @@ nl2sql:
     refresh-cron: "0 0 * * * *"  # 每小时刷新
 ```
 
-### 7.5 重构验证
+### 8.5 重构验证
 
 ```bash
 # Java 编译

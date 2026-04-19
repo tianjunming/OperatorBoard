@@ -1,7 +1,7 @@
 # OperatorBoard 软件设计文档
 
-**文档版本**: 1.2
-**编制日期**: 2026-04-16
+**文档版本**: 1.3
+**编制日期**: 2026-04-19
 **参考标准**: IEEE 1012 | ISO/IEC/IEEE 42010
 
 ---
@@ -536,76 +536,161 @@ data: {"type": "done", "request_id": "req_001"}
 
 #### Query Controller (Query侧)
 
-##### GET /api/v1/query/operators
+##### GET /api/v1/nl2sql/operators
 获取运营商列表
+
+**参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| country | string | 否 | 国家名称 |
+| operatorName | string | 否 | 运营商名称（模糊匹配） |
+
+**响应**:
+```json
+[
+  {"id": 1, "operatorName": "China Mobile", "country": "中国", ...},
+  {"id": 2, "operatorName": "China Unicom", "country": "中国", ...},
+  {"id": 3, "operatorName": "China Telecom", "country": "中国", ...}
+]
+```
+
+##### GET /api/v1/nl2sql/operators/{id}
+获取运营商详情
 
 **响应**:
 ```json
 {
-  "operators": [
-    {"id": 1, "name": "China Mobile"},
-    {"id": 2, "name": "China Unicom"},
-    {"id": 3, "name": "China Telecom"}
-  ]
+  "id": 1,
+  "operatorName": "China Mobile",
+  "country": "中国",
+  "region": "华北",
+  "networkType": "4G/5G",
+  "dataMonth": "2026-03"
 }
 ```
 
-##### GET /api/v1/query/site-summary
+##### GET /api/v1/nl2sql/site-summary
 站点汇总查询
 
 **参数**:
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| operator | string | 否 | 运营商名称 |
-| band | string | 否 | 频段 |
-| network_type | string | 否 | 网络类型 |
-| city | string | 否 | 城市 |
-| limit | int | 否 | 返回条数，默认10 |
+| operatorId | long | 否 | 运营商ID |
+| operatorName | string | 否 | 运营商名称 |
+| dataMonth | string | 否 | 数据月份 |
+
+**响应**:
+```json
+[
+  {
+    "operatorId": 174,
+    "operatorName": "中国联通",
+    "band": "LTE 700M FDD",
+    "technology": "LTE",
+    "siteNum": 123,
+    "cellNum": 369
+  }
+]
+```
+
+##### GET /api/v1/nl2sql/operators/{operatorName}/sites/latest
+获取指定运营商最新站点数据
+
+**响应**:
+```json
+[
+  {
+    "operatorId": 174,
+    "operatorName": "中国联通",
+    "band": "LTE 700M FDD",
+    "siteNum": 123,
+    "cellNum": 369
+  }
+]
+```
+
+##### GET /api/v1/nl2sql/operators/{operatorName}/sites/history
+获取指定运营商历史站点数据
+
+**响应**: 站点历史列表
+
+##### GET /api/v1/nl2sql/operators/all/sites/latest
+获取所有运营商最新站点数据
+
+**响应**: 所有运营商站点汇总列表
+
+##### GET /api/v1/nl2sql/operators/{operatorName}/indicators/latest
+获取指定运营商最新指标
 
 **响应**:
 ```json
 {
-  "summary": [
-    {
-      "operator_name": "China Unicom",
-      "band": "3500M",
-      "site_count": 1256,
-      "cell_count": 3812
-    }
-  ],
-  "total": 1
+  "operatorId": 174,
+  "operatorName": "中国联通",
+  "dataMonth": "2026-03",
+  "lteAvgDlRate": 113.02,
+  "nrAvgDlRate": 255.40,
+  ...
 }
 ```
 
-##### GET /api/v1/query/indicators/latest
+##### GET /api/v1/nl2sql/operators/{operatorName}/indicators/history
+获取指定运营商指标历史趋势
+
+**响应**: 指标历史列表
+
+##### GET /api/v1/nl2sql/operators/all/indicators/latest
+获取所有运营商最新指标
+
+**响应**: 所有运营商指标列表
+
+##### GET /api/v1/nl2sql/indicators
+获取指标列表
+
+**参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| operatorId | long | 否 | 运营商ID |
+| operatorName | string | 否 | 运营商名称 |
+| dataMonth | string | 否 | 数据月份 |
+
+**响应**: 指标列表
+
+##### GET /api/v1/nl2sql/indicators/latest
 最新指标查询
 
 **参数**:
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| operator | string | 否 | 运营商名称 |
-| band | string | 否 | 频段 |
-| network_type | string | 否 | 网络类型 |
-| limit | int | 否 | 返回条数，默认10 |
+| operatorId | long | 否 | 运营商ID |
+| operatorName | string | 否 | 运营商名称 |
 
 **响应**:
 ```json
-{
-  "indicators": [
-    {
-      "operator_name": "China Unicom",
-      "band": "3500M",
-      "network_type": "NR",
-      "data_month": "2026-03",
-      "cell_count": 3812,
-      "avg_pdsch_throughput": 126.87,
-      "avg_pusch_throughput": 45.23,
-      "avg_access_success_rate": 99.2,
-      "avg_coverage_rate": 95.8
-    }
-  ]
-}
+[
+  {
+    "operatorId": 174,
+    "operatorName": "中国联通",
+    "band": "3500M",
+    "networkType": "NR",
+    "dataMonth": "2026-03",
+    "dlRate": 126.87,
+    "ulRate": 45.23,
+    ...
+  }
+]
 ```
+
+##### GET /api/v1/nl2sql/indicators/trend
+指标趋势数据
+
+**参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| operatorId | long | 否 | 运营商ID |
+| operatorName | string | 否 | 运营商名称 |
+
+**响应**: 时间范围内的指标趋势列表
 
 ##### GET /api/v1/nl2sql/indicators/band
 按频段指标查询(LTE/NR区分，networkType为空时返回双版本)
@@ -673,7 +758,13 @@ data: {"type": "done", "request_id": "req_001"}
     "fallbackRatio": 0.7079,
     "fallbackRatioDesc": "NR用户回落到LTE的比例",
     "lteAvgDlRate": 113.02,
-    "nrAvgDlRate": 255.40
+    "lteAvgUlRate": ...,
+    "lteAvgDlPrb": ...,
+    "lteAvgUlPrb": ...,
+    "nrAvgDlRate": 255.40,
+    "nrAvgUlRate": ...,
+    "nrAvgDlPrb": ...,
+    "nrAvgUlPrb": ...
   }
 ]
 ```
@@ -1147,6 +1238,7 @@ nl2sql:
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.3 | 2026-04-19 | 新增运营商站点/指标最新历史API端点、times端点、all operators端点；新增UserManagement前端组件、global.css全局样式 |
 | 1.2 | 2026-04-16 | 新增频段指标查询(BandIndicatorResponse)、运营商汇总指标(OperatorMetricsResponse)、indicator_info表新增汇总指标字段 |
 | 1.1 | 2026-04-16 | 新增Auth Agent模块、用户注册审批功能、运营商不存在响应DTO |
 | 1.0 | 2026-04-12 | 初始版本，软件设计文档 |
