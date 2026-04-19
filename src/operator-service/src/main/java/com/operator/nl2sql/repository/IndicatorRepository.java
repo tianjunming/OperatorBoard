@@ -20,4 +20,10 @@ public interface IndicatorRepository {
             @Param("dataMonth") String dataMonth);
 
     List<IndicatorInfo> findTrendData(@Param("operatorId") Long operatorId);
+
+    List<IndicatorInfo> findMetricsSummary(@Param("operatorId") Long operatorId);
+
+    List<IndicatorInfo> findMetricsSummaryByMonth(
+            @Param("operatorId") Long operatorId,
+            @Param("dataMonth") String dataMonth);
 }

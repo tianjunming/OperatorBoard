@@ -166,18 +166,24 @@ export default function OperatorDashboard() {
     });
   }, [operators, allOperatorsData]);
 
-  // Indicator table data
+  // Indicator table data - use latest month
   const indicatorTableData = useMemo(() => {
     if (!latestIndicators.length) return [];
+    // Find latest month data
+    const latestData = latestIndicators.reduce((latest, item) => {
+      if (!latest || item.dataMonth > latest.dataMonth) return item;
+      return latest;
+    }, null);
+    if (!latestData) return [];
+
     const result = [];
-    const item = latestIndicators[0];
     for (const band of BANDS) {
-      const dlRate = item[`lte${band}DlRate`] || item[`nr${band}DlRate`] || 0;
-      const ulRate = item[`lte${band}UlRate`] || item[`nr${band}UlRate`] || 0;
-      const dlPrb = item[`lte${band}DlPrb`] || item[`nr${band}DlPrb`] || 0;
-      const ulPrb = item[`lte${band}UlPrb`] || item[`nr${band}UlPrb`] || 0;
+      const dlRate = latestData[`lte${band}DlRate`] || latestData[`nr${band}DlRate`] || 0;
+      const ulRate = latestData[`lte${band}UlRate`] || latestData[`nr${band}UlRate`] || 0;
+      const dlPrb = latestData[`lte${band}DlPrb`] || latestData[`nr${band}DlPrb`] || 0;
+      const ulPrb = latestData[`lte${band}UlPrb`] || latestData[`nr${band}UlPrb`] || 0;
       if (dlRate > 0 || ulRate > 0) {
-        result.push({ band, dlRate, ulRate, dlPrb, ulPrb, createdTime: item.createdTime });
+        result.push({ band, dlRate, ulRate, dlPrb, ulPrb, createdTime: latestData.createdTime });
       }
     }
     return result;
