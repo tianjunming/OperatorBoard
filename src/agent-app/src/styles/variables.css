@@ -143,6 +143,35 @@
   --scrollbar-thumb-hover: #5a5a80;
 }
 
+/* ===== Midnight Mode (Pure Black) ===== */
+[data-theme="midnight"] {
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0a;
+  --bg-tertiary: #141414;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-active: rgba(255, 255, 255, 0.08);
+
+  --text-primary: #e8e8f0;
+  --text-secondary: #a0a0b8;
+  --text-tertiary: #707088;
+  --text-muted: #505068;
+
+  --border-light: #1a1a1a;
+  --border-default: #282828;
+  --border-strong: #383838;
+
+  --color-primary: #6b8aff;
+  --color-primary-hover: #7a99ff;
+  --color-primary-light: rgba(107, 138, 255, 0.12);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6), 0 2px 4px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7), 0 4px 6px -2px rgba(0, 0, 0, 0.5);
+
+  --scrollbar-thumb: #383838;
+  --scrollbar-thumb-hover: #484858;
+}
+
 /* ===== System Theme Detection ===== */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
