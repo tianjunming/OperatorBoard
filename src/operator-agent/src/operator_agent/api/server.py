@@ -1006,7 +1006,8 @@ def _transform_indicator_to_long(indicators: list, metric: str = "dl_rate") -> l
 def _build_standard_response(title: str, summary: dict, table_data: list,
                              chart_type: str, chart_keys: list, chart_data: list,
                              table_columns: list, thinking: str = "",
-                             show_summary_in_content: bool = True) -> Dict[str, Any]:
+                             show_summary_in_content: bool = True,
+                             show_raw_content: bool = False) -> Dict[str, Any]:
     """
     Build a standardized response for all 18 functions.
 
@@ -1015,8 +1016,6 @@ def _build_standard_response(title: str, summary: dict, table_data: list,
     - chart: Chart data for frontend visualization
     - data: Raw data for debugging
     """
-    # DEBUG
-
     # Build table data string
     if table_columns and table_data:
         col_str = "|".join(table_columns)
@@ -1047,12 +1046,17 @@ def _build_standard_response(title: str, summary: dict, table_data: list,
 [chart_data::{chart_data_str}]
 [/toggle]"""
 
-    content = f"# {title}\n\n"
-    if show_summary_in_content and summary_str:
-        content += f"{summary_str}\n\n"
-    if table_md:
-        content += table_md + "\n\n"
-    content += toggle_block
+    # Build content - only include raw markdown if show_raw_content is True
+    if show_raw_content:
+        content = f"# {title}\n\n"
+        if show_summary_in_content and summary_str:
+            content += f"{summary_str}\n\n"
+        if table_md:
+            content += table_md + "\n\n"
+        content += toggle_block
+    else:
+        # Only include toggle block, no raw markdown
+        content = toggle_block
 
     return {
         "content": (thinking + "\n\n" + content) if thinking else content,
