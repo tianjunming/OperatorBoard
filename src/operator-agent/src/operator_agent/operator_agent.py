@@ -545,10 +545,6 @@ Return JSON only, no other text."""
 
         prompt = prompt_template.replace("{query}", natural_language_query).replace("{operator_examples}", operator_examples)
 
-        print(f"[DEBUG] llm_endpoint: {llm_endpoint}")
-        print(f"[DEBUG] llm_model: {llm_model}")
-        print(f"[DEBUG] api_key present: {bool(api_key)}")
-        print(f"[DEBUG] prompt length: {len(prompt)}")
 
         try:
             async with httpx.AsyncClient(timeout=float(timeout)) as client:

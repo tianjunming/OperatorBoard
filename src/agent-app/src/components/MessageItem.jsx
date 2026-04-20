@@ -4,7 +4,7 @@ import {
   Copy, Check, RotateCcw, ThumbsUp, ThumbsDown,
   User, Bot, AlertCircle, CheckCircle, AlertTriangle, Info,
   ChevronDown, ChevronUp, ChevronRight, MessageSquare, Database,
-  BarChart3, Table2, Code2, Sparkles, Eye, EyeOff,
+  BarChart3, Table2, Sparkles, Eye, EyeOff,
   Clock, ArrowRight, Search, Cpu, Loader2, Download, Filter, ArrowUp, ArrowDown, X,
   ChevronLeft, ChevronFirst, ChevronLast, Layers, MapPin
 } from 'lucide-react';
@@ -21,6 +21,7 @@ import ChartTypeSelector from './charts/ChartTypeSelector';
 import CodeBlock from './CodeBlock';
 import KpiCard from './KpiCard';
 import SkeletonLoader, { SKELETON_TYPES } from './SkeletonLoader';
+import SqlBlock from './SqlBlock';
 import './MessageItem.css';
 import './KpiCard.css';
 import './SkeletonLoader.css';
@@ -525,8 +526,8 @@ function MessageItem({ message, onResend, isStreaming, streamingContent, onFeedb
       await navigator.clipboard.writeText(content);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
+} catch (err) {
+      // Silently fail - clipboard may not be available
     }
   }, [content]);
 
@@ -622,7 +623,6 @@ function MessageItem({ message, onResend, isStreaming, streamingContent, onFeedb
                 trendValue={`${trend === 'up' ? '+' : trend === 'down' ? '' : ''}${trendPercent}%`}
                 sparklineData={sparklineData}
                 sparklineColor={trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#4f46e5'}
-                onClick={() => console.log('KPI clicked:', item.label)}
               />
             );
           })}
@@ -653,40 +653,7 @@ function MessageItem({ message, onResend, isStreaming, streamingContent, onFeedb
     </div>
   );
 
-  // SQL Renderer
-  const renderSql = (block) => {
-    const [sqlCopied, setSqlCopied] = useState(false);
-    const handleSqlCopy = useCallback(async () => {
-      try {
-        await navigator.clipboard.writeText(block.sql);
-        setSqlCopied(true);
-        setTimeout(() => setSqlCopied(false), 2000);
-      } catch (err) {
-        console.error('Failed to copy SQL:', err);
-      }
-    }, [block.sql]);
-
-    return (
-      <div className="structured-sql">
-        <div className="sql-header">
-          <Code2 size={14} />
-          <span>SQL 查询</span>
-          <button
-            className="sql-copy-btn"
-            onClick={handleSqlCopy}
-            aria-label={sqlCopied ? '已复制' : '复制SQL'}
-            title={sqlCopied ? '已复制' : '复制SQL'}
-          >
-            {sqlCopied ? <Check size={12} /> : <Copy size={12} />}
-          </button>
-        </div>
-        <pre className="sql-content">{block.sql}</pre>
-      </div>
-    );
-  };
-
-  // Text/Markdown Renderer
-  const renderText = (text) => (
+    const renderText = (text) => (
     <ReactMarkdown
       components={{
         code({ node, inline, className, children, ...props }) {
@@ -767,7 +734,7 @@ function MessageItem({ message, onResend, isStreaming, streamingContent, onFeedb
                     case 'chart': return <div key={idx} className="block-chart"><ChartBlock block={block} /></div>;
                     case 'metrics': return <div key={idx} className="block-metrics">{renderMetrics(block)}</div>;
                     case 'steps': return <div key={idx} className="block-steps">{renderSteps(block)}</div>;
-                    case 'sql': return <div key={idx} className="block-sql">{renderSql(block)}</div>;
+                    case 'sql': return <div key={idx} className="block-sql"><SqlBlock sql={block.sql} /></div>;
                     case 'toggle': return <div key={idx} className="block-toggle"><RenderToggle block={block} blockIdx={idx} viewMode={toggleViewModes[idx] || 'table'} onToggleView={toggleViewMode} /></div>;
                     case 'text': return <div key={idx} className="block-text">{renderText(block.content)}</div>;
                     default: return null;

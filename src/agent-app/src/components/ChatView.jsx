@@ -22,21 +22,14 @@ function ChatView() {
     abort,
     handleConfirmationConfirm,
     handleConfirmationCancel
-  } = useStreamingAgent({
-    onStreamStart: () => console.log('[ChatView] Streaming started'),
-    onStreamEnd: () => console.log('[ChatView] Streaming ended'),
-  });
+  } = useStreamingAgent({});
 
   // Handle send message
   const handleSendMessage = useCallback(async (text, isResend = false) => {
     if (!text.trim()) return;
 
-    console.log('[ChatView] handleSendMessage called:', text, 'isResend:', isResend);
-
     if (!isResend) {
-      console.log('[ChatView] Saving user message...');
-      const savedUserMsg = await saveMessage('user', text, { intent: 'chat' });
-      console.log('[ChatView] User message saved:', savedUserMsg);
+      await saveMessage('user', text, { intent: 'chat' });
     }
 
     await sendMessage(text, saveMessage);

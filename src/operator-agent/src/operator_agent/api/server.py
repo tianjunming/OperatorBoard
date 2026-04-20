@@ -111,6 +111,7 @@ async def get_agent() -> OperatorAgent:
     if _agent is None:
         config_dir = os.getenv("AGENT_CONFIG_DIR")
         operator_config = load_operator_config(config_dir)
+        intent_config = operator_config.get_intent_detection_config()
 
         from agent_framework.core import AgentConfig
         config = AgentConfig(
@@ -1014,6 +1015,8 @@ def _build_standard_response(title: str, summary: dict, table_data: list,
     - chart: Chart data for frontend visualization
     - data: Raw data for debugging
     """
+    # DEBUG
+
     # Build table data string
     if table_columns and table_data:
         col_str = "|".join(table_columns)
@@ -1581,6 +1584,7 @@ def format_all_operators_sites(site_cells: list, operators: list) -> Dict[str, A
         chart_data=chart_data,
         table_columns=table_columns,
         thinking=thinking,
+        show_summary_in_content=False,
     )
 
 
@@ -2102,6 +2106,8 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
         operator_name = intent_result.get("operator_name")
         data_month = intent_result.get("data_month")
         limit = intent_result.get("limit", 50)
+
+        print(f"[DEBUG _process_agent_request] intent={intent}, operator_name={operator_name}")
 
         # Detect data category from user input
         data_category, is_history = _detect_data_category(user_input)
