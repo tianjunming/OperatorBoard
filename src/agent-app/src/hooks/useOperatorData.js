@@ -1,148 +1,110 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '../api/client';
 
-const API_BASE = '/api/query';
-
-async function fetchAPI(endpoint, options = {}) {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
+// Fetch operators list
+export function useOperators() {
+  return useQuery({
+    queryKey: ['operators'],
+    queryFn: async () => {
+      const data = await apiFetch('/query/operators');
+      return data || [];
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
-  }
-  return response.json();
 }
 
-export function useOperatorData() {
-  const [operators, setOperators] = useState([]);
-  const [siteCells, setSiteCells] = useState([]);
-  const [latestIndicators, setLatestIndicators] = useState([]);
-  const [historyIndicators, setHistoryIndicators] = useState([]);
-  const [loadingKeys, setLoadingKeys] = useState(new Set());
-  const [error, setError] = useState(null);
-  const [selectedOperatorId, setSelectedOperatorId] = useState(null);
+// Fetch site cells for an operator
+export function useOperatorSiteCells(operatorId) {
+  return useQuery({
+    queryKey: ['operator-site-cells', operatorId],
+    queryFn: async () => {
+      const data = await apiFetch(`/query/site-cells?operatorId=${operatorId}`);
+      return data || [];
+    },
+    enabled: !!operatorId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
 
-  const addLoadingKey = useCallback((key) => {
-    setLoadingKeys(prev => new Set([...prev, key]));
-  }, []);
+// Fetch latest indicators for an operator
+export function useLatestIndicators(operatorId) {
+  return useQuery({
+    queryKey: ['latest-indicators', operatorId],
+    queryFn: async () => {
+      const data = await apiFetch(`/query/indicators/latest?operatorId=${operatorId}`);
+      return data || [];
+    },
+    enabled: !!operatorId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
 
-  const removeLoadingKey = useCallback((key) => {
-    setLoadingKeys(prev => {
-      const next = new Set(prev);
-      next.delete(key);
-      return next;
-    });
-  }, []);
+// Fetch history indicators for an operator
+export function useHistoryIndicators(operatorId, dataMonth) {
+  return useQuery({
+    queryKey: ['history-indicators', operatorId, dataMonth],
+    queryFn: async () => {
+      const data = await apiFetch(`/query/indicators/history?operatorId=${operatorId}${dataMonth ? `&dataMonth=${dataMonth}` : ''}`);
+      return data || [];
+    },
+    enabled: !!operatorId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
 
-  const isLoading = useCallback((key) => {
-    return key ? loadingKeys.has(key) : loadingKeys.size > 0;
-  }, [loadingKeys]);
+// Fetch indicator trend
+export function useIndicatorTrend(operatorId, options = {}) {
+  const { band, start, end, months = 6 } = options;
 
-  const fetchOperators = useCallback(async () => {
-    addLoadingKey('operators');
-    try {
-      const data = await fetchAPI('/operators');
-      setOperators(data || []);
-      if (data && data.length > 0 && !selectedOperatorId) {
-        setSelectedOperatorId(data[0].id);
-      }
-      setError(null);
-    } catch (err) {
-      setError(err.message);
-      setOperators([]);
-    } finally {
-      removeLoadingKey('operators');
-    }
-  }, [selectedOperatorId, addLoadingKey, removeLoadingKey]);
-
-  const fetchSiteCells = useCallback(async (operatorId, band) => {
-    addLoadingKey('siteCells');
-    try {
-      let url = `/site-cells?operatorId=${operatorId}`;
-      if (band) url += `&band=${encodeURIComponent(band)}`;
-      const data = await fetchAPI(url);
-      setSiteCells(data || []);
-    } catch (err) {
-      setSiteCells([]);
-    } finally {
-      removeLoadingKey('siteCells');
-    }
-  }, [addLoadingKey, removeLoadingKey]);
-
-  const fetchLatestIndicators = useCallback(async (operatorId, band) => {
-    addLoadingKey('latestIndicators');
-    try {
-      let url = `/indicators/latest?operatorId=${operatorId}`;
-      if (band) url += `&band=${encodeURIComponent(band)}`;
-      const data = await fetchAPI(url);
-      setLatestIndicators(data || []);
-      setError(null);
-    } catch (err) {
-      setError(err.message);
-      setLatestIndicators([]);
-    } finally {
-      removeLoadingKey('latestIndicators');
-    }
-  }, [addLoadingKey, removeLoadingKey]);
-
-  const fetchHistoryIndicators = useCallback(async (operatorId, band, dataMonth) => {
-    addLoadingKey('historyIndicators');
-    try {
-      let url = `/indicators/history?operatorId=${operatorId}`;
-      if (band) url += `&band=${encodeURIComponent(band)}`;
-      if (dataMonth) url += `&dataMonth=${dataMonth}`;
-      const data = await fetchAPI(url);
-      setHistoryIndicators(data || []);
-    } catch (err) {
-      setHistoryIndicators([]);
-    } finally {
-      removeLoadingKey('historyIndicators');
-    }
-  }, [addLoadingKey, removeLoadingKey]);
-
-  const fetchTrendData = useCallback(async (operatorId, band, start, end) => {
-    addLoadingKey('trend');
-    try {
-      let url = `/indicators/trend?operatorId=${operatorId}`;
+  return useQuery({
+    queryKey: ['indicator-trend', operatorId, band, start, end],
+    queryFn: async () => {
+      let url = `/query/indicators/trend?operatorId=${operatorId}`;
       if (band) url += `&band=${encodeURIComponent(band)}`;
       if (start) url += `&start=${encodeURIComponent(start)}`;
       if (end) url += `&end=${encodeURIComponent(end)}`;
-      const data = await fetchAPI(url);
-      setHistoryIndicators(data || []);
-      setError(null);
-    } catch (err) {
-      setError(err.message);
-      setHistoryIndicators([]);
-    } finally {
-      removeLoadingKey('trend');
-    }
-  }, [addLoadingKey, removeLoadingKey]);
+      const data = await apiFetch(url);
+      return data || [];
+    },
+    enabled: !!operatorId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
 
-  useEffect(() => {
-    fetchOperators();
-  }, []);
+// Fetch indicator comparison
+export function useIndicatorCompare(operatorId, dataMonth) {
+  return useQuery({
+    queryKey: ['indicator-compare', operatorId, dataMonth],
+    queryFn: async () => {
+      const data = await apiFetch(`/query/indicators/compare?operatorId=${operatorId}${dataMonth ? `&dataMonth=${dataMonth}` : ''}`);
+      return data || [];
+    },
+    enabled: !!operatorId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
 
-  useEffect(() => {
-    if (selectedOperatorId) {
-      fetchSiteCells(selectedOperatorId);
-      fetchLatestIndicators(selectedOperatorId);
-    }
-  }, [selectedOperatorId, fetchSiteCells, fetchLatestIndicators]);
+// Prefetch operators (for warming up cache)
+export function usePrefetchOperators() {
+  const queryClient = useQueryClient();
 
-  return {
-    operators,
-    siteCells,
-    latestIndicators,
-    historyIndicators,
-    loadingKeys,
-    isLoading,
-    error,
-    selectedOperatorId,
-    setSelectedOperatorId,
-    fetchOperators,
-    fetchSiteCells,
-    fetchLatestIndicators,
-    fetchHistoryIndicators,
-    fetchTrendData,
+  return () => {
+    queryClient.prefetchQuery({
+      queryKey: ['operators'],
+      queryFn: async () => {
+        const data = await apiFetch('/query/operators');
+        return data || [];
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+  };
+}
+
+// Invalidate operators cache
+export function useInvalidateOperators() {
+  const queryClient = useQueryClient();
+
+  return () => {
+    queryClient.invalidateQueries({ queryKey: ['operators'] });
   };
 }

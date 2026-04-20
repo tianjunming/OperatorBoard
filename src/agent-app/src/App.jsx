@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './api/queryClient';
 import Layout from './components/Layout';
 import ChatView from './components/ChatView';
 import OperatorDashboard from './components/OperatorDashboard';
@@ -84,15 +86,17 @@ function AppContent() {
 
 function App() {
   return (
-    <I18nProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <ChatProvider>
-            <AppContent />
-          </ChatProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </I18nProvider>
+    <QueryClientProvider client={queryClient}>
+      <I18nProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <ChatProvider>
+              <AppContent />
+            </ChatProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </I18nProvider>
+    </QueryClientProvider>
   );
 }
 
