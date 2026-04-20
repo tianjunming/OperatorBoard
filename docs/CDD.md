@@ -1,7 +1,7 @@
 # OperatorBoard 代码设计文档
 
-**文档版本**: 1.3
-**编制日期**: 2026-04-19
+**文档版本**: 1.4
+**编制日期**: 2026-04-20
 **参考标准**: Google Style Guide | SOLID Principles
 
 ---

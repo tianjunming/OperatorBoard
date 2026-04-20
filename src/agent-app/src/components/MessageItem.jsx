@@ -490,7 +490,7 @@ function MessageItem({ message, onResend, isStreaming, streamingContent, onFeedb
   const [copied, setCopied] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [feedback, setFeedback] = useState(MESSAGE_FEEDBACK.NONE);
-  const [showThinking, setShowThinking] = useState(true);
+  const [showThinking, setShowThinking] = useState(false);
   const [stepsExpanded, setStepsExpanded] = useState(true);
   const [toggleViewModes, setToggleViewModes] = useState({});
 

@@ -1004,7 +1004,8 @@ def _transform_indicator_to_long(indicators: list, metric: str = "dl_rate") -> l
 
 def _build_standard_response(title: str, summary: dict, table_data: list,
                              chart_type: str, chart_keys: list, chart_data: list,
-                             table_columns: list, thinking: str = "") -> Dict[str, Any]:
+                             table_columns: list, thinking: str = "",
+                             show_summary_in_content: bool = True) -> Dict[str, Any]:
     """
     Build a standardized response for all 18 functions.
 
@@ -1031,20 +1032,20 @@ def _build_standard_response(title: str, summary: dict, table_data: list,
                      for k, v in summary.items()]
     summary_str = " | ".join(summary_parts)
 
-    # Build toggle block with standardized format
+    # Build toggle block with standardized format (always includes summary for frontend parsing)
     toggle_block = f"""[toggle]
 [type::data]
 [title::{title}]
 [summary::{summary_str}]
 [table_columns::{",".join(table_columns) if table_columns else ""}]
-[table_data::{";".join([",".join(str(v) for v in row.values()) for row in table_data]) if table_data else ""}]
+[table_data::{";".join(["|".join(str(v) for v in row.values()) for row in table_data]) if table_data else ""}]
 [chart_type::{chart_type}]
 [chart_keys::{chart_keys_str}]
 [chart_data::{chart_data_str}]
 [/toggle]"""
 
     content = f"# {title}\n\n"
-    if summary_str:
+    if show_summary_in_content and summary_str:
         content += f"{summary_str}\n\n"
     if table_md:
         content += table_md + "\n\n"
@@ -1157,6 +1158,7 @@ def format_operator_site_count(site_cells: list, operators: list, operator_name:
         chart_data=chart_data,
         table_columns=table_columns,
         thinking=thinking,
+        show_summary_in_content=False,
     )
 
 
