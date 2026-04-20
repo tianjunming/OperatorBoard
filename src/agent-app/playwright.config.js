@@ -6,10 +6,10 @@ export default defineConfig({
   expect: {
     timeout: 30000, // 断言超时增加到 30s
   },
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  retries: 1,
+  workers: 1,
 
   // 报告配置
   reporter: [

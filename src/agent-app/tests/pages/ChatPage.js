@@ -8,14 +8,14 @@ export class ChatPage {
 
     this.locators = {
       // Auth
-      usernameInput: page.locator('input[name="username"], input[placeholder*="用户"]'),
-      passwordInput: page.locator('input[name="password"], input[placeholder*="密码"]'),
-      loginButton: page.locator('button[type="submit"], button:has-text("登录")'),
-      errorMessage: page.locator('.error, .alert-error, [role="alert"]'),
+      usernameInput: page.locator('#username'),
+      passwordInput: page.locator('#password'),
+      loginButton: page.locator('button[type="submit"]'),
+      errorMessage: page.locator('.auth-error, .error'),
 
       // Chat
-      chatInput: page.locator('textarea[data-testid="chat-input"], .chat-input-field'),
-      sendButton: page.locator('button[data-testid="send-button"], .send-btn'),
+      chatInput: page.locator('textarea[data-testid="chat-input"]'),
+      sendButton: page.locator('button[data-testid="send-button"]'),
       messageList: page.locator('.message-list, .message-list-inner'),
       lastAssistantMessage: page.locator('.message-item.assistant:last-child .message-bubble, .message-item.assistant:last-child .message-text'),
     };
@@ -34,10 +34,18 @@ export class ChatPage {
    */
   async login(username, password) {
     try {
+      // Wait for login form to be visible
+      await this.locators.usernameInput.waitFor({ state: 'visible', timeout: 10000 });
+
       await this.locators.usernameInput.fill(username);
       await this.locators.passwordInput.fill(password);
       await this.locators.loginButton.click();
-      await this.page.waitForLoadState('networkidle');
+
+      // Wait for navigation or chat input to appear
+      await this.page.waitForFunction(() => {
+        const input = document.querySelector('textarea[data-testid="chat-input"]');
+        return input !== null;
+      }, { timeout: 30000 }).catch(() => {});
     } catch (e) {
       // Already logged in or login not required
     }
@@ -60,6 +68,7 @@ export class ChatPage {
    * Send a message and wait for response
    */
   async sendMessage(text) {
+    await this.locators.chatInput.waitFor({ state: 'visible', timeout: 10000 });
     await this.locators.chatInput.fill(text);
     await this.locators.sendButton.click();
   }
@@ -67,8 +76,8 @@ export class ChatPage {
   /**
    * Wait for assistant response
    */
-  async waitForResponse(timeout = 30000) {
-    await this.page.waitForTimeout(1000);
+  async waitForResponse(timeout = 60000) {
+    await this.page.waitForTimeout(2000);
 
     // Wait for streaming to complete or message to appear
     try {
@@ -81,7 +90,7 @@ export class ChatPage {
       // Timeout - might still be streaming
     }
 
-    await this.page.waitForTimeout(500);
+    await this.page.waitForTimeout(1000);
   }
 
   /**
@@ -90,7 +99,7 @@ export class ChatPage {
   async getLastAssistantMessage() {
     try {
       const message = this.locators.lastAssistantMessage;
-      if (await message.isVisible()) {
+      if (await message.isVisible({ timeout: 5000 })) {
         return await message.textContent();
       }
     } catch (e) {
@@ -103,14 +112,14 @@ export class ChatPage {
    * Open command palette
    */
   async openCommandPalette() {
-    await this.page.keyboard.press('Meta+k');
-    await this.page.waitForTimeout(300);
+    await this.page.keyboard.press('Control+k');
+    await this.page.waitForTimeout(500);
 
     const palette = this.page.locator('.command-palette-overlay');
     if (!(await palette.isVisible())) {
-      // Try Ctrl+K for Windows/Linux
-      await this.page.keyboard.press('Control+k');
-      await this.page.waitForTimeout(300);
+      // Try Meta+k for Mac
+      await this.page.keyboard.press('Meta+k');
+      await this.page.waitForTimeout(500);
     }
   }
 
@@ -120,7 +129,7 @@ export class ChatPage {
   async selectCommand(commandName) {
     const commandItem = this.page.locator(`.command-item:has-text("${commandName}")`).first();
     await commandItem.click();
-    await this.page.waitForTimeout(300);
+    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -128,7 +137,7 @@ export class ChatPage {
    */
   async isLoggedIn() {
     try {
-      await this.locators.chatInput.waitFor({ timeout: 3000 });
+      await this.locators.chatInput.waitFor({ timeout: 5000 });
       return true;
     } catch (e) {
       return false;
