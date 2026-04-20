@@ -63,7 +63,7 @@ function MessageItem({ message, onResend, isStreaming, streamingContent, onFeedb
       await navigator.clipboard.writeText(content);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-} catch (err) {
+    } catch (err) {
       // Silently fail - clipboard may not be available
     }
   }, [content]);
