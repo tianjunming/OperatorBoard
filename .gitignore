@@ -50,4 +50,3 @@ config.local.yaml
 configs.local/
 *.local.yaml
 *.local.yml
-src/agent-app/tests
