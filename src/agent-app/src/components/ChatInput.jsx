@@ -67,13 +67,13 @@ function ChatInput({ onSend, disabled, placeholder, messages, onClear }) {
     }
   }, [showCommandPanel, showMentionPanel, handleCommandKeyDown, messages, handleSubmit]);
 
-  const handleChange = (e) => {
+  const handleChange = useCallback((e) => {
     setInput(e.target.value);
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
     }
-  };
+  }, []);
 
   return (
     <form className="chat-input-wrapper" onSubmit={handleSubmit}>

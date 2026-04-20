@@ -1,17 +1,24 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Header from './Header';
 import Sidebar from './Sidebar';
-import { useChat } from '../context/ChatContext';
 import { useTheme } from '../context/ThemeContext';
 import './Layout.css';
 
 function Layout({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { sidebarOpen } = useChat();
   const { theme } = useTheme();
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed((prev) => !prev);
+  }, []);
+
+  // Listen for toggle-sidebar event from keyboard shortcuts
+  useEffect(() => {
+    const handler = () => {
+      setSidebarCollapsed((prev) => !prev);
+    };
+    window.addEventListener('toggle-sidebar', handler);
+    return () => window.removeEventListener('toggle-sidebar', handler);
   }, []);
 
   return (
