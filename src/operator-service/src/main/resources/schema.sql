@@ -124,28 +124,6 @@ CREATE TABLE indicator_info (
     dl_traffic DECIMAL(15,2) COMMENT '下行流量 MB',
     ul_traffic DECIMAL(15,2) COMMENT '上行流量 MB',
 
-    -- 用户指标
-    online_users DECIMAL(10,2) COMMENT '在线用户数',
-    nr_users DECIMAL(10,2) COMMENT 'NR用户数',
-
-    -- 终端指标
-    terminal_penetration_ratio DECIMAL(10,4) COMMENT '终端渗透率',
-
-    -- 汇总指标 (按技术类型 LTE/NR 聚合)
-    lte_avg_dl_rate DECIMAL(10,2) COMMENT 'LTE平均下行速率 Mbps',
-    lte_avg_ul_rate DECIMAL(10,2) COMMENT 'LTE平均上行速率 Mbps',
-    lte_avg_dl_prb DECIMAL(10,5) COMMENT 'LTE平均下行PRB利用率',
-    lte_avg_ul_prb DECIMAL(10,5) COMMENT 'LTE平均上行PRB利用率',
-    nr_avg_dl_rate DECIMAL(10,2) COMMENT 'NR平均下行速率 Mbps',
-    nr_avg_ul_rate DECIMAL(10,2) COMMENT 'NR平均上行速率 Mbps',
-    nr_avg_dl_prb DECIMAL(10,5) COMMENT 'NR平均下行PRB利用率',
-    nr_avg_ul_prb DECIMAL(10,5) COMMENT 'NR平均上行PRB利用率',
-
-    -- 分流/驻留指标
-    traffic_ratio DECIMAL(10,4) COMMENT '流量分流比',
-    duration_campratio DECIMAL(10,4) COMMENT '时长驻留比',
-    fallback_ratio DECIMAL(10,4) COMMENT '回流比',
-
     FOREIGN KEY (operator_id) REFERENCES operator_info(id),
     FOREIGN KEY (band_id) REFERENCES band_info(id),
     UNIQUE KEY uk_op_band_month (operator_id, band_id, data_month),
@@ -155,8 +133,8 @@ CREATE TABLE indicator_info (
 -- ============================================================================
 -- 运营商月度站点聚合表
 -- ============================================================================
-DROP TABLE IF EXISTS operator_total_site;
-CREATE TABLE operator_total_site (
+DROP TABLE IF EXISTS operator_summary;
+CREATE TABLE operator_summary (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     operator_id BIGINT NOT NULL COMMENT '运营商ID',
     data_month VARCHAR(7) NOT NULL COMMENT '数据月份 YYYY-MM',
@@ -173,6 +151,29 @@ CREATE TABLE operator_total_site (
     -- 总计
     total_site_num INT DEFAULT 0 COMMENT '总站点数',
     total_cell_num INT DEFAULT 0 COMMENT '总小区数',
+
+    
+    -- 用户指标
+    online_users DECIMAL(10,2) COMMENT '在线用户数',
+    nr_users DECIMAL(10,2) COMMENT 'NR用户数',
+
+    -- 终端指标
+    terminal_penetration_ratio DECIMAL(10,4) COMMENT '终端渗透率',
+
+    -- 非汇总指标 (按技术类型 LTE/NR 获取实际值)
+    lte_avg_dl_rate DECIMAL(10,2) COMMENT 'LTE平均下行速率 Mbps',
+    lte_avg_ul_rate DECIMAL(10,2) COMMENT 'LTE平均上行速率 Mbps',
+    lte_avg_dl_prb DECIMAL(10,5) COMMENT 'LTE平均下行PRB利用率',
+    lte_avg_ul_prb DECIMAL(10,5) COMMENT 'LTE平均上行PRB利用率',
+    nr_avg_dl_rate DECIMAL(10,2) COMMENT 'NR平均下行速率 Mbps',
+    nr_avg_ul_rate DECIMAL(10,2) COMMENT 'NR平均上行速率 Mbps',
+    nr_avg_dl_prb DECIMAL(10,5) COMMENT 'NR平均下行PRB利用率',
+    nr_avg_ul_prb DECIMAL(10,5) COMMENT 'NR平均上行PRB利用率',
+
+    -- 分流/驻留指标
+    traffic_ratio DECIMAL(10,4) COMMENT '流量分流比',
+    duration_campratio DECIMAL(10,4) COMMENT '时长驻留比',
+    fallback_ratio DECIMAL(10,4) COMMENT '回流比',
 
     FOREIGN KEY (operator_id) REFERENCES operator_info(id),
     UNIQUE KEY uk_op_month_tech (operator_id, data_month, technology),
