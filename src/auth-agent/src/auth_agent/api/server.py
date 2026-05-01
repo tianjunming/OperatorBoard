@@ -8,6 +8,7 @@ from agent_framework.api import BaseAgentServer
 
 from .auth import JWTManager, load_config
 from .chat_routes import create_chat_router
+from .decorators import require_any_permission, require_any_role, require_permissions, require_roles
 from .dependencies import (
     get_current_user,
     get_database,
@@ -16,6 +17,7 @@ from .dependencies import (
     require_role,
     require_superuser,
 )
+from .middleware import AuditMiddleware
 from .models import CurrentUser
 from .schemas import Database
 from .service import AuthService, PermissionService, RoleService, UserService
@@ -45,6 +47,27 @@ class AuthAgentServer(BaseAgentServer):
         if self._db is None:
             self._db = Database(self._config)
         return self._db
+
+    @property
+    def app(self):
+        """Get or create the FastAPI app with middleware."""
+        if self._app is None:
+            self._app = FastAPI(
+                title=self.title,
+                version=self.version,
+                description=self.description,
+            )
+            # Add audit middleware first
+            self._app.add_middleware(AuditMiddleware)
+            self._app.state.db = self.db
+            self._setup_default_routes()
+            self.setup_routes()
+        return self._app
+
+    @app.setter
+    def app(self, value):
+        """Allow setting app directly."""
+        self._app = value
 
     def setup_routes(self) -> None:
         """Setup API routes."""

@@ -47,6 +47,7 @@ class BaseAgentServer:
         self.version = version
         self.description = description
         self._app: Optional[FastAPI] = None
+        self._middleware_added: bool = False
 
     @property
     def app(self) -> FastAPI:
@@ -60,6 +61,18 @@ class BaseAgentServer:
             self._setup_default_routes()
             self.setup_routes()
         return self._app
+
+    def add_middleware(self, middleware_class: Any, **kwargs) -> None:
+        """
+        Add middleware to the FastAPI app.
+
+        Args:
+            middleware_class: Middleware class to add
+            **kwargs: Additional arguments for the middleware
+
+        Note: Must be called before the app is accessed (before run() or before first request).
+        """
+        self.app.add_middleware(middleware_class, **kwargs)
 
     @app.setter
     def app(self, value: FastAPI):

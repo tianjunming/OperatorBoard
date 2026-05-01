@@ -149,6 +149,7 @@ class RoleBase(BaseModel):
     role_code: str = Field(..., min_length=1, max_length=50)
     role_name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = None
+    parent_id: Optional[int] = None
 
 
 class RoleCreate(RoleBase):
@@ -160,6 +161,7 @@ class RoleUpdate(BaseModel):
     """Update role model."""
     role_name: Optional[str] = None
     description: Optional[str] = None
+    parent_id: Optional[int] = None
 
 
 class RoleSimple(BaseModel):

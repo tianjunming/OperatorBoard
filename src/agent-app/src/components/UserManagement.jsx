@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Check, X, Clock } from 'lucide-react';
+import PermissionGuard from './PermissionGuard';
 
 const API_BASE = '/api';
 
@@ -26,22 +27,13 @@ function UserManagement() {
     role_ids: [],
   });
 
-  const canList = hasPermission('system:user:list');
-  const canCreate = hasPermission('system:user:create');
-  const canUpdate = hasPermission('system:user:update');
-  const canDelete = hasPermission('system:user:delete');
-  const canAssignRoles = hasPermission('system:user:assign-roles');
-  const canApprove = isSuperuser;
-
   useEffect(() => {
-    if (canList) {
-      fetchUsers();
-      fetchRoles();
-    }
-    if (canApprove) {
+    fetchUsers();
+    fetchRoles();
+    if (isSuperuser) {
       fetchPendingUsers();
     }
-  }, [canList, canApprove]);
+  }, [isSuperuser]);
 
   const fetchUsers = async () => {
     try {
@@ -252,26 +244,24 @@ function UserManagement() {
     }
   };
 
-  if (!canList) {
-    return <div className="permission-denied">You don't have permission to view users.</div>;
-  }
-
-  if (loading) {
-    return <div className="loading">Loading...</div>;
-  }
-
   return (
-    <div className="user-management">
+    <PermissionGuard permissions="system:user:list" fallback={<div className="permission-denied">You don't have permission to view users.</div>}>
+      {loading ? (
+        <div className="loading">Loading...</div>
+      ) : (
+        <div className="user-management">
       <div className="management-header">
         <h3>用户管理</h3>
-        {canCreate && activeTab === 'users' && (
-          <button className="btn-primary" onClick={handleCreate}>
-            创建用户
-          </button>
-        )}
+        <PermissionGuard permissions="system:user:create">
+          {activeTab === 'users' && (
+            <button className="btn-primary" onClick={handleCreate}>
+              创建用户
+            </button>
+          )}
+        </PermissionGuard>
       </div>
 
-      {canApprove && (
+      <PermissionGuard roles="admin">
         <div className="sub-tabs">
           <button
             className={`sub-tab ${activeTab === 'users' ? 'active' : ''}`}
@@ -291,7 +281,8 @@ function UserManagement() {
         </div>
       )}
 
-      {error && <div className="error-message">{error}</div>}
+      <PermissionGuard fallback={null}>
+        {error && <div className="error-message">{error}</div>}
 
       {activeTab === 'users' && (
         <table className="data-table">
@@ -318,27 +309,27 @@ function UserManagement() {
               <td>{user.is_superuser ? '是' : '否'}</td>
               <td>{user.roles ? user.roles.map(r => r.role_name).join(', ') : '-'}</td>
               <td>
-                {canUpdate && (
+                <PermissionGuard permissions="system:user:update">
                   <button className="btn-small" onClick={() => handleEdit(user)}>
                     编辑
                   </button>
-                )}
-                {canAssignRoles && (
+                </PermissionGuard>
+                <PermissionGuard permissions="system:user:assign-roles">
                   <button
                     className="btn-small"
                     onClick={() => handleAssignRoles(user.id, user.roles)}
                   >
                     分配角色
                   </button>
-                )}
-                {canDelete && (
+                </PermissionGuard>
+                <PermissionGuard permissions="system:user:delete">
                   <button
                     className="btn-small btn-danger"
                     onClick={() => handleDelete(user.id)}
                   >
                     删除
                   </button>
-                )}
+                </PermissionGuard>
               </td>
             </tr>
           ))}

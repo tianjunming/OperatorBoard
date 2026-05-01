@@ -122,7 +122,7 @@ class AuthService:
         )
 
     def get_current_user(self, user_id: int) -> Optional[CurrentUser]:
-        """Get current user info."""
+        """Get current user info with inherited permissions from parent roles."""
         user = (
             self.db.query(AuthUser)
             .options(joinedload(AuthUser.roles).joinedload(AuthRole.permissions))
@@ -134,8 +134,12 @@ class AuthService:
 
         roles = [r.role_code for r in user.roles]
         permissions = []
+        role_service = RoleService(self.db)
+
+        # Collect permissions from each role (including inherited)
         for role in user.roles:
-            for perm in role.permissions:
+            role_perms = role_service.get_role_permissions_recursive(role.id)
+            for perm in role_perms:
                 if perm.permission_code not in permissions:
                     permissions.append(perm.permission_code)
 
@@ -343,12 +347,42 @@ class RoleService:
         """Get role by code."""
         return self.db.query(AuthRole).filter(AuthRole.role_code == role_code).first()
 
+    def get_role_permissions_recursive(self, role_id: int) -> List[AuthPermission]:
+        """
+        Get all permissions for a role including inherited permissions from parent roles.
+
+        Args:
+            role_id: The role ID to get permissions for
+
+        Returns:
+            List of all permission objects (including inherited)
+        """
+        role = self.get_role_by_id(role_id)
+        if not role:
+            return []
+
+        all_permissions = {}
+        self._collect_permissions_recursive(role, all_permissions)
+        return list(all_permissions.values())
+
+    def _collect_permissions_recursive(self, role: AuthRole, perm_dict: dict) -> None:
+        """Recursively collect permissions from role and its parents."""
+        for perm in role.permissions:
+            perm_dict[perm.id] = perm
+
+        # Recursively get from parent
+        if role.parent_id:
+            parent = self.db.query(AuthRole).filter(AuthRole.id == role.parent_id).first()
+            if parent:
+                self._collect_permissions_recursive(parent, perm_dict)
+
     def create_role(self, data: RoleCreate) -> AuthRole:
         """Create a new role."""
         role = AuthRole(
             role_code=data.role_code,
             role_name=data.role_name,
             description=data.description,
+            parent_id=data.parent_id,
         )
         self.db.add(role)
         self.db.flush()
@@ -376,6 +410,8 @@ class RoleService:
             role.role_name = data.role_name
         if data.description is not None:
             role.description = data.description
+        if data.parent_id is not None:
+            role.parent_id = data.parent_id
 
         self.db.commit()
         self.db.refresh(role)
