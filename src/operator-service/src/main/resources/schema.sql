@@ -26,7 +26,7 @@ CREATE TABLE operator_info (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ============================================================================
--- 频段维度表 (21个频段)
+-- 频段维度表 (22个频段)
 -- ============================================================================
 DROP TABLE IF EXISTS band_info;
 CREATE TABLE band_info (
@@ -41,9 +41,9 @@ CREATE TABLE band_info (
     INDEX idx_duplex (duplex_mode)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- 插入21个频段数据
+-- 插入22个频段数据
 INSERT INTO band_info (band_code, band_name, technology, frequency_mhz, duplex_mode, band_group) VALUES
--- LTE 频段 (10个)
+-- LTE 频段 (11个)
 ('LTE700M_FDD', 'LTE 700M FDD', 'LTE', 700, 'FDD', '700M'),
 ('LTE800M_FDD', 'LTE 800M FDD', 'LTE', 800, 'FDD', '800M'),
 ('LTE900M_FDD', 'LTE 900M FDD', 'LTE', 900, 'FDD', '900M'),
