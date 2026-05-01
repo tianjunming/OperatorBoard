@@ -116,9 +116,8 @@ public class IndicatorSummary {
 
     // 分流/驻留指标
     private BigDecimal trafficRatio;
-    private BigDecimal trafficCampratio;
-    private BigDecimal terminalPenetration;
     private BigDecimal durationCampratio;
+    private BigDecimal terminalPenetration;
     private BigDecimal fallbackRatio;
 
     private LocalDateTime createdTime;
