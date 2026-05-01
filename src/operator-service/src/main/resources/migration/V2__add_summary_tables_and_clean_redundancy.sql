@@ -393,7 +393,7 @@ SET
     s.nr_avg_ul_prb = i.nr_avg_ul_prb,
     s.traffic_ratio = i.traffic_ratio,
     s.duration_campratio = i.duration_campratio,
-    s.terminal_penetration = i.terminal_penetration,
+    s.terminal_penetration = i.terminal_penetration_ratio,
     s.fallback_ratio = i.fallback_ratio
 WHERE i.lte_avg_dl_rate IS NOT NULL OR i.nr_avg_dl_rate IS NOT NULL;
 
