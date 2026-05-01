@@ -29,8 +29,18 @@ import {
   transformIndicatorData,
   transformPRBData,
   aggregateCellDistribution,
-  calculateTotals
+  calculateTotals,
+  transformSiteSummaryData,
+  transformIndicatorSummaryData,
+  calculateSiteSummaryTotals,
+  generateOperatorComparisonData,
+  generateTrafficMetricsData,
 } from '../utils/dataTransformers';
+import {
+  useAllOperatorsSiteSummary,
+  useAllOperatorsIndicatorSummary,
+  useAllOperatorsTrafficMetrics,
+} from '../hooks/useOperatorData';
 import '../styles/Dashboard.css';
 
 const API_BASE = '/api';
@@ -57,21 +67,65 @@ export default function OperatorDashboard() {
   const [selectedOperatorData, setSelectedOperatorData] = useState(null);
   const [error, setError] = useState(null);
 
+  // V2 Summary data hooks
+  const { data: allSiteSummary, isLoading: loadingSiteSummary } = useAllOperatorsSiteSummary();
+  const { data: allIndicatorSummary, isLoading: loadingIndicatorSummary } = useAllOperatorsIndicatorSummary();
+  const { data: allTrafficMetrics, isLoading: loadingTrafficMetrics } = useAllOperatorsTrafficMetrics();
+
+  // Transform V2 data
+  const siteSummaryTransformed = useMemo(() => {
+    return transformSiteSummaryData(allSiteSummary || []);
+  }, [allSiteSummary]);
+
+  const indicatorSummaryTransformed = useMemo(() => {
+    return transformIndicatorSummaryData(allIndicatorSummary || []);
+  }, [allIndicatorSummary]);
+
+  const trafficMetricsData = useMemo(() => {
+    return generateTrafficMetricsData(allIndicatorSummary || []);
+  }, [allIndicatorSummary]);
+
+  const operatorComparisonData = useMemo(() => {
+    return generateOperatorComparisonData(allSiteSummary || []);
+  }, [allSiteSummary]);
+
   const isLoading = loadingOperators || loadingData;
 
-  // Fetch all operators on mount
+  // Fetch operators list and set selected operator from V2 data
   useEffect(() => {
-    fetchOperators();
-  }, []);
-
-  // Fetch data when selection or month changes
-  useEffect(() => {
-    if (selectedOperatorId) {
-      fetchAllOperatorsData();
+    if (siteSummaryTransformed.operators?.length > 0) {
+      const ops = siteSummaryTransformed.operators.map(op => ({
+        id: op.operatorId,
+        operatorName: op.operatorName,
+        country: op._raw?.country || '',
+        region: op._raw?.region || '',
+      }));
+      setOperators(ops);
+      if (!selectedOperatorId && ops.length > 0) {
+        setSelectedOperatorId(ops[0].id);
+      }
+      setLoadingOperators(false);
+    } else if (!loadingSiteSummary && !allSiteSummary?.length) {
+      // Fallback to legacy API if V2 returns no data
+      fetchOperatorsLegacy();
     }
-  }, [selectedOperatorId, currentMonth]);
+  }, [siteSummaryTransformed, loadingSiteSummary]);
 
-  const fetchOperators = async () => {
+  // Update selected operator data when selection changes
+  useEffect(() => {
+    if (selectedOperatorId && siteSummaryTransformed.operators?.length > 0) {
+      const opData = siteSummaryTransformed.operators.find(op => op.operatorId === selectedOperatorId);
+      const indData = indicatorSummaryTransformed.operators.find(op => op.operatorId === selectedOperatorId);
+      if (opData) {
+        setSelectedOperatorData({
+          siteSummary: opData._raw,
+          indicatorSummary: indData?._raw || null,
+        });
+      }
+    }
+  }, [selectedOperatorId, siteSummaryTransformed, indicatorSummaryTransformed]);
+
+  const fetchOperatorsLegacy = async () => {
     setLoadingOperators(true);
     try {
       const response = await fetch(`${API_BASE}/query/operators`);
@@ -139,8 +193,16 @@ export default function OperatorDashboard() {
   const prbByBandData = useMemo(() => transformPRBData(latestIndicators), [latestIndicators]);
   const cellDistributionData = useMemo(() => aggregateCellDistribution(bandCellData), [bandCellData]);
 
-  // Calculate metrics
+  // Calculate metrics from V2 data
   const metrics = useMemo(() => {
+    if (selectedOperatorData?.indicatorSummary) {
+      const item = selectedOperatorData.indicatorSummary;
+      const avgDlPrb = parseFloat(item.lteAvgDlPrb || item.lte_avg_dl_prb || item.nrAvgDlPrb || item.nr_avg_dl_prb || 0);
+      const avgUlPrb = parseFloat(item.lteAvgUlPrb || item.lte_avg_ul_prb || item.nrAvgUlPrb || item.nr_avg_ul_prb || avgDlPrb * 1.1);
+      const avgDlRate = parseFloat(item.lteAvgDlRate || item.lte_avg_dl_rate || item.nrAvgDlRate || item.nr_avg_dl_rate || 0);
+      const avgUlRate = parseFloat(item.lteAvgUlRate || item.lte_avg_ul_rate || item.nrAvgUlRate || item.nr_avg_ul_rate || avgDlRate * 0.2);
+      return { avgDlPrb, avgUlPrb, avgDlRate, avgUlRate };
+    }
     if (!latestIndicators.length) return null;
     const item = latestIndicators[0];
     const avgDlPrb = parseFloat(item.lteAvgDlPrb || item.nrAvgDlPrb || 0);
@@ -148,10 +210,25 @@ export default function OperatorDashboard() {
     const avgDlRate = parseFloat(item.lteAvgDlRate || item.nrAvgDlRate || 0);
     const avgUlRate = parseFloat(item.lteAvgUlRate || item.nrAvgUlRate || avgDlRate * 0.2);
     return { avgDlPrb, avgUlPrb, avgDlRate, avgUlRate };
-  }, [latestIndicators]);
+  }, [selectedOperatorData, latestIndicators]);
 
-  // Calculate site/cell totals
-  const totals = useMemo(() => calculateTotals(siteCells), [siteCells]);
+  // Calculate site/cell totals from V2 data
+  const totals = useMemo(() => {
+    if (selectedOperatorData?.siteSummary) {
+      return calculateSiteSummaryTotals(selectedOperatorData.siteSummary);
+    }
+    return calculateTotals(siteCells);
+  }, [selectedOperatorData, siteCells]);
+
+  // V2 traffic metrics - directly from API (returns { operatorId, operator_name, traffic_ratio, duration_campratio, ... })
+  const trafficMetrics = useMemo(() => {
+    if (!selectedOperatorId || !allTrafficMetrics?.length) return null;
+    return allTrafficMetrics.find(m =>
+      m.operatorId === selectedOperatorId ||
+      m.operator_id === selectedOperatorId ||
+      m.operator_name === operators.find(o => o.id === selectedOperatorId)?.operatorName
+    );
+  }, [selectedOperatorId, allTrafficMetrics, operators]);
 
   // Operator summary for comparison
   const operatorSummaries = useMemo(() => {
@@ -188,16 +265,6 @@ export default function OperatorDashboard() {
     }
     return result;
   }, [latestIndicators]);
-
-  // All operators comparison data
-  const comparisonData = useMemo(() => {
-    return operatorSummaries.map(op => ({
-      name: op.operatorName,
-      站点数: op.totalSites,
-      小区数: op.totalCells,
-      平均速率: op.avgDlRate
-    }));
-  }, [operatorSummaries]);
 
   const SectionHeader = ({ title, icon: Icon, section }) => (
     <div className="section-header" onClick={() => toggleSection(section)}>
@@ -302,7 +369,7 @@ export default function OperatorDashboard() {
                     <h4>小区数量分布</h4>
                     <div className="chart-container">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={comparisonData} layout="vertical">
+                        <BarChart data={operatorComparisonData} layout="vertical">
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis type="number" />
                           <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
@@ -316,7 +383,7 @@ export default function OperatorDashboard() {
                     <h4>平均下行速率</h4>
                     <div className="chart-container">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={comparisonData}>
+                        <BarChart data={operatorComparisonData}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                           <YAxis />
@@ -439,6 +506,32 @@ export default function OperatorDashboard() {
                     </div>
                   </>
                 )}
+
+                {/* V2 Traffic Metrics - 分流比/驻留比 */}
+                {trafficMetrics && (
+                  <>
+                    <div className="metric-card">
+                      <div className="metric-icon">
+                        <Network size={24} />
+                      </div>
+                      <div className="metric-content">
+                        <div className="metric-label">分流比</div>
+                        <div className="metric-value">{((trafficMetrics.trafficRatio || trafficMetrics.traffic_ratio || 0) * 100).toFixed(1)}%</div>
+                        <div className="metric-sub">分流到5G流量占比</div>
+                      </div>
+                    </div>
+                    <div className="metric-card">
+                      <div className="metric-icon">
+                        <Users size={24} />
+                      </div>
+                      <div className="metric-content">
+                        <div className="metric-label">驻留比</div>
+                        <div className="metric-value">{((trafficMetrics.durationCampratio || trafficMetrics.duration_campratio || 0) * 100).toFixed(1)}%</div>
+                        <div className="metric-sub">5G终端在5G网络驻留比例</div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -527,6 +620,26 @@ export default function OperatorDashboard() {
                     </ResponsiveContainer>
                   </div>
                 </div>
+
+                {/* V2 Traffic Metrics Comparison - 分流比/驻留比 */}
+                {trafficMetricsData.length > 0 && (
+                  <div className="chart-card span-2">
+                    <h3><Network size={16} /> 分流比/驻留比对比 (V2)</h3>
+                    <div className="chart-container">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={trafficMetricsData} layout="vertical">
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis type="number" domain={[0, 100]} />
+                          <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11 }} />
+                          <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
+                          <Legend />
+                          <Bar dataKey="分流比" fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} />
+                          <Bar dataKey="驻留比" fill={CHART_COLORS[1]} radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

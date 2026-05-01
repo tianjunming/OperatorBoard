@@ -4,7 +4,11 @@ import com.operator.nl2sql.dto.OperatorNotFoundResponse;
 import com.operator.nl2sql.entity.OperatorInfo;
 import com.operator.nl2sql.entity.IndicatorInfo;
 import com.operator.nl2sql.entity.SiteCellSummary;
+import com.operator.nl2sql.entity.SiteSummary;
+import com.operator.nl2sql.entity.IndicatorSummary;
 import com.operator.nl2sql.service.query.OperatorQueryService;
+import com.operator.nl2sql.repository.SiteSummaryMapper;
+import com.operator.nl2sql.repository.IndicatorSummaryMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,9 +20,15 @@ import java.util.stream.Collectors;
 public class OperatorQueryController {
 
     private final OperatorQueryService operatorQueryService;
+    private final SiteSummaryMapper siteSummaryMapper;
+    private final IndicatorSummaryMapper indicatorSummaryMapper;
 
-    public OperatorQueryController(OperatorQueryService operatorQueryService) {
+    public OperatorQueryController(OperatorQueryService operatorQueryService,
+                                    SiteSummaryMapper siteSummaryMapper,
+                                    IndicatorSummaryMapper indicatorSummaryMapper) {
         this.operatorQueryService = operatorQueryService;
+        this.siteSummaryMapper = siteSummaryMapper;
+        this.indicatorSummaryMapper = indicatorSummaryMapper;
     }
 
     private OperatorNotFoundResponse createOperatorNotFoundResponse(String operatorName) {
@@ -194,5 +204,136 @@ public class OperatorQueryController {
     public ResponseEntity<List<IndicatorInfo>> getAllOperatorsIndicatorsLatest() {
         List<IndicatorInfo> indicators = operatorQueryService.getAllOperatorsIndicatorsLatest();
         return ResponseEntity.ok(indicators);
+    }
+
+    // ==================== Site Summary Endpoints (New V2 Summary Tables) ====================
+
+    /**
+     * Get latest site summary for all operators
+     */
+    @GetMapping("/operators/all/site-summary/latest")
+    public ResponseEntity<List<SiteSummary>> getAllOperatorsSiteSummaryLatest() {
+        List<SiteSummary> summaries = siteSummaryMapper.findAllLatest();
+        return ResponseEntity.ok(summaries);
+    }
+
+    /**
+     * Get latest site summary for a specific operator
+     */
+    @GetMapping("/operators/{operatorName}/site-summary/latest")
+    public ResponseEntity<?> getOperatorSiteSummaryLatest(@PathVariable String operatorName) {
+        List<OperatorInfo> operators = operatorQueryService.findByOperatorName(operatorName);
+        if (operators.isEmpty()) {
+            return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
+        }
+        OperatorInfo operator = operators.get(0);
+        SiteSummary summary = siteSummaryMapper.findLatestByOperatorId(operator.getId());
+        if (summary == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(summary);
+    }
+
+    /**
+     * Get site summary history for a specific operator
+     */
+    @GetMapping("/operators/{operatorName}/site-summary/history")
+    public ResponseEntity<?> getOperatorSiteSummaryHistory(@PathVariable String operatorName) {
+        List<OperatorInfo> operators = operatorQueryService.findByOperatorName(operatorName);
+        if (operators.isEmpty()) {
+            return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
+        }
+        OperatorInfo operator = operators.get(0);
+        List<SiteSummary> summaries = siteSummaryMapper.findHistoryByOperatorId(operator.getId());
+        return ResponseEntity.ok(summaries);
+    }
+
+    // ==================== Indicator Summary Endpoints (New V2 Summary Tables) ====================
+
+    /**
+     * Get latest indicator summary for all operators
+     */
+    @GetMapping("/operators/all/indicator-summary/latest")
+    public ResponseEntity<List<IndicatorSummary>> getAllOperatorsIndicatorSummaryLatest() {
+        List<IndicatorSummary> summaries = indicatorSummaryMapper.findAllLatest();
+        return ResponseEntity.ok(summaries);
+    }
+
+    /**
+     * Get latest indicator summary for a specific operator
+     */
+    @GetMapping("/operators/{operatorName}/indicator-summary/latest")
+    public ResponseEntity<?> getOperatorIndicatorSummaryLatest(@PathVariable String operatorName) {
+        List<OperatorInfo> operators = operatorQueryService.findByOperatorName(operatorName);
+        if (operators.isEmpty()) {
+            return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
+        }
+        OperatorInfo operator = operators.get(0);
+        IndicatorSummary summary = indicatorSummaryMapper.findLatestByOperatorId(operator.getId());
+        if (summary == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(summary);
+    }
+
+    /**
+     * Get indicator summary history for a specific operator
+     */
+    @GetMapping("/operators/{operatorName}/indicator-summary/history")
+    public ResponseEntity<?> getOperatorIndicatorSummaryHistory(@PathVariable String operatorName) {
+        List<OperatorInfo> operators = operatorQueryService.findByOperatorName(operatorName);
+        if (operators.isEmpty()) {
+            return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
+        }
+        OperatorInfo operator = operators.get(0);
+        List<IndicatorSummary> summaries = indicatorSummaryMapper.findHistoryByOperatorId(operator.getId());
+        return ResponseEntity.ok(summaries);
+    }
+
+    // ==================== Indicator Metric Endpoints (All Operators) ====================
+
+    /**
+     * Get uplink PRB for all operators
+     */
+    @GetMapping("/operators/all/indicators/ul-prb")
+    public ResponseEntity<List<IndicatorSummary>> getAllOperatorsUlPrb() {
+        List<IndicatorSummary> summaries = indicatorSummaryMapper.findAllLatest();
+        return ResponseEntity.ok(summaries);
+    }
+
+    /**
+     * Get downlink PRB for all operators
+     */
+    @GetMapping("/operators/all/indicators/dl-prb")
+    public ResponseEntity<List<IndicatorSummary>> getAllOperatorsDlPrb() {
+        List<IndicatorSummary> summaries = indicatorSummaryMapper.findAllLatest();
+        return ResponseEntity.ok(summaries);
+    }
+
+    /**
+     * Get uplink rate for all operators
+     */
+    @GetMapping("/operators/all/indicators/ul-rate")
+    public ResponseEntity<List<IndicatorSummary>> getAllOperatorsUlRate() {
+        List<IndicatorSummary> summaries = indicatorSummaryMapper.findAllLatest();
+        return ResponseEntity.ok(summaries);
+    }
+
+    /**
+     * Get downlink rate for all operators
+     */
+    @GetMapping("/operators/all/indicators/dl-rate")
+    public ResponseEntity<List<IndicatorSummary>> getAllOperatorsDlRate() {
+        List<IndicatorSummary> summaries = indicatorSummaryMapper.findAllLatest();
+        return ResponseEntity.ok(summaries);
+    }
+
+    /**
+     * Get traffic metrics (分流比、驻留比等) for all operators
+     */
+    @GetMapping("/operators/all/indicators/traffic-metrics")
+    public ResponseEntity<List<IndicatorSummary>> getAllOperatorsTrafficMetrics() {
+        List<IndicatorSummary> summaries = indicatorSummaryMapper.findAllLatestMetrics();
+        return ResponseEntity.ok(summaries);
     }
 }
