@@ -3,6 +3,7 @@ import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 import Welcome from './Welcome';
 import QueryConfirmationDialog from './QueryConfirmationDialog';
+import FollowupQuestions from './FollowupQuestions';
 import { useChat } from '../context/ChatContext';
 import { useI18n } from '../i18n';
 import { useStreamingAgent } from '../hooks/useStreamingAgent';
@@ -18,33 +19,44 @@ function ChatView() {
     isStreaming,
     showConfirmation,
     clarificationOptions,
+    followupQuestions,
     sendMessage,
     abort,
     handleConfirmationConfirm,
-    handleConfirmationCancel
+    handleConfirmationCancel,
+    clearFollowupQuestions,
   } = useStreamingAgent({});
 
   // Handle send message
   const handleSendMessage = useCallback(async (text, isResend = false) => {
     if (!text.trim()) return;
 
+    // Clear followup questions when starting new message
+    clearFollowupQuestions();
+
     if (!isResend) {
       await saveMessage('user', text, { intent: 'chat' });
     }
 
     await sendMessage(text, saveMessage);
-  }, [saveMessage, sendMessage]);
+  }, [saveMessage, sendMessage, clearFollowupQuestions]);
 
   // Handle resend
   const handleResend = useCallback((content) => {
     handleSendMessage(content, true);
   }, [handleSendMessage]);
 
+  // Handle followup question click
+  const handleFollowupClick = useCallback((question) => {
+    handleSendMessage(question);
+  }, [handleSendMessage]);
+
   // Handle clear conversation
   const handleClear = useCallback(() => {
     abort();
     clearCurrentSession();
-  }, [abort, clearCurrentSession]);
+    clearFollowupQuestions();
+  }, [abort, clearCurrentSession, clearFollowupQuestions]);
 
   // Handle example click
   const handleExampleClick = useCallback((text) => {
@@ -63,6 +75,8 @@ function ChatView() {
             streamingContent={streamingContent}
             streamingChart={streamingChart}
             onResend={handleResend}
+            followupQuestions={followupQuestions}
+            onFollowupClick={handleFollowupClick}
           />
         )}
       </div>

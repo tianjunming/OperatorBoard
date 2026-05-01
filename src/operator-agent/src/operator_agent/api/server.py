@@ -1074,7 +1074,7 @@ def _build_standard_response(title: str, summary: dict, table_data: list,
 
 
 # ==================== Function 1: Operator Site Count (Latest) ====================
-def format_operator_site_count(site_cells: list, operators: list, operator_name: str = None) -> Dict[str, Any]:
+def format_operator_site_count(site_cells: list, operators: list, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
     """
     功能1: 中国联通有多少站点，返回最新的日期的各个频段站点信息
     """
@@ -1166,11 +1166,12 @@ def format_operator_site_count(site_cells: list, operators: list, operator_name:
         table_columns=table_columns,
         thinking=thinking,
         show_summary_in_content=False,
+        followup_questions=followup_questions,
     )
 
 
 # ==================== Function 2: Operator Cell Count (Latest) ====================
-def format_operator_cell_count(site_cells: list, operators: list, operator_name: str = None) -> Dict[str, Any]:
+def format_operator_cell_count(site_cells: list, operators: list, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
     """
     功能2: 中国联通有多少小区，返回最新的日期的各个频段小区信息
     """
@@ -1260,43 +1261,44 @@ def format_operator_cell_count(site_cells: list, operators: list, operator_name:
         chart_data=chart_data,
         table_columns=table_columns,
         thinking=thinking,
+        followup_questions=followup_questions,
     )
 
 
 # ==================== Function 3: UL PRB (Latest) ====================
-def format_ul_prb(indicators: list, operators: list, operator_name: str = None) -> Dict[str, Any]:
+def format_ul_prb(indicators: list, operators: list, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
     """
     功能3: 中国联通小区上行负载，返回最新的日期的各个频段小区ULPRB利用率
     """
-    return _format_indicator_metric(indicators, operators, "ul_prb", "上行负载(UL PRB)", operator_name)
+    return _format_indicator_metric(indicators, operators, "ul_prb", "上行负载(UL PRB)", operator_name, followup_questions)
 
 
 # ==================== Function 4: DL PRB (Latest) ====================
-def format_dl_prb(indicators: list, operators: list, operator_name: str = None) -> Dict[str, Any]:
+def format_dl_prb(indicators: list, operators: list, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
     """
     功能4: 中国联通小区下行负载，返回最新的日期的各个频段小区DLPRB利用率
     """
-    return _format_indicator_metric(indicators, operators, "dl_prb", "下行负载(DL PRB)", operator_name)
+    return _format_indicator_metric(indicators, operators, "dl_prb", "下行负载(DL PRB)", operator_name, followup_questions)
 
 
 # ==================== Function 5: UL Rate (Latest) ====================
-def format_ul_rate(indicators: list, operators: list, operator_name: str = None) -> Dict[str, Any]:
+def format_ul_rate(indicators: list, operators: list, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
     """
     功能5: 中国联通小区上行速率，返回最新的日期的各个频段小区ULUserRate
     """
-    return _format_indicator_metric(indicators, operators, "ul_rate", "上行速率(Mbps)", operator_name)
+    return _format_indicator_metric(indicators, operators, "ul_rate", "上行速率(Mbps)", operator_name, followup_questions)
 
 
 # ==================== Function 6: DL Rate (Latest) ====================
-def format_dl_rate(indicators: list, operators: list, operator_name: str = None) -> Dict[str, Any]:
+def format_dl_rate(indicators: list, operators: list, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
     """
     功能6: 中国联通小区下行速率，返回最新的日期的各个频段小区DLUserRate
     """
-    return _format_indicator_metric(indicators, operators, "dl_rate", "下行速率(Mbps)", operator_name)
+    return _format_indicator_metric(indicators, operators, "dl_rate", "下行速率(Mbps)", operator_name, followup_questions)
 
 
 def _format_indicator_metric(indicators: list, operators: list, metric: str,
-                             metric_name: str, operator_name: str = None) -> Dict[str, Any]:
+                             metric_name: str, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
     """
     Generic function to format indicator metrics (DL/UL rate, DL/UL PRB).
     """
@@ -1388,11 +1390,12 @@ def _format_indicator_metric(indicators: list, operators: list, metric: str,
         chart_data=chart_data,
         table_columns=table_columns,
         thinking=thinking,
+        followup_questions=followup_questions,
     )
 
 
 # ==================== Function 7: Traffic Ratio (Latest) ====================
-def format_traffic_ratio(indicators: list, operators: list, operator_name: str = None) -> Dict[str, Any]:
+def format_traffic_ratio(indicators: list, operators: list, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
     """
     功能7: 中国联通小区分流/指标，返回最新的日期的分流比，时长驻留比、流量驻留比
     """
@@ -1471,11 +1474,12 @@ def format_traffic_ratio(indicators: list, operators: list, operator_name: str =
         chart_data=chart_data,
         table_columns=table_columns,
         thinking=thinking,
+        followup_questions=followup_questions,
     )
 
 
 # ==================== Function 9: All Operators List ====================
-def format_all_operators(operators: list) -> Dict[str, Any]:
+def format_all_operators(operators: list, followup_questions: list = None) -> Dict[str, Any]:
     """
     功能9: 查看所有运营商，返回所有运营商信息
     """
@@ -1508,11 +1512,12 @@ def format_all_operators(operators: list) -> Dict[str, Any]:
         chart_data=[],
         table_columns=table_columns,
         thinking=thinking,
+        followup_questions=followup_questions,
     )
 
 
 # ==================== Function 10: All Operators Sites (Latest) ====================
-def format_all_operators_sites(site_cells: list, operators: list) -> Dict[str, Any]:
+def format_all_operators_sites(site_cells: list, operators: list, followup_questions: list = None) -> Dict[str, Any]:
     """
     功能10: 查看所有运营商站点，返回所有运营商最新日期的站点信息
     """
@@ -1589,18 +1594,19 @@ def format_all_operators_sites(site_cells: list, operators: list) -> Dict[str, A
         table_columns=table_columns,
         thinking=thinking,
         show_summary_in_content=False,
+        followup_questions=followup_questions,
     )
 
 
 # ==================== Functions 11: All Operators DL/UL Rate ====================
-def format_all_operators_dl_rate(indicators: list, operators: list) -> Dict[str, Any]:
+def format_all_operators_dl_rate(indicators: list, operators: list, followup_questions: list = None) -> Dict[str, Any]:
     """
     功能11: 查看所有运营商下行速率，返回所有运营商最新日期的LTE和NR的dl_avg的速率
     """
     return _format_all_operators_rate(indicators, operators, "dl_rate", "下行速率")
 
 
-def format_all_operators_ul_rate(indicators: list, operators: list) -> Dict[str, Any]:
+def format_all_operators_ul_rate(indicators: list, operators: list, followup_questions: list = None) -> Dict[str, Any]:
     """
     功能11: 查看所有运营商上行速率，返回所有运营商最新日期的LTE和NR的ul_avg的速率
     """
@@ -1690,11 +1696,12 @@ def _format_all_operators_rate(indicators: list, operators: list, metric: str, m
         chart_data=chart_data,
         table_columns=table_columns,
         thinking=thinking,
+        followup_questions=followup_questions,
     )
 
 
 # ==================== Functions 12-18: History Functions ====================
-def format_site_history(site_cells: list, operators: list, operator_name: str = None, data_type: str = "sites") -> Dict[str, Any]:
+def format_site_history(site_cells: list, operators: list, operator_name: str = None, data_type: str = "sites", followup_questions: list = None) -> Dict[str, Any]:
     """
     功能12: 中国联通历史/所有站点，返回所有日期的各个频段站点信息
     功能13: 中国联通历史/所有小区，返回所有日期的各个频段小区信息
@@ -1781,10 +1788,11 @@ def format_site_history(site_cells: list, operators: list, operator_name: str = 
         chart_data=chart_data,
         table_columns=table_columns,
         thinking=thinking,
+        followup_questions=followup_questions,
     )
 
 
-def format_indicator_history(indicators: list, operators: list, metric: str, operator_name: str = None) -> Dict[str, Any]:
+def format_indicator_history(indicators: list, operators: list, metric: str, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
     """
     功能14: 中国联通历史/所有小区上行负载
     功能15: 中国联通历史/所有小区下行负载
@@ -1883,11 +1891,12 @@ def format_indicator_history(indicators: list, operators: list, metric: str, ope
         chart_data=chart_data,
         table_columns=table_columns,
         thinking=thinking,
+        followup_questions=followup_questions,
     )
 
 
 # ==================== Function 18: Traffic Ratio History ====================
-def format_traffic_ratio_history(indicators: list, operators: list, operator_name: str = None) -> Dict[str, Any]:
+def format_traffic_ratio_history(indicators: list, operators: list, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
     """
     功能18: 中国联通历史/所有小区分流/指标，返回所有日期的分流比，时长驻留比、流量驻留比
     """
@@ -1965,6 +1974,7 @@ def format_traffic_ratio_history(indicators: list, operators: list, operator_nam
         chart_data=chart_data,
         table_columns=table_columns,
         thinking=thinking,
+        followup_questions=followup_questions,
     )
 
 
@@ -2010,6 +2020,9 @@ async def agent_stream(request: AgentRunRequest, _: bool = Depends(verify_api_ke
                 # Send chart data if available
                 if result.get("chart"):
                     yield f'data: {json.dumps({"type": "chart", "chart": result["chart"]})}\n\n'
+                # Send followup questions if available
+                if result.get("followup_questions"):
+                    yield f'data: {json.dumps({"type": "followup", "questions": result["followup_questions"]})}\n\n'
             else:
                 yield f"data: {{\"type\": \"content\", \"content\": {json.dumps(str(result))}}}\n\n"
 
@@ -2044,6 +2057,151 @@ def _filter_by_operator(site_cells: list, operators: list, operator_name: str) -
     if op_id:
         return [sc for sc in site_cells if isinstance(sc, dict) and sc.get("operatorId") == op_id]
     return site_cells
+
+
+def _get_operator_names(operators: list) -> list:
+    """Extract operator names from operators list."""
+    if not operators:
+        return []
+    return [op.get("operatorName", "") for op in operators if isinstance(op, dict) and op.get("operatorName")]
+
+
+def _generate_followup_questions(user_input: str, intent: str, operator_name: str, operators: list) -> list:
+    """
+    Generate follow-up questions based on the current query context.
+
+    Args:
+        user_input: The original user query
+        intent: Detected intent type
+        operator_name: Extracted operator name (if any)
+        operators: List of all available operators
+
+    Returns:
+        List of suggested follow-up questions
+    """
+    questions = []
+    op_names = _get_operator_names(operators)
+    op_list_str = "、".join(op_names[:5]) if op_names else "北京联通、上海联通、广州联通"
+
+    text_lower = user_input.lower()
+
+    # Determine what the user is likely interested in based on intent and query content
+    is_site_query = any(kw in text_lower for kw in ['站点', 'site', '站址'])
+    is_cell_query = any(kw in text_lower for kw in ['小区', 'cell', '小区数'])
+    is_indicator_query = any(kw in text_lower for kw in ['负载', '速率', 'prb', 'rate', '指标'])
+    is_traffic_query = any(kw in text_lower for kw in ['分流', '驻留', '流量'])
+    is_history = any(kw in text_lower for kw in ['历史', '历年', '趋势', '变化'])
+
+    if is_history:
+        # User asked for historical data - suggest latest data comparisons
+        if operator_name:
+            questions.extend([
+                f"{operator_name} 最新站点数量是多少？",
+                f"{operator_name} 最新小区数量是多少？",
+                f"{operator_name} 近期指标变化趋势如何？",
+            ])
+        else:
+            questions.extend([
+                f"查看所有运营商（{op_list_str}）最新站点数据",
+                f"各运营商最新小区数量对比",
+                f"各运营商近期指标变化趋势",
+            ])
+    elif is_site_query:
+        # User asked about sites
+        if operator_name:
+            questions.extend([
+                f"{operator_name} 的小区数量是多少？",
+                f"{operator_name} 各频段站点分布如何？",
+                f"{operator_name} 最新指标数据有哪些？",
+                f"对比 {operator_name} 历史站点变化趋势",
+            ])
+        else:
+            questions.extend([
+                f"查看 {op_list_str} 等运营商的站点数据",
+                f"各运营商站点数量对比",
+                f"查看更多运营商小区数据",
+            ])
+    elif is_cell_query:
+        # User asked about cells
+        if operator_name:
+            questions.extend([
+                f"{operator_name} 的站点数量是多少？",
+                f"{operator_name} 各频段小区分布如何？",
+                f"{operator_name} 的上下行负载是多少？",
+                f"{operator_name} 的速率指标如何？",
+            ])
+        else:
+            questions.extend([
+                f"对比 {op_list_str} 等运营商小区数量",
+                f"查看各运营商小区指标分布",
+                f"各运营商站点与小区比例",
+            ])
+    elif is_indicator_query or is_traffic_query:
+        # User asked about indicators
+        if operator_name:
+            questions.extend([
+                f"{operator_name} 的站点和小区数量是多少？",
+                f"{operator_name} 各频段指标对比如何？",
+                f"{operator_name} 与其他运营商指标对比",
+                f"查看 {operator_name} 历史指标变化趋势",
+            ])
+        else:
+            questions.extend([
+                f"对比 {op_list_str} 等运营商指标",
+                f"各运营商最新站点小区数据",
+                f"查看更多频段详细指标",
+            ])
+    else:
+        # Generic query - provide broad suggestions
+        if operator_name:
+            questions.extend([
+                f"{operator_name} 站点和小区数量统计",
+                f"{operator_name} 各频段网络指标",
+                f"{operator_name} 最新网络性能如何？",
+                f"查看 {operator_name} 历史数据变化",
+            ])
+        else:
+            questions.extend([
+                f"查看 {op_list_str} 等运营商站点数据",
+                f"各运营商小区数量对比",
+                f"最新网络指标对比分析",
+                f"查看更多频段指标详情",
+            ])
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_questions = []
+    for q in questions:
+        if q not in seen:
+            seen.add(q)
+            unique_questions.append(q)
+
+    return unique_questions[:4]  # Return max 4 questions
+
+
+def _build_standard_response(title: str, summary: dict, table_data: list, chart_type: str,
+                             chart_keys: list, chart_data: list, table_columns: list,
+                             thinking: str = "", show_summary_in_content: bool = True,
+                             followup_questions: list = None) -> Dict[str, Any]:
+    """
+    Build a standard structured response with optional follow-up questions.
+    """
+    result = {
+        "title": title,
+        "summary": summary,
+        "table_data": table_data,
+        "chart_type": chart_type,
+        "chart_keys": chart_keys,
+        "chart_data": chart_data,
+        "table_columns": table_columns,
+        "thinking": thinking,
+        "show_summary_in_content": show_summary_in_content,
+    }
+
+    if followup_questions:
+        result["followup_questions"] = followup_questions
+
+    return result
 
 
 def _build_thinking_chain(query: str, intent: str, operator_name: str = None, data_type: str = None) -> str:
@@ -2126,6 +2284,9 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
         if isinstance(operators_result, dict) and operators_result.get("error") is None:
             operators = operators_result.get("data", [])
             operators = operators if isinstance(operators, list) else []
+
+        # Generate follow-up questions based on context
+        followup_questions = _generate_followup_questions(user_input, intent, operator_name, operators)
 
         # Helper to get site cells data
         async def get_site_cells_data(op_name: str = None):
@@ -2222,15 +2383,15 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
 
                 if data_category == 'sites':
                     if operator_name:
-                        return format_operator_site_count(site_cells, operators, operator_name)
+                        return format_operator_site_count(site_cells, operators, operator_name, followup_questions)
                     else:
-                        return format_all_operators_sites(site_cells, operators)
+                        return format_all_operators_sites(site_cells, operators, followup_questions)
                 else:  # cells
                     if operator_name:
-                        return format_operator_cell_count(site_cells, operators, operator_name)
+                        return format_operator_cell_count(site_cells, operators, operator_name, followup_questions)
                     else:
                         # For all operators cells, reuse logic
-                        return format_operator_cell_count(site_cells, operators, None)
+                        return format_operator_cell_count(site_cells, operators, None, followup_questions)
 
             elif data_category in ['ul_prb', 'dl_prb', 'ul_rate', 'dl_rate', 'traffic_ratio']:
                 # Indicator query
@@ -2245,9 +2406,9 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
                         indicators = [indicators] if indicators else []
 
                     if data_category == 'traffic_ratio':
-                        return format_traffic_ratio_history(indicators, operators, operator_name)
+                        return format_traffic_ratio_history(indicators, operators, operator_name, followup_questions)
                     else:
-                        return format_indicator_history(indicators, operators, data_category, operator_name)
+                        return format_indicator_history(indicators, operators, data_category, operator_name, followup_questions)
                 else:
                     # Latest query - functions 3, 4, 5, 6, 7, 11
                     result = await get_indicators_data(operator_name)
@@ -2261,21 +2422,21 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
                     # For "all operators" rate queries (function 11)
                     if not operator_name and data_category in ['dl_rate', 'ul_rate']:
                         if data_category == 'dl_rate':
-                            return format_all_operators_dl_rate(indicators, operators)
+                            return format_all_operators_dl_rate(indicators, operators, followup_questions)
                         else:
-                            return format_all_operators_ul_rate(indicators, operators)
+                            return format_all_operators_ul_rate(indicators, operators, followup_questions)
                     elif data_category == 'ul_prb':
-                        return format_ul_prb(indicators, operators, operator_name)
+                        return format_ul_prb(indicators, operators, operator_name, followup_questions)
                     elif data_category == 'dl_prb':
-                        return format_dl_prb(indicators, operators, operator_name)
+                        return format_dl_prb(indicators, operators, operator_name, followup_questions)
                     elif data_category == 'ul_rate':
-                        return format_ul_rate(indicators, operators, operator_name)
+                        return format_ul_rate(indicators, operators, operator_name, followup_questions)
                     elif data_category == 'dl_rate':
-                        return format_dl_rate(indicators, operators, operator_name)
+                        return format_dl_rate(indicators, operators, operator_name, followup_questions)
                     elif data_category == 'traffic_ratio':
-                        return format_traffic_ratio(indicators, operators, operator_name)
+                        return format_traffic_ratio(indicators, operators, operator_name, followup_questions)
                     else:
-                        return format_ul_prb(indicators, operators, operator_name)
+                        return format_ul_prb(indicators, operators, operator_name, followup_questions)
 
         elif intent == "operator_list":
             # Function 9: All operators list
@@ -2290,7 +2451,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
             operators_data = operators_result.get("data") if isinstance(operators_result, dict) else operators_result
             operators_data = operators_data if isinstance(operators_data, list) else []
 
-            return format_all_operators(operators_data)
+            return format_all_operators(operators_data, followup_questions)
 
         elif intent == "nl2sql":
             nl2sql_result = await agent.query_nl2sql(natural_language_query=user_input)
@@ -2311,7 +2472,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
                         lines.append("| " + " | ".join(str(row.get(k, "")) for k in keys) + " |")
 
             thinking = _build_thinking_chain(user_input, "nl2sql - 自然语言查询", operator_name, "数据库记录")
-            return {"content": thinking + "\n\n" + "\n".join(lines)}
+            return {"content": thinking + "\n\n" + "\n".join(lines), "followup_questions": followup_questions}
 
         else:
             # Fallback to NL2SQL
@@ -2333,7 +2494,7 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
                         lines.append("| " + " | ".join(str(row.get(k, "")) for k in keys) + " |")
 
             thinking = _build_thinking_chain(user_input, "nl2sql - 自然语言查询(兜底)", operator_name, "数据库记录")
-            return {"content": thinking + "\n\n" + "\n".join(lines)}
+            return {"content": thinking + "\n\n" + "\n".join(lines), "followup_questions": followup_questions}
 
     except Exception as e:
         return get_error_response(INTERNAL_ERROR, locale, str(e))

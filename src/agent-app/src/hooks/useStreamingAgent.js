@@ -14,6 +14,7 @@ export function useStreamingAgent({ onStreamStart, onStreamEnd, onConfirmation }
   const [isStreaming, setIsStreaming] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [clarificationOptions, setClarificationOptions] = useState({});
+  const [followupQuestions, setFollowupQuestions] = useState([]);
   const abortControllerRef = useRef(null);
   const pendingMessageRef = useRef(null);
 
@@ -82,6 +83,8 @@ export function useStreamingAgent({ onStreamStart, onStreamEnd, onConfirmation }
                 } else if (parsed.type === 'chart' && parsed.chart) {
                   chartData = parsed.chart;
                   setStreamingChart(parsed.chart);
+                } else if (parsed.type === 'followup' && parsed.questions) {
+                  setFollowupQuestions(parsed.questions);
                 } else if (parsed.content) {
                   fullContent += parsed.content;
                   setStreamingContent(fullContent);
@@ -110,6 +113,11 @@ export function useStreamingAgent({ onStreamStart, onStreamEnd, onConfirmation }
     }
   }, [abort, onStreamStart, onStreamEnd, onConfirmation]);
 
+  // Clear followup questions when starting new message
+  const clearFollowupQuestions = useCallback(() => {
+    setFollowupQuestions([]);
+  }, []);
+
   // 处理确认对话框确认
   const handleConfirmationConfirm = useCallback(async (options) => {
     setShowConfirmation(false);
@@ -137,10 +145,12 @@ export function useStreamingAgent({ onStreamStart, onStreamEnd, onConfirmation }
     isStreaming,
     showConfirmation,
     clarificationOptions,
+    followupQuestions,
     sendMessage,
     abort,
     handleConfirmationConfirm,
     handleConfirmationCancel,
+    clearFollowupQuestions,
   };
 }
 
