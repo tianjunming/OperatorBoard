@@ -215,6 +215,8 @@ agent-app 新增以下交互体验优化组件：
 - `clarificationOptions` - 确认选项
 - `handleConfirmationConfirm` - 确认回调
 - `handleConfirmationCancel` - 取消回调
+- `followupQuestions` - 后续问题推荐
+- `clearFollowupQuestions` - 清除后续问题
 
 **SSE 事件类型**:
 | 类型 | 处理 |
@@ -222,6 +224,7 @@ agent-app 新增以下交互体验优化组件：
 | `confirmation` | 弹出确认对话框 |
 | `chart` | 更新流式图表 |
 | `content` | 更新流式内容 |
+| `followup` | 发送后续问题推荐 |
 
 ## 4. NL2SQL 实现方案
 

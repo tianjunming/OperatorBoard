@@ -141,7 +141,8 @@ src/agent-app/
     │   ├── ChatContainer.jsx     # 对话容器
     │   ├── ChatInput.jsx         # 输入框
     │   ├── ChatMessage.jsx       # 消息组件
-    │   └── OperatorDashboard.jsx # 数据看板组件 (更新)
+    │   ├── FollowupQuestions.jsx  # 后续问题推荐组件
+    │   └── OperatorDashboard.jsx   # 数据看板组件 (更新)
     │
     ├── hooks/
     │   ├── useOperatorData.js    # 运营商数据 Hook (更新)

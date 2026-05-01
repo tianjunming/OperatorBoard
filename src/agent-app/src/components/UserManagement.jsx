@@ -6,7 +6,7 @@ import PermissionGuard from './PermissionGuard';
 const API_BASE = '/api';
 
 function UserManagement() {
-  const { token, hasPermission, isSuperuser } = useAuth();
+  const { token, isSuperuser } = useAuth();
   const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -245,278 +245,282 @@ function UserManagement() {
   };
 
   return (
-    <PermissionGuard permissions="system:user:list" fallback={<div className="permission-denied">You don't have permission to view users.</div>}>
+    <PermissionGuard
+      permissions="system:user:list"
+      fallback={<div className="permission-denied">You don't have permission to view users.</div>}
+    >
       {loading ? (
         <div className="loading">Loading...</div>
       ) : (
         <div className="user-management">
-      <div className="management-header">
-        <h3>用户管理</h3>
-        <PermissionGuard permissions="system:user:create">
-          {activeTab === 'users' && (
-            <button className="btn-primary" onClick={handleCreate}>
-              创建用户
-            </button>
-          )}
-        </PermissionGuard>
-      </div>
+          <div className="management-header">
+            <h3>用户管理</h3>
+            <PermissionGuard permissions="system:user:create">
+              {activeTab === 'users' && (
+                <button className="btn-primary" onClick={handleCreate}>
+                  创建用户
+                </button>
+              )}
+            </PermissionGuard>
+          </div>
 
-      <PermissionGuard roles="admin">
-        <div className="sub-tabs">
-          <button
-            className={`sub-tab ${activeTab === 'users' ? 'active' : ''}`}
-            onClick={() => setActiveTab('users')}
-          >
-            用户列表
-          </button>
-          <button
-            className={`sub-tab ${activeTab === 'pending' ? 'active' : ''}`}
-            onClick={() => setActiveTab('pending')}
-          >
-            注册审批
-            {pendingUsers.length > 0 && (
-              <span className="badge">{pendingUsers.length}</span>
-            )}
-          </button>
-        </div>
-      )}
-
-      <PermissionGuard fallback={null}>
-        {error && <div className="error-message">{error}</div>}
-
-      {activeTab === 'users' && (
-        <table className="data-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>用户名</th>
-            <th>全名</th>
-            <th>邮箱</th>
-            <th>激活</th>
-            <th>超级管理员</th>
-            <th>角色</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map(user => (
-            <tr key={user.id}>
-              <td>{user.id}</td>
-              <td>{user.username}</td>
-              <td>{user.full_name || '-'}</td>
-              <td>{user.email || '-'}</td>
-              <td>{user.is_active ? '是' : '否'}</td>
-              <td>{user.is_superuser ? '是' : '否'}</td>
-              <td>{user.roles ? user.roles.map(r => r.role_name).join(', ') : '-'}</td>
-              <td>
-                <PermissionGuard permissions="system:user:update">
-                  <button className="btn-small" onClick={() => handleEdit(user)}>
-                    编辑
-                  </button>
-                </PermissionGuard>
-                <PermissionGuard permissions="system:user:assign-roles">
-                  <button
-                    className="btn-small"
-                    onClick={() => handleAssignRoles(user.id, user.roles)}
-                  >
-                    分配角色
-                  </button>
-                </PermissionGuard>
-                <PermissionGuard permissions="system:user:delete">
-                  <button
-                    className="btn-small btn-danger"
-                    onClick={() => handleDelete(user.id)}
-                  >
-                    删除
-                  </button>
-                </PermissionGuard>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      )}
-
-      {activeTab === 'pending' && (
-        <div className="pending-approvals">
-          {pendingUsers.length === 0 ? (
-            <div className="empty-state">
-              <p>暂无待审批的用户</p>
+          <PermissionGuard roles="admin">
+            <div className="sub-tabs">
+              <button
+                className={`sub-tab ${activeTab === 'users' ? 'active' : ''}`}
+                onClick={() => setActiveTab('users')}
+              >
+                用户列表
+              </button>
+              <button
+                className={`sub-tab ${activeTab === 'pending' ? 'active' : ''}`}
+                onClick={() => setActiveTab('pending')}
+              >
+                注册审批
+                {pendingUsers.length > 0 && (
+                  <span className="badge">{pendingUsers.length}</span>
+                )}
+              </button>
             </div>
-          ) : (
+          </PermissionGuard>
+
+          {error && <div className="error-message">{error}</div>}
+
+          {activeTab === 'users' && (
             <table className="data-table">
               <thead>
                 <tr>
                   <th>ID</th>
                   <th>用户名</th>
-                  <th>姓名</th>
+                  <th>全名</th>
                   <th>邮箱</th>
-                  <th>注册时间</th>
-                  <th>状态</th>
+                  <th>激活</th>
+                  <th>超级管理员</th>
+                  <th>角色</th>
                   <th>操作</th>
                 </tr>
               </thead>
               <tbody>
-                {pendingUsers.map((user) => (
+                {users.map(user => (
                   <tr key={user.id}>
                     <td>{user.id}</td>
                     <td>{user.username}</td>
                     <td>{user.full_name || '-'}</td>
                     <td>{user.email || '-'}</td>
-                    <td>{user.created_at ? new Date(user.created_at).toLocaleString('zh-CN') : '-'}</td>
+                    <td>{user.is_active ? '是' : '否'}</td>
+                    <td>{user.is_superuser ? '是' : '否'}</td>
+                    <td>{user.roles ? user.roles.map(r => r.role_name).join(', ') : '-'}</td>
                     <td>
-                      <span className="status-badge status-pending">
-                        <Clock size={14} /> 待审批
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        className="btn-small btn-success"
-                        onClick={() => handleApprove(user.id)}
-                        title="批准"
-                      >
-                        <Check size={14} /> 批准
-                      </button>
-                      <button
-                        className="btn-small btn-danger"
-                        onClick={() => handleRejectClick(user)}
-                        title="拒绝"
-                      >
-                        <X size={14} /> 拒绝
-                      </button>
+                      <PermissionGuard permissions="system:user:update">
+                        <button className="btn-small" onClick={() => handleEdit(user)}>
+                          编辑
+                        </button>
+                      </PermissionGuard>
+                      <PermissionGuard permissions="system:user:assign-roles">
+                        <button
+                          className="btn-small"
+                          onClick={() => handleAssignRoles(user.id, user.roles)}
+                        >
+                          分配角色
+                        </button>
+                      </PermissionGuard>
+                      <PermissionGuard permissions="system:user:delete">
+                        <button
+                          className="btn-small btn-danger"
+                          onClick={() => handleDelete(user.id)}
+                        >
+                          删除
+                        </button>
+                      </PermissionGuard>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
-        </div>
-      )}
 
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h4>{editingUser ? '编辑用户' : '创建用户'}</h4>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>用户名</label>
-                <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  required={!editingUser}
-                  disabled={!!editingUser}
-                />
+          {activeTab === 'pending' && (
+            <div className="pending-approvals">
+              {pendingUsers.length === 0 ? (
+                <div className="empty-state">
+                  <p>暂无待审批的用户</p>
+                </div>
+              ) : (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>用户名</th>
+                      <th>姓名</th>
+                      <th>邮箱</th>
+                      <th>注册时间</th>
+                      <th>状态</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingUsers.map((user) => (
+                      <tr key={user.id}>
+                        <td>{user.id}</td>
+                        <td>{user.username}</td>
+                        <td>{user.full_name || '-'}</td>
+                        <td>{user.email || '-'}</td>
+                        <td>{user.created_at ? new Date(user.created_at).toLocaleString('zh-CN') : '-'}</td>
+                        <td>
+                          <span className="status-badge status-pending">
+                            <Clock size={14} /> 待审批
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            className="btn-small btn-success"
+                            onClick={() => handleApprove(user.id)}
+                            title="批准"
+                          >
+                            <Check size={14} /> 批准
+                          </button>
+                          <button
+                            className="btn-small btn-danger"
+                            onClick={() => handleRejectClick(user)}
+                            title="拒绝"
+                          >
+                            <X size={14} /> 拒绝
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
+          {showModal && (
+            <div className="modal-overlay">
+              <div className="modal">
+                <h4>{editingUser ? '编辑用户' : '创建用户'}</h4>
+                <form onSubmit={handleSubmit}>
+                  <div className="form-group">
+                    <label>用户名</label>
+                    <input
+                      type="text"
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      required={!editingUser}
+                      disabled={!!editingUser}
+                    />
+                  </div>
+
+                  {!editingUser && (
+                    <div className="form-group">
+                      <label>密码</label>
+                      <input
+                        type="password"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        required={!editingUser}
+                      />
+                    </div>
+                  )}
+
+                  <div className="form-group">
+                    <label>全名</label>
+                    <input
+                      type="text"
+                      value={formData.full_name}
+                      onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>邮箱</label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={formData.is_active}
+                        onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                      />
+                      激活
+                    </label>
+                  </div>
+
+                  <div className="form-group">
+                    <label>角色</label>
+                    <select
+                      multiple
+                      value={formData.role_ids}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        role_ids: Array.from(e.target.selectedOptions, option => parseInt(option.value))
+                      })}
+                      style={{ height: '100px' }}
+                    >
+                      {roles.map(role => (
+                        <option key={role.id} value={role.id}>
+                          {role.role_name} ({role.role_code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="modal-actions">
+                    <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>
+                      取消
+                    </button>
+                    <button type="submit" className="btn-primary">
+                      保存
+                    </button>
+                  </div>
+                </form>
               </div>
+            </div>
+          )}
 
-              {!editingUser && (
+          {showRejectModal && (
+            <div className="modal-overlay">
+              <div className="modal">
+                <h4>拒绝用户注册</h4>
+                <p>确定要拒绝用户 <strong>{rejectingUser?.username}</strong> 的注册申请吗？</p>
                 <div className="form-group">
-                  <label>密码</label>
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required={!editingUser}
+                  <label>拒绝原因（可选）</label>
+                  <textarea
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder="请输入拒绝原因..."
+                    rows={3}
+                    style={{ width: '100%', padding: '8px', marginTop: '8px' }}
                   />
                 </div>
-              )}
-
-              <div className="form-group">
-                <label>全名</label>
-                <input
-                  type="text"
-                  value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                />
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowRejectModal(false)}
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger"
+                    onClick={handleRejectConfirm}
+                  >
+                    确认拒绝
+                  </button>
+                </div>
               </div>
-
-              <div className="form-group">
-                <label>邮箱</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={formData.is_active}
-                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  />
-                  激活
-                </label>
-              </div>
-
-              <div className="form-group">
-                <label>角色</label>
-                <select
-                  multiple
-                  value={formData.role_ids}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    role_ids: Array.from(e.target.selectedOptions, option => parseInt(option.value))
-                  })}
-                  style={{ height: '100px' }}
-                >
-                  {roles.map(role => (
-                    <option key={role.id} value={role.id}>
-                      {role.role_name} ({role.role_code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>
-                  取消
-                </button>
-                <button type="submit" className="btn-primary">
-                  保存
-                </button>
-              </div>
-            </form>
-          </div>
+            </div>
+          )}
         </div>
       )}
-
-      {showRejectModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h4>拒绝用户注册</h4>
-            <p>确定要拒绝用户 <strong>{rejectingUser?.username}</strong> 的注册申请吗？</p>
-            <div className="form-group">
-              <label>拒绝原因（可选）</label>
-              <textarea
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="请输入拒绝原因..."
-                rows={3}
-                style={{ width: '100%', padding: '8px', marginTop: '8px' }}
-              />
-            </div>
-            <div className="modal-actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setShowRejectModal(false)}
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                className="btn-danger"
-                onClick={handleRejectConfirm}
-              >
-                确认拒绝
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </PermissionGuard>
   );
 }
 

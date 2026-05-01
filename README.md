@@ -609,6 +609,8 @@ data: {"type": "content", "content": "| 中国电信 | 12,000 | 36,000 |"}
 
 data: {"type": "content", "content": "| 中国联通 | 9,800 | 29,400 |"}
 
+data: {"type": "followup", "questions": ["中国移动的小区数量是多少？", "北京联通各频段站点分布如何？", "对比历史站点变化趋势"]}
+
 data: [DONE]
 ```
 
