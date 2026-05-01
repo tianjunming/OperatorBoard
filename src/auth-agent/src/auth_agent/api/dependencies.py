@@ -63,11 +63,12 @@ async def get_current_user(
     cache = get_permission_cache()
     cached = cache.get(user_id)
     if cached is not None:
-        # Return cached user data
+        # Return cached user data (username/email not cached, use default)
         return CurrentUser(
             id=cached.user_id,
-            username="",
-            email="",
+            username=cached.username or "",
+            email=cached.email or "",
+            full_name=None,
             is_superuser=cached.is_superuser,
             roles=cached.roles,
             permissions=cached.permissions,
@@ -86,8 +87,15 @@ async def get_current_user(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Cache the permissions
-        cache.set(user_id, user.permissions, user.roles, user.is_superuser)
+        # Cache the user data for future requests
+        cache.set(
+            user_id=user.id,
+            permissions=user.permissions,
+            roles=user.roles,
+            is_superuser=user.is_superuser,
+            username=user.username,
+            email=user.email,
+        )
 
         return user
     finally:

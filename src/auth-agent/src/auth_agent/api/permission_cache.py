@@ -18,6 +18,8 @@ class CachedPermissions:
     permissions: List[str]
     roles: List[str]
     is_superuser: bool
+    username: str = ""
+    email: str = ""
     cached_at: float = field(default_factory=time.time)
 
     def is_expired(self, ttl_seconds: float = 300) -> bool:
@@ -69,7 +71,7 @@ class PermissionCache:
             return cached
 
     def set(self, user_id: int, permissions: List[str], roles: List[str],
-            is_superuser: bool = False) -> None:
+            is_superuser: bool = False, username: str = "", email: str = "") -> None:
         """
         Cache permissions for a user.
 
@@ -78,6 +80,8 @@ class PermissionCache:
             permissions: List of permission codes
             roles: List of role codes
             is_superuser: Whether the user is a superuser
+            username: The username
+            email: The email
         """
         with self._lock:
             # Remove old role associations
@@ -88,7 +92,9 @@ class PermissionCache:
                 user_id=user_id,
                 permissions=permissions,
                 roles=roles,
-                is_superuser=is_superuser
+                is_superuser=is_superuser,
+                username=username,
+                email=email,
             )
             self._cache[user_id] = cached
 
