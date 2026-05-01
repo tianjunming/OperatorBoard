@@ -9,6 +9,7 @@ from .auth import JWTManager, load_config
 from .models import CurrentUser
 from .schemas import AuthUser, Database
 from .service import AuthService
+from .permission_cache import get_permission_cache
 
 # Security scheme
 security = HTTPBearer(auto_error=False)
@@ -35,7 +36,10 @@ def get_jwt_manager() -> JWTManager:
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> CurrentUser:
-    """Get current authenticated user from JWT token."""
+    """Get current authenticated user from JWT token.
+
+    Uses permission cache to reduce database queries. Cache entries expire after 5 minutes.
+    """
     if not credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -54,6 +58,22 @@ async def get_current_user(
         )
 
     user_id = int(payload["sub"])
+
+    # Try to get from cache first
+    cache = get_permission_cache()
+    cached = cache.get(user_id)
+    if cached is not None:
+        # Return cached user data
+        return CurrentUser(
+            id=cached.user_id,
+            username="",
+            email="",
+            is_superuser=cached.is_superuser,
+            roles=cached.roles,
+            permissions=cached.permissions,
+        )
+
+    # Cache miss - query database
     db = get_database().get_session()
 
     try:
@@ -65,6 +85,10 @@ async def get_current_user(
                 detail="User not found",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+
+        # Cache the permissions
+        cache.set(user_id, user.permissions, user.roles, user.is_superuser)
+
         return user
     finally:
         db.close()

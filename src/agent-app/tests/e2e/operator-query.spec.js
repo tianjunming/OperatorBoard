@@ -13,15 +13,16 @@ import { ChatPage } from '../pages/ChatPage.js';
 const TEST_TIMEOUT = 180000;
 const RESPONSE_WAIT = 60000;
 
+// Global test data - initialized in beforeAll
+let testOperators = [];
+
 test.describe('Operator Query E2E Tests - V2 Summary Tables', () => {
   let chatPage;
   let dataFactory;
-  let testOperators;
 
   // Fetch random operators from database before running tests
   test.beforeAll(async () => {
     try {
-      // Get at least 3 random operators for testing
       testOperators = await dbHelper.getRandomOperators(5);
       console.log(`Using ${testOperators.length} operators for testing:`, testOperators.map(o => o.operator_name));
     } catch (error) {
@@ -96,7 +97,13 @@ test.describe('Operator Query E2E Tests - V2 Summary Tables', () => {
 
   // ========== Test Suite 1: Single Operator Site Summary ==========
   test.describe('1. Single Operator Site Summary Queries', () => {
-    testOperators.forEach((operator, index) => {
+    if (testOperators.length === 0) {
+      test.skip('No operators available in database');
+      return;
+    }
+
+    for (let index = 0; index < testOperators.length; index++) {
+      const operator = testOperators[index];
       test(`Query ${index + 1}: ${operator.operator_name} site summary - should match database`, async ({ page }) => {
         // Get expected data from database
         const dbSiteSummary = await dbHelper.getSiteSummaryLatest(operator.id);
@@ -117,12 +124,18 @@ test.describe('Operator Query E2E Tests - V2 Summary Tables', () => {
           !lastMessage.includes('找不到') && !lastMessage.includes('not found');
         expect(isValidResponse).toBeTruthy();
       });
-    });
+    }
   });
 
   // ========== Test Suite 2: Single Operator Cell Summary ==========
   test.describe('2. Single Operator Cell Summary Queries', () => {
-    testOperators.forEach((operator, index) => {
+    if (testOperators.length === 0) {
+      test.skip('No operators available in database');
+      return;
+    }
+
+    for (let index = 0; index < testOperators.length; index++) {
+      const operator = testOperators[index];
       test(`Query ${index + 1}: ${operator.operator_name} cell summary - should match database`, async ({ page }) => {
         // Get expected data from database
         const dbSiteSummary = await dbHelper.getSiteSummaryLatest(operator.id);
@@ -138,12 +151,18 @@ test.describe('Operator Query E2E Tests - V2 Summary Tables', () => {
           !lastMessage.includes('找不到') && !lastMessage.includes('not found');
         expect(isValidResponse).toBeTruthy();
       });
-    });
+    }
   });
 
   // ========== Test Suite 3: Single Operator UL PRB ==========
   test.describe('3. Single Operator UL PRB Queries', () => {
-    testOperators.forEach((operator, index) => {
+    if (testOperators.length === 0) {
+      test.skip('No operators available in database');
+      return;
+    }
+
+    for (let index = 0; index < testOperators.length; index++) {
+      const operator = testOperators[index];
       test(`Query ${index + 1}: ${operator.operator_name} uplink PRB - should match database`, async ({ page }) => {
         // Get expected data from database
         const dbIndicatorSummary = await dbHelper.getIndicatorSummaryLatest(operator.id);
@@ -158,12 +177,18 @@ test.describe('Operator Query E2E Tests - V2 Summary Tables', () => {
           !lastMessage.includes('找不到') && !lastMessage.includes('not found');
         expect(isValidResponse).toBeTruthy();
       });
-    });
+    }
   });
 
   // ========== Test Suite 4: Single Operator DL PRB ==========
   test.describe('4. Single Operator DL PRB Queries', () => {
-    testOperators.forEach((operator, index) => {
+    if (testOperators.length === 0) {
+      test.skip('No operators available in database');
+      return;
+    }
+
+    for (let index = 0; index < testOperators.length; index++) {
+      const operator = testOperators[index];
       test(`Query ${index + 1}: ${operator.operator_name} downlink PRB - should match database`, async ({ page }) => {
         // Get expected data from database
         const dbIndicatorSummary = await dbHelper.getIndicatorSummaryLatest(operator.id);
@@ -178,12 +203,18 @@ test.describe('Operator Query E2E Tests - V2 Summary Tables', () => {
           !lastMessage.includes('找不到') && !lastMessage.includes('not found');
         expect(isValidResponse).toBeTruthy();
       });
-    });
+    }
   });
 
   // ========== Test Suite 5: Single Operator UL Rate ==========
   test.describe('5. Single Operator UL Rate Queries', () => {
-    testOperators.forEach((operator, index) => {
+    if (testOperators.length === 0) {
+      test.skip('No operators available in database');
+      return;
+    }
+
+    for (let index = 0; index < testOperators.length; index++) {
+      const operator = testOperators[index];
       test(`Query ${index + 1}: ${operator.operator_name} uplink rate - should match database`, async ({ page }) => {
         // Get expected data from database
         const dbIndicatorSummary = await dbHelper.getIndicatorSummaryLatest(operator.id);
@@ -198,12 +229,18 @@ test.describe('Operator Query E2E Tests - V2 Summary Tables', () => {
           !lastMessage.includes('找不到') && !lastMessage.includes('not found');
         expect(isValidResponse).toBeTruthy();
       });
-    });
+    }
   });
 
   // ========== Test Suite 6: Single Operator DL Rate ==========
   test.describe('6. Single Operator DL Rate Queries', () => {
-    testOperators.forEach((operator, index) => {
+    if (testOperators.length === 0) {
+      test.skip('No operators available in database');
+      return;
+    }
+
+    for (let index = 0; index < testOperators.length; index++) {
+      const operator = testOperators[index];
       test(`Query ${index + 1}: ${operator.operator_name} downlink rate - should match database`, async ({ page }) => {
         // Get expected data from database
         const dbIndicatorSummary = await dbHelper.getIndicatorSummaryLatest(operator.id);
@@ -218,12 +255,18 @@ test.describe('Operator Query E2E Tests - V2 Summary Tables', () => {
           !lastMessage.includes('找不到') && !lastMessage.includes('not found');
         expect(isValidResponse).toBeTruthy();
       });
-    });
+    }
   });
 
   // ========== Test Suite 7: Single Operator Traffic Metrics ==========
   test.describe('7. Single Operator Traffic Metrics Queries', () => {
-    testOperators.forEach((operator, index) => {
+    if (testOperators.length === 0) {
+      test.skip('No operators available in database');
+      return;
+    }
+
+    for (let index = 0; index < testOperators.length; index++) {
+      const operator = testOperators[index];
       test(`Query ${index + 1}: ${operator.operator_name} traffic metrics - should match database`, async ({ page }) => {
         // Get expected data from database
         const dbIndicatorSummary = await dbHelper.getIndicatorSummaryLatest(operator.id);
@@ -238,7 +281,7 @@ test.describe('Operator Query E2E Tests - V2 Summary Tables', () => {
           !lastMessage.includes('找不到') && !lastMessage.includes('not found');
         expect(isValidResponse).toBeTruthy();
       });
-    });
+    }
   });
 
   // ========== Test Suite 8: All Operators Site Summary ==========
@@ -361,7 +404,14 @@ test.describe('Operator Query E2E Tests - V2 Summary Tables', () => {
 
   // ========== Test Suite 15: Single Operator Site History ==========
   test.describe('15. Single Operator Site History Queries', () => {
-    testOperators.slice(0, 3).forEach((operator, index) => {
+    if (testOperators.length === 0) {
+      test.skip('No operators available in database');
+      return;
+    }
+
+    const slice = testOperators.slice(0, 3);
+    for (let index = 0; index < slice.length; index++) {
+      const operator = slice[index];
       test(`Query ${index + 1}: ${operator.operator_name} site history - should match database`, async ({ page }) => {
         // Get expected data from database
         const dbHistory = await dbHelper.getSiteSummaryHistory(operator.id);
@@ -377,12 +427,19 @@ test.describe('Operator Query E2E Tests - V2 Summary Tables', () => {
           !lastMessage.includes('找不到') && !lastMessage.includes('not found');
         expect(isValidResponse).toBeTruthy();
       });
-    });
+    }
   });
 
   // ========== Test Suite 16: Single Operator Indicator History ==========
   test.describe('16. Single Operator Indicator History Queries', () => {
-    testOperators.slice(0, 3).forEach((operator, index) => {
+    if (testOperators.length === 0) {
+      test.skip('No operators available in database');
+      return;
+    }
+
+    const slice = testOperators.slice(0, 3);
+    for (let index = 0; index < slice.length; index++) {
+      const operator = slice[index];
       test(`Query ${index + 1}: ${operator.operator_name} indicator history - should match database`, async ({ page }) => {
         // Get expected data from database
         const dbHistory = await dbHelper.getIndicatorSummaryHistory(operator.id);
@@ -397,7 +454,7 @@ test.describe('Operator Query E2E Tests - V2 Summary Tables', () => {
           !lastMessage.includes('找不到') && !lastMessage.includes('not found');
         expect(isValidResponse).toBeTruthy();
       });
-    });
+    }
   });
 
   // ========== Test Suite 17: All Operators Site History ==========
