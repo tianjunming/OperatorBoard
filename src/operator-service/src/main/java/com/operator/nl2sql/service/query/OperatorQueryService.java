@@ -3,9 +3,13 @@ package com.operator.nl2sql.service.query;
 import com.operator.nl2sql.entity.OperatorInfo;
 import com.operator.nl2sql.entity.IndicatorInfo;
 import com.operator.nl2sql.entity.SiteCellSummary;
+import com.operator.nl2sql.entity.SiteSummary;
+import com.operator.nl2sql.entity.IndicatorSummary;
 import com.operator.nl2sql.repository.IndicatorRepository;
 import com.operator.nl2sql.repository.OperatorRepository;
 import com.operator.nl2sql.repository.SiteStatisticsMapper;
+import com.operator.nl2sql.repository.SiteSummaryMapper;
+import com.operator.nl2sql.repository.IndicatorSummaryMapper;
 import com.operator.nl2sql.service.builder.OperatorSqlBuilder;
 import org.springframework.stereotype.Service;
 
@@ -18,15 +22,21 @@ public class OperatorQueryService {
     private final OperatorSqlBuilder operatorSqlBuilder;
     private final SiteStatisticsMapper siteStatisticsMapper;
     private final IndicatorRepository indicatorRepository;
+    private final SiteSummaryMapper siteSummaryMapper;
+    private final IndicatorSummaryMapper indicatorSummaryMapper;
 
     public OperatorQueryService(OperatorRepository operatorRepository,
                                   OperatorSqlBuilder operatorSqlBuilder,
                                   SiteStatisticsMapper siteStatisticsMapper,
-                                  IndicatorRepository indicatorRepository) {
+                                  IndicatorRepository indicatorRepository,
+                                  SiteSummaryMapper siteSummaryMapper,
+                                  IndicatorSummaryMapper indicatorSummaryMapper) {
         this.operatorRepository = operatorRepository;
         this.operatorSqlBuilder = operatorSqlBuilder;
         this.siteStatisticsMapper = siteStatisticsMapper;
         this.indicatorRepository = indicatorRepository;
+        this.siteSummaryMapper = siteSummaryMapper;
+        this.indicatorSummaryMapper = indicatorSummaryMapper;
     }
 
     public List<OperatorInfo> findAllOperators() {
@@ -89,6 +99,36 @@ public class OperatorQueryService {
 
     public List<IndicatorInfo> getOperatorIndicatorsTrend(Long operatorId) {
         return indicatorRepository.findTrendData(operatorId);
+    }
+
+    // ==================== V2 Summary Table Queries ====================
+
+    public List<SiteSummary> getAllOperatorsSiteSummaryLatest() {
+        return siteSummaryMapper.findAllLatest();
+    }
+
+    public SiteSummary getOperatorSiteSummaryLatest(Long operatorId) {
+        return siteSummaryMapper.findLatestByOperatorId(operatorId);
+    }
+
+    public List<SiteSummary> getOperatorSiteSummaryHistory(Long operatorId) {
+        return siteSummaryMapper.findHistoryByOperatorId(operatorId);
+    }
+
+    public List<IndicatorSummary> getAllOperatorsIndicatorSummaryLatest() {
+        return indicatorSummaryMapper.findAllLatest();
+    }
+
+    public IndicatorSummary getOperatorIndicatorSummaryLatest(Long operatorId) {
+        return indicatorSummaryMapper.findLatestByOperatorId(operatorId);
+    }
+
+    public List<IndicatorSummary> getOperatorIndicatorSummaryHistory(Long operatorId) {
+        return indicatorSummaryMapper.findHistoryByOperatorId(operatorId);
+    }
+
+    public List<IndicatorSummary> getAllOperatorsIndicatorSummaryMetrics() {
+        return indicatorSummaryMapper.findAllLatestMetrics();
     }
 
     // ==================== Helper Methods ====================

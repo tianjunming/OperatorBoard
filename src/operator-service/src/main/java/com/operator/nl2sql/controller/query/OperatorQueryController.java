@@ -7,8 +7,6 @@ import com.operator.nl2sql.entity.SiteCellSummary;
 import com.operator.nl2sql.entity.SiteSummary;
 import com.operator.nl2sql.entity.IndicatorSummary;
 import com.operator.nl2sql.service.query.OperatorQueryService;
-import com.operator.nl2sql.repository.SiteSummaryMapper;
-import com.operator.nl2sql.repository.IndicatorSummaryMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,15 +18,9 @@ import java.util.stream.Collectors;
 public class OperatorQueryController {
 
     private final OperatorQueryService operatorQueryService;
-    private final SiteSummaryMapper siteSummaryMapper;
-    private final IndicatorSummaryMapper indicatorSummaryMapper;
 
-    public OperatorQueryController(OperatorQueryService operatorQueryService,
-                                    SiteSummaryMapper siteSummaryMapper,
-                                    IndicatorSummaryMapper indicatorSummaryMapper) {
+    public OperatorQueryController(OperatorQueryService operatorQueryService) {
         this.operatorQueryService = operatorQueryService;
-        this.siteSummaryMapper = siteSummaryMapper;
-        this.indicatorSummaryMapper = indicatorSummaryMapper;
     }
 
     private OperatorNotFoundResponse createOperatorNotFoundResponse(String operatorName) {
@@ -213,7 +205,7 @@ public class OperatorQueryController {
      */
     @GetMapping("/operators/all/site-summary/latest")
     public ResponseEntity<List<SiteSummary>> getAllOperatorsSiteSummaryLatest() {
-        List<SiteSummary> summaries = siteSummaryMapper.findAllLatest();
+        List<SiteSummary> summaries = operatorQueryService.getAllOperatorsSiteSummaryLatest();
         return ResponseEntity.ok(summaries);
     }
 
@@ -227,7 +219,7 @@ public class OperatorQueryController {
             return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
         }
         OperatorInfo operator = operators.get(0);
-        SiteSummary summary = siteSummaryMapper.findLatestByOperatorId(operator.getId());
+        SiteSummary summary = operatorQueryService.getOperatorSiteSummaryLatest(operator.getId());
         if (summary == null) {
             return ResponseEntity.notFound().build();
         }
@@ -244,7 +236,7 @@ public class OperatorQueryController {
             return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
         }
         OperatorInfo operator = operators.get(0);
-        List<SiteSummary> summaries = siteSummaryMapper.findHistoryByOperatorId(operator.getId());
+        List<SiteSummary> summaries = operatorQueryService.getOperatorSiteSummaryHistory(operator.getId());
         return ResponseEntity.ok(summaries);
     }
 
@@ -255,7 +247,7 @@ public class OperatorQueryController {
      */
     @GetMapping("/operators/all/indicator-summary/latest")
     public ResponseEntity<List<IndicatorSummary>> getAllOperatorsIndicatorSummaryLatest() {
-        List<IndicatorSummary> summaries = indicatorSummaryMapper.findAllLatest();
+        List<IndicatorSummary> summaries = operatorQueryService.getAllOperatorsIndicatorSummaryLatest();
         return ResponseEntity.ok(summaries);
     }
 
@@ -269,7 +261,7 @@ public class OperatorQueryController {
             return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
         }
         OperatorInfo operator = operators.get(0);
-        IndicatorSummary summary = indicatorSummaryMapper.findLatestByOperatorId(operator.getId());
+        IndicatorSummary summary = operatorQueryService.getOperatorIndicatorSummaryLatest(operator.getId());
         if (summary == null) {
             return ResponseEntity.notFound().build();
         }
@@ -286,7 +278,7 @@ public class OperatorQueryController {
             return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
         }
         OperatorInfo operator = operators.get(0);
-        List<IndicatorSummary> summaries = indicatorSummaryMapper.findHistoryByOperatorId(operator.getId());
+        List<IndicatorSummary> summaries = operatorQueryService.getOperatorIndicatorSummaryHistory(operator.getId());
         return ResponseEntity.ok(summaries);
     }
 
@@ -297,7 +289,7 @@ public class OperatorQueryController {
      */
     @GetMapping("/operators/all/indicators/ul-prb")
     public ResponseEntity<List<IndicatorSummary>> getAllOperatorsUlPrb() {
-        List<IndicatorSummary> summaries = indicatorSummaryMapper.findAllLatest();
+        List<IndicatorSummary> summaries = operatorQueryService.getAllOperatorsIndicatorSummaryLatest();
         return ResponseEntity.ok(summaries);
     }
 
@@ -306,7 +298,7 @@ public class OperatorQueryController {
      */
     @GetMapping("/operators/all/indicators/dl-prb")
     public ResponseEntity<List<IndicatorSummary>> getAllOperatorsDlPrb() {
-        List<IndicatorSummary> summaries = indicatorSummaryMapper.findAllLatest();
+        List<IndicatorSummary> summaries = operatorQueryService.getAllOperatorsIndicatorSummaryLatest();
         return ResponseEntity.ok(summaries);
     }
 
@@ -315,7 +307,7 @@ public class OperatorQueryController {
      */
     @GetMapping("/operators/all/indicators/ul-rate")
     public ResponseEntity<List<IndicatorSummary>> getAllOperatorsUlRate() {
-        List<IndicatorSummary> summaries = indicatorSummaryMapper.findAllLatest();
+        List<IndicatorSummary> summaries = operatorQueryService.getAllOperatorsIndicatorSummaryLatest();
         return ResponseEntity.ok(summaries);
     }
 
@@ -324,7 +316,7 @@ public class OperatorQueryController {
      */
     @GetMapping("/operators/all/indicators/dl-rate")
     public ResponseEntity<List<IndicatorSummary>> getAllOperatorsDlRate() {
-        List<IndicatorSummary> summaries = indicatorSummaryMapper.findAllLatest();
+        List<IndicatorSummary> summaries = operatorQueryService.getAllOperatorsIndicatorSummaryLatest();
         return ResponseEntity.ok(summaries);
     }
 
@@ -333,7 +325,7 @@ public class OperatorQueryController {
      */
     @GetMapping("/operators/all/indicators/traffic-metrics")
     public ResponseEntity<List<IndicatorSummary>> getAllOperatorsTrafficMetrics() {
-        List<IndicatorSummary> summaries = indicatorSummaryMapper.findAllLatestMetrics();
+        List<IndicatorSummary> summaries = operatorQueryService.getAllOperatorsIndicatorSummaryMetrics();
         return ResponseEntity.ok(summaries);
     }
 }
