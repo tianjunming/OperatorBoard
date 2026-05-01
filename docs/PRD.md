@@ -1,7 +1,7 @@
 # OperatorBoard 需求分析文档
 
-**文档版本**: 1.4
-**编制日期**: 2026-04-20
+**文档版本**: 1.5
+**编制日期**: 2026-05-01
 **参考标准**: Google PRD Template | IEEE 830
 
 ---
@@ -126,6 +126,22 @@ class BaseSkill:
     async def validate(self, context: SkillContext) -> bool
     async def cleanup(self) -> None
 ```
+
+**标准可复用Skills** (`agent_framework.skills.standard`):
+
+| Skill | 功能 | 解决的问题 |
+|--------|------|--------|
+| TechnologySelectionSkill | 技术选型三问法 | 决策框架混乱 |
+| IntentCascadeSkill | LLM与规则引擎级联架构 | 不可解释性 |
+| RAGEnhancementSkill | RAG知识增强四步法 | LLM记性不好 |
+| LLMExceptionSkill | LLM异常排查三板斧 | 输出异常定位 |
+| PromptTemplateSkill | Prompt模板安全写法 | 占位符冲突 |
+| OutputSecuritySkill | LLM输出安全校验框架 | SQL注入/全表扫描 |
+| MultiAgentCollaborationSkill | Multi-Agent协作三问 | Agent编排 |
+| LLMProviderAbstractionSkill | 多LLM Provider抽象设计 | 供应商锁定 |
+| StreamingStateMachineSkill | 流式响应状态机设计 | SSE完整性 |
+| SystemReliabilitySkill | 系统可靠性自检清单 | 不知道测什么 |
+| PreLaunchChecklistSkill | LLM功能上线前检查 | 上线遗漏 |
 
 #### 2.1.5 RAG语料加载器
 
@@ -533,6 +549,8 @@ data: [DONE]
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.5 | 2026-05-01 | 技术博客Word文档深度优化，新增11个可复用Skill |
+| 1.4 | 2026-04-20 | 新增E2E测试套件、数据库一致性验证 |
 | 1.3 | 2026-04-19 | 新增站点最新/历史数据API、指标最新/历史数据API、times端点、all operators端点；前端UserManagement增强、global.css |
 | 1.2 | 2026-04-16 | 新增PendingApprovals组件、AuthRegister组件、按频段指标查询、运营商汇总指标查询 |
 | 1.1 | 2026-04-16 | 新增用户注册审批功能、智能提示功能 |

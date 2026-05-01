@@ -1,7 +1,7 @@
 # OperatorBoard 代码设计文档
 
-**文档版本**: 1.4
-**编制日期**: 2026-04-20
+**文档版本**: 1.5
+**编制日期**: 2026-05-01
 **参考标准**: Google Style Guide | SOLID Principles
 
 ---
@@ -50,7 +50,21 @@ D:\develop\OperatorBoard\
 │   │   │   ├── skills/           # 技能系统
 │   │   │   │   ├── __init__.py
 │   │   │   │   ├── base.py        # BaseSkill
-│   │   │   │   └── context.py     # SkillContext
+│   │   │   │   ├── context.py     # SkillContext
+│   │   │   │   └── standard/      # 标准可复用Skills
+│   │   │   │       ├── __init__.py
+│   │   │   │       ├── index.py   # Skills索引表
+│   │   │   │       ├── technology_selection.py  # 技术选型决策框架
+│   │   │   │       ├── intent_cascade.py        # LLM与规则引擎级联
+│   │   │   │       ├── rag_enhancement.py      # RAG知识增强四步法
+│   │   │   │       ├── llm_exception.py         # LLM异常排查三板斧
+│   │   │   │       ├── prompt_template.py      # Prompt模板安全写法
+│   │   │   │       ├── output_security.py      # LLM输出安全校验
+│   │   │   │       ├── multi_agent_collaboration.py  # Multi-Agent协作
+│   │   │   │       ├── llm_provider_abstraction.py    # 多LLM Provider抽象
+│   │   │   │       ├── streaming_state_machine.py     # 流式响应状态机
+│   │   │   │       ├── system_reliability.py         # 系统可靠性自检
+│   │   │   │       └── pre_launch_checklist.py       # 上线前检查
 │   │   │   ├── rag/              # RAG系统
 │   │   │   │   ├── __init__.py
 │   │   │   │   ├── loaders/       # 语料加载器
@@ -885,6 +899,8 @@ const examples = {
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.5 | 2026-05-01 | 技术博客Word文档深度优化，新增11个可复用Skill |
+| 1.4 | 2026-04-20 | 新增E2E测试套件、数据库一致性验证 |
 | 1.3 | 2026-04-19 | 新增global.css全局样式、UserManagement组件增强、App.jsx集成AuthRegister和PendingApprovals |
 | 1.2 | 2026-04-16 | 新增PendingApprovals组件、AuthRegister组件、UserManagement增强 |
 | 1.1 | 2026-04-16 | 新增auth-agent项目结构、AuthRegister、UserManagement组件 |

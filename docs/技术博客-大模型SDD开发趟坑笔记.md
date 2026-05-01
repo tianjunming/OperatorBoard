@@ -1110,3 +1110,21 @@ AI 自主完成需求分析 → 架构设计 → 代码生成 → 测试
 - [Pydantic 数据验证](https://docs.pydantic.dev/) - LLM 输出结构化解析
 - [Elasticsearch 安全护栏实践](https://www.elastic.co/blog/elastic-ai-assistant-security) - 输出安全参考
 - [AWS LLM App Guardrails](https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails.html) - LLM 安全设计思路
+
+**标准 Skills 模块**：
+以上 11 个可复用 Skill 已提取到标准模块：`agent_framework.skills.standard`
+```python
+from agent_framework.skills import (
+    TechnologySelectionSkill,      # Skill 1: 技术选型决策框架
+    IntentCascadeSkill,            # Skill 2: LLM与规则引擎级联架构
+    RAGEnhancementSkill,            # Skill 3: RAG知识增强四步法
+    LLMExceptionSkill,             # Skill 4: LLM异常排查三板斧
+    PromptTemplateSkill,            # Skill 5: Prompt模板安全写法
+    OutputSecuritySkill,            # Skill 6: LLM输出安全校验框架
+    MultiAgentCollaborationSkill,   # Skill 7: Multi-Agent协作三问
+    LLMProviderAbstractionSkill,    # Skill 8: 多LLM Provider抽象设计
+    StreamingStateMachineSkill,     # Skill 9: 流式响应状态机设计
+    SystemReliabilitySkill,         # Skill 10: 系统可靠性自检清单
+    PreLaunchChecklistSkill,       # Skill 11: LLM功能上线前检查
+)
+```
