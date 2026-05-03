@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.operator.nl2sql.repository.OperatorSummaryMapper">
+
+    <resultMap id="OperatorSummaryResultMap" type="com.operator.nl2sql.entity.OperatorSummary">
+        <id property="id" column="id"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="operatorName" column="operator_name"/>
+        <result property="dataMonth" column="data_month"/>
+        <result property="technology" column="technology"/>
+        <result property="nrPhysicalCellNum" column="nr_physical_cell_num"/>
+        <result property="ltePhysicalCellNum" column="lte_physical_cell_num"/>
+        <result property="ltePhysicalSiteNum" column="lte_physical_site_num"/>
+        <result property="nrPhysicalSiteNum" column="nr_physical_site_num"/>
+        <result property="totalSiteNum" column="total_site_num"/>
+        <result property="totalCellNum" column="total_cell_num"/>
+        <result property="onlineUsers" column="online_users"/>
+        <result property="nrUsers" column="nr_users"/>
+        <result property="terminalPenetrationRatio" column="terminal_penetration_ratio"/>
+        <result property="lteAvgDlRate" column="lte_avg_dl_rate"/>
+        <result property="lteAvgUlRate" column="lte_avg_ul_rate"/>
+        <result property="lteAvgDlPrb" column="lte_avg_dl_prb"/>
+        <result property="lteAvgUlPrb" column="lte_avg_ul_prb"/>
+        <result property="nrAvgDlRate" column="nr_avg_dl_rate"/>
+        <result property="nrAvgUlRate" column="nr_avg_ul_rate"/>
+        <result property="nrAvgDlPrb" column="nr_avg_dl_prb"/>
+        <result property="nrAvgUlPrb" column="nr_avg_ul_prb"/>
+        <result property="trafficRatio" column="traffic_ratio"/>
+        <result property="durationCampratio" column="duration_campratio"/>
+        <result property="fallbackRatio" column="fallback_ratio"/>
+        <result property="createdTime" column="created_time"/>
+        <result property="updatedTime" column="updated_time"/>
+    </resultMap>
+
+    <!-- Get all operators latest summary (ALL technology) -->
+    <select id="findAllLatest" resultMap="OperatorSummaryResultMap">
+        SELECT
+            os.id,
+            os.operator_id,
+            oi.operator_name,
+            os.data_month,
+            os.technology,
+            os.nr_physical_cell_num,
+            os.lte_physical_cell_num,
+            os.lte_physical_site_num,
+            os.nr_physical_site_num,
+            os.total_site_num,
+            os.total_cell_num,
+            os.online_users,
+            os.nr_users,
+            os.terminal_penetration_ratio,
+            os.lte_avg_dl_rate,
+            os.lte_avg_ul_rate,
+            os.lte_avg_dl_prb,
+            os.lte_avg_ul_prb,
+            os.nr_avg_dl_rate,
+            os.nr_avg_ul_rate,
+            os.nr_avg_dl_prb,
+            os.nr_avg_ul_prb,
+            os.traffic_ratio,
+            os.duration_campratio,
+            os.fallback_ratio,
+            os.created_time,
+            os.updated_time
+        FROM operator_summary os
+        JOIN operator_info oi ON os.operator_id = oi.id
+        WHERE os.technology = 'ALL'
+          AND os.data_month = (
+              SELECT MAX(os2.data_month) FROM operator_summary os2
+              WHERE os2.operator_id = os.operator_id AND os2.technology = 'ALL'
+          )
+        ORDER BY os.operator_id
+    </select>
+
+    <!-- Get all operators latest summary by technology (LTE/NR) -->
+    <select id="findAllLatestByTech" resultMap="OperatorSummaryResultMap">
+        SELECT
+            os.id,
+            os.operator_id,
+            oi.operator_name,
+            os.data_month,
+            os.technology,
+            os.nr_physical_cell_num,
+            os.lte_physical_cell_num,
+            os.lte_physical_site_num,
+            os.nr_physical_site_num,
+            os.total_site_num,
+            os.total_cell_num,
+            os.online_users,
+            os.nr_users,
+            os.terminal_penetration_ratio,
+            os.lte_avg_dl_rate,
+            os.lte_avg_ul_rate,
+            os.lte_avg_dl_prb,
+            os.lte_avg_ul_prb,
+            os.nr_avg_dl_rate,
+            os.nr_avg_ul_rate,
+            os.nr_avg_dl_prb,
+            os.nr_avg_ul_prb,
+            os.traffic_ratio,
+            os.duration_campratio,
+            os.fallback_ratio,
+            os.created_time,
+            os.updated_time
+        FROM operator_summary os
+        JOIN operator_info oi ON os.operator_id = oi.id
+        WHERE os.data_month = (
+            SELECT MAX(os2.data_month) FROM operator_summary os2
+            WHERE os2.operator_id = os.operator_id AND os2.technology = os.technology
+        )
+        ORDER BY os.operator_id, os.technology
+    </select>
+
+    <!-- Get latest summary for specific operator -->
+    <select id="findLatestByOperatorId" resultMap="OperatorSummaryResultMap">
+        SELECT
+            os.id,
+            os.operator_id,
+            oi.operator_name,
+            os.data_month,
+            os.technology,
+            os.nr_physical_cell_num,
+            os.lte_physical_cell_num,
+            os.lte_physical_site_num,
+            os.nr_physical_site_num,
+            os.total_site_num,
+            os.total_cell_num,
+            os.online_users,
+            os.nr_users,
+            os.terminal_penetration_ratio,
+            os.lte_avg_dl_rate,
+            os.lte_avg_ul_rate,
+            os.lte_avg_dl_prb,
+            os.lte_avg_ul_prb,
+            os.nr_avg_dl_rate,
+            os.nr_avg_ul_rate,
+            os.nr_avg_dl_prb,
+            os.nr_avg_ul_prb,
+            os.traffic_ratio,
+            os.duration_campratio,
+            os.fallback_ratio,
+            os.created_time,
+            os.updated_time
+        FROM operator_summary os
+        JOIN operator_info oi ON os.operator_id = oi.id
+        WHERE os.operator_id = #{operatorId}
+          AND os.technology = 'ALL'
+          AND os.data_month = (
+              SELECT MAX(os2.data_month) FROM operator_summary os2
+              WHERE os2.operator_id = os.operator_id AND os2.technology = 'ALL'
+          )
+    </select>
+
+    <!-- Get history for specific operator -->
+    <select id="findHistoryByOperatorId" resultMap="OperatorSummaryResultMap">
+        SELECT
+            os.id,
+            os.operator_id,
+            oi.operator_name,
+            os.data_month,
+            os.technology,
+            os.nr_physical_cell_num,
+            os.lte_physical_cell_num,
+            os.lte_physical_site_num,
+            os.nr_physical_site_num,
+            os.total_site_num,
+            os.total_cell_num,
+            os.online_users,
+            os.nr_users,
+            os.terminal_penetration_ratio,
+            os.lte_avg_dl_rate,
+            os.lte_avg_ul_rate,
+            os.lte_avg_dl_prb,
+            os.lte_avg_ul_prb,
+            os.nr_avg_dl_rate,
+            os.nr_avg_ul_rate,
+            os.nr_avg_dl_prb,
+            os.nr_avg_ul_prb,
+            os.traffic_ratio,
+            os.duration_campratio,
+            os.fallback_ratio,
+            os.created_time,
+            os.updated_time
+        FROM operator_summary os
+        JOIN operator_info oi ON os.operator_id = oi.id
+        WHERE os.operator_id = #{operatorId}
+          AND os.technology = 'ALL'
+        ORDER BY os.data_month DESC
+    </select>
+
+    <!-- Get all operators latest for specific technology -->
+    <select id="findAllLatestByTechnology" resultMap="OperatorSummaryResultMap">
+        SELECT
+            os.id,
+            os.operator_id,
+            oi.operator_name,
+            os.data_month,
+            os.technology,
+            os.nr_physical_cell_num,
+            os.lte_physical_cell_num,
+            os.lte_physical_site_num,
+            os.nr_physical_site_num,
+            os.total_site_num,
+            os.total_cell_num,
+            os.online_users,
+            os.nr_users,
+            os.terminal_penetration_ratio,
+            os.lte_avg_dl_rate,
+            os.lte_avg_ul_rate,
+            os.lte_avg_dl_prb,
+            os.lte_avg_ul_prb,
+            os.nr_avg_dl_rate,
+            os.nr_avg_ul_rate,
+            os.nr_avg_dl_prb,
+            os.nr_avg_ul_prb,
+            os.traffic_ratio,
+            os.duration_campratio,
+            os.fallback_ratio,
+            os.created_time,
+            os.updated_time
+        FROM operator_summary os
+        JOIN operator_info oi ON os.operator_id = oi.id
+        WHERE os.technology = #{technology}
+          AND os.data_month = (
+              SELECT MAX(os2.data_month) FROM operator_summary os2
+              WHERE os2.operator_id = os.operator_id AND os2.technology = #{technology}
+          )
+        ORDER BY os.operator_id
+    </select>
+
+</mapper>

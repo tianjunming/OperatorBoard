@@ -974,14 +974,14 @@ def _transform_indicator_to_long(indicators: list, metric: str = "dl_rate") -> l
         List of records in long format with fields:
         operator_id, operator_name, data_month, band, technology, value
     """
-    # Map metric to field index in INDICATOR_BANDS
+    # Map metric to field index in INDICATOR_BANDS tuple (dl_rate, ul_rate, dl_prb, ul_prb)
     metric_map = {
-        "dl_rate": 2,   # dl_rate field index
-        "ul_rate": 3,   # ul_rate field index
-        "dl_prb": 4,    # dl_prb field index
-        "ul_prb": 5,    # ul_prb field index
+        "dl_rate": 0,   # dl_rate field index
+        "ul_rate": 1,   # ul_rate field index
+        "dl_prb": 2,    # dl_prb field index
+        "ul_prb": 3,    # ul_prb field index
     }
-    field_idx = metric_map.get(metric, 2)
+    field_idx = metric_map.get(metric, 0)
 
     result = []
     for ind in indicators:
@@ -1261,6 +1261,7 @@ def format_operator_cell_count(site_cells: list, operators: list, operator_name:
         chart_data=chart_data,
         table_columns=table_columns,
         thinking=thinking,
+        show_summary_in_content=False,
         followup_questions=followup_questions,
     )
 
@@ -1321,7 +1322,9 @@ def _format_indicator_metric(indicators: list, operators: list, metric: str,
         if operator_name:
             op_id = ind.get("operatorId")
             op_info = operator_map.get(op_id, {})
-            if operator_name not in op_info.get("name", "") and op_info.get("name", "") not in operator_name:
+            op_name = op_info.get("name", "")
+            # Check if operator name matches (both directions for partial match)
+            if operator_name not in op_name and op_name not in operator_name:
                 continue
         filtered.append(ind)
 
@@ -1332,12 +1335,15 @@ def _format_indicator_metric(indicators: list, operators: list, metric: str,
     long_data = _transform_indicator_to_long(filtered, metric)
 
     # Filter non-zero values
-    long_data = [d for d in long_data if d["value"] > 0]
+    long_data = [d for d in long_data if d.get("value", 0) > 0]
+
+    if not long_data:
+        return {"content": f"未找到有效的{metric_name}数据", "chart": None, "data": None}
 
     # Group by operator
     op_groups = {}
     for d in long_data:
-        key = d["operatorId"]
+        key = d.get("operatorId")
         if key not in op_groups:
             op_groups[key] = []
         op_groups[key].append(d)
@@ -1598,6 +1604,86 @@ def format_all_operators_sites(site_cells: list, operators: list, followup_quest
     )
 
 
+# ==================== Function 10b: All Operators Physical Sites (from operator_summary) ====================
+def format_all_operators_physical_sites(summaries: list, operators: list, followup_questions: list = None) -> Dict[str, Any]:
+    """
+    功能10: 查看所有运营商站点，返回所有运营商最新日期operator_summary中的
+    lte_physical_site_num和nr_physical_site_num，表格形式呈现
+    """
+    if not summaries:
+        return {"content": "未找到站点数据", "chart": None, "data": None}
+
+    operator_map = _get_operator_map(operators)
+
+    # Get latest month
+    months = sorted(set(s.get("dataMonth", "") for s in summaries if isinstance(s, dict)), reverse=True)
+    latest_month = months[0] if months else ""
+
+    # Filter by latest month
+    filtered = [s for s in summaries if isinstance(s, dict) and s.get("dataMonth") == latest_month]
+
+    if not filtered:
+        return {"content": "未找到站点数据", "chart": None, "data": None}
+
+    # Build summary and table with physical site numbers
+    table_columns = ["运营商", "LTE物理站点", "NR物理站点", "总站点"]
+    table_data = []
+    chart_data = []
+
+    for summary in filtered:
+        if not isinstance(summary, dict):
+            continue
+
+        op_id = summary.get("operatorId")
+        op_info = operator_map.get(op_id, {"name": summary.get("operatorName", f"运营商{op_id}")})
+        op_name = op_info["name"]
+
+        lte_sites = summary.get("ltePhysicalSiteNum", 0) or 0
+        nr_sites = summary.get("nrPhysicalSiteNum", 0) or 0
+        total_sites = summary.get("totalSiteNum", lte_sites + nr_sites) or (lte_sites + nr_sites)
+
+        table_data.append({
+            "运营商": op_name,
+            "LTE物理站点": lte_sites,
+            "NR物理站点": nr_sites,
+            "总站点": total_sites,
+        })
+
+        chart_data.append({
+            "运营商": op_name,
+            "LTE站点": lte_sites,
+            "NR站点": nr_sites,
+            "总站点": total_sites,
+        })
+
+    total_lte = sum(d.get("ltePhysicalSiteNum", 0) or 0 for d in filtered)
+    total_nr = sum(d.get("nrPhysicalSiteNum", 0) or 0 for d in filtered)
+    total_all = sum(d.get("totalSiteNum", 0) or (d.get("ltePhysicalSiteNum", 0) + d.get("nrPhysicalSiteNum", 0)) for d in filtered)
+
+    summary = {
+        "运营商数": len(filtered),
+        "LTE站点总数": total_lte,
+        "NR站点总数": total_nr,
+        "总站点数": total_all,
+        "数据月份": latest_month,
+    }
+
+    thinking = _build_thinking_chain("", "all_physical_sites - 所有运营商物理站点查询", None, "物理站点数据")
+
+    return _build_standard_response(
+        title="所有运营商物理站点统计",
+        summary=summary,
+        table_data=table_data,
+        chart_type="bar",
+        chart_keys=["LTE站点", "NR站点", "总站点"],
+        chart_data=chart_data,
+        table_columns=table_columns,
+        thinking=thinking,
+        show_summary_in_content=False,
+        followup_questions=followup_questions,
+    )
+
+
 # ==================== Functions 11: All Operators DL/UL Rate ====================
 def format_all_operators_dl_rate(indicators: list, operators: list, followup_questions: list = None) -> Dict[str, Any]:
     """
@@ -1613,7 +1699,7 @@ def format_all_operators_ul_rate(indicators: list, operators: list, followup_que
     return _format_all_operators_rate(indicators, operators, "ul_rate", "上行速率")
 
 
-def _format_all_operators_rate(indicators: list, operators: list, metric: str, metric_name: str) -> Dict[str, Any]:
+def _format_all_operators_rate(indicators: list, operators: list, metric: str, metric_name: str, followup_questions: list = None) -> Dict[str, Any]:
     """
     Generic function for all operators DL/UL rate.
     """
@@ -1647,23 +1733,31 @@ def _format_all_operators_rate(indicators: list, operators: list, metric: str, m
         op_info = operator_map.get(op_id, {"name": f"运营商{op_id}"})
         op_name = op_info["name"]
 
-        # Calculate LTE avg
-        lte_vals = []
-        for band_name, band_prefix, dl_rate_key, ul_rate_key, dl_prb_key, ul_prb_key in LTE_BANDS_INDICATOR:
-            val = ind.get([dl_rate_key, ul_rate_key][0 if metric == "dl_rate" else 1], 0) or 0
-            if val > 0:
-                lte_vals.append(val)
-        lte_avg = sum(lte_vals) / len(lte_vals) if lte_vals else 0
+        # Get LTE/NR avg rates - first try direct summary fields, then fallback to band calculation
+        lte_rate_key = "lteAvgDlRate" if metric == "dl_rate" else "lteAvgUlRate"
+        nr_rate_key = "nrAvgDlRate" if metric == "dl_rate" else "nrAvgUlRate"
 
-        # Calculate NR avg
-        nr_vals = []
-        for band_name, band_prefix, dl_rate_key, ul_rate_key, dl_prb_key, ul_prb_key in NR_BANDS_INDICATOR:
-            val = ind.get([dl_rate_key, ul_rate_key][0 if metric == "dl_rate" else 1], 0) or 0
-            if val > 0:
-                nr_vals.append(val)
-        nr_avg = sum(nr_vals) / len(nr_vals) if nr_vals else 0
+        lte_avg = ind.get(lte_rate_key, 0) or 0
+        nr_avg = ind.get(nr_rate_key, 0) or 0
 
-        overall_avg = (lte_avg * len(lte_vals) + nr_avg * len(nr_vals)) / (len(lte_vals) + len(nr_vals)) if (lte_vals or nr_vals) else 0
+        # Fallback: calculate from band values if avg fields are 0
+        if lte_avg == 0:
+            lte_vals = []
+            for band_name, band_prefix, dl_rate_key, ul_rate_key, dl_prb_key, ul_prb_key in LTE_BANDS_INDICATOR:
+                val = ind.get([dl_rate_key, ul_rate_key][0 if metric == "dl_rate" else 1], 0) or 0
+                if val > 0:
+                    lte_vals.append(val)
+            lte_avg = sum(lte_vals) / len(lte_vals) if lte_vals else 0
+
+        if nr_avg == 0:
+            nr_vals = []
+            for band_name, band_prefix, dl_rate_key, ul_rate_key, dl_prb_key, ul_prb_key in NR_BANDS_INDICATOR:
+                val = ind.get([dl_rate_key, ul_rate_key][0 if metric == "dl_rate" else 1], 0) or 0
+                if val > 0:
+                    nr_vals.append(val)
+            nr_avg = sum(nr_vals) / len(nr_vals) if nr_vals else 0
+
+        overall_avg = (lte_avg + nr_avg) / 2 if (lte_avg > 0 or nr_avg > 0) else 0
 
         table_data.append({
             "运营商": op_name,
@@ -1676,6 +1770,118 @@ def _format_all_operators_rate(indicators: list, operators: list, metric: str, m
             "运营商": op_name,
             "LTE": round(lte_avg, 2),
             "NR": round(nr_avg, 2),
+            "平均": round(overall_avg, 2),
+        })
+
+    summary = {
+        "运营商数": len(filtered),
+        "数据月份": latest_month,
+        "指标": metric_name,
+    }
+
+    thinking = _build_thinking_chain("", f"all_{metric} - 所有运营商{metric_name}查询", None, "网络指标")
+
+    return _build_standard_response(
+        title=f"所有运营商{metric_name}统计",
+        summary=summary,
+        table_data=table_data,
+        chart_type="bar",
+        chart_keys=["LTE", "NR", "平均"],
+        chart_data=chart_data,
+        table_columns=table_columns,
+        thinking=thinking,
+        followup_questions=followup_questions,
+    )
+
+
+# ==================== Functions 12-13: All Operators DL/UL PRB ====================
+def format_all_operators_dl_prb(indicators: list, operators: list, followup_questions: list = None) -> Dict[str, Any]:
+    """
+    功能12: 查看所有运营商下行负载，返回所有运营商最新日期的lte_avg_dl_prb和nr_avg_dl_prb
+    """
+    return _format_all_operators_prb(indicators, operators, "dl_prb", "下行负载(DL PRB)", followup_questions)
+
+
+def format_all_operators_ul_prb(indicators: list, operators: list, followup_questions: list = None) -> Dict[str, Any]:
+    """
+    功能13: 查看所有运营商上行负载，返回所有运营商最新日期的lte_avg_ul_prb和nr_avg_ul_prb
+    """
+    return _format_all_operators_prb(indicators, operators, "ul_prb", "上行负载(UL PRB)", followup_questions)
+
+
+def _format_all_operators_prb(indicators: list, operators: list, metric: str, metric_name: str, followup_questions: list = None) -> Dict[str, Any]:
+    """
+    Generic function for all operators DL/UL PRB.
+    """
+    if not indicators:
+        return {"content": "未找到指标数据", "chart": None, "data": None}
+
+    operator_map = _get_operator_map(operators)
+
+    # Get latest month
+    months = sorted(set(ind.get("dataMonth", "") for ind in indicators if isinstance(ind, dict)), reverse=True)
+    latest_month = months[0] if months else ""
+
+    # Filter by latest month
+    filtered = [ind for ind in indicators if isinstance(ind, dict) and ind.get("dataMonth") == latest_month]
+
+    if not filtered:
+        return {"content": "未找到指标数据", "chart": None, "data": None}
+
+    # Calculate per-operator LTE/NR averages for the metric
+    table_columns = ["运营商", "LTE下行PRB(%)", "NR下行PRB(%)", "整体平均(%)"]
+    if metric == "ul_prb":
+        table_columns = ["运营商", "LTE上行PRB(%)", "NR上行PRB(%)", "整体平均(%)"]
+
+    table_data = []
+    chart_data = []
+
+    for ind in filtered:
+        if not isinstance(ind, dict):
+            continue
+        op_id = ind.get("operatorId")
+        op_info = operator_map.get(op_id, {"name": f"运营商{op_id}"})
+        op_name = op_info["name"]
+
+        # Get the PRB average fields directly (lteAvgDlPrb, nrAvgDlPrb, etc.)
+        lte_key = "lteAvgDlPrb" if metric == "dl_prb" else "lteAvgUlPrb"
+        nr_key = "nrAvgDlPrb" if metric == "dl_prb" else "nrAvgUlPrb"
+
+        lte_val = ind.get(lte_key, 0) or 0
+        nr_val = ind.get(nr_key, 0) or 0
+
+        # Fallback: calculate from band values if avg fields are 0
+        if lte_val == 0:
+            lte_vals = []
+            for band_name, band_prefix, dl_rate_key, ul_rate_key, dl_prb_key, ul_prb_key in LTE_BANDS_INDICATOR:
+                prb_key = dl_prb_key if metric == "dl_prb" else ul_prb_key
+                val = ind.get(prb_key, 0) or 0
+                if val > 0:
+                    lte_vals.append(val)
+            lte_val = sum(lte_vals) / len(lte_vals) if lte_vals else 0
+
+        if nr_val == 0:
+            nr_vals = []
+            for band_name, band_prefix, dl_rate_key, ul_rate_key, dl_prb_key, ul_prb_key in NR_BANDS_INDICATOR:
+                prb_key = dl_prb_key if metric == "dl_prb" else ul_prb_key
+                val = ind.get(prb_key, 0) or 0
+                if val > 0:
+                    nr_vals.append(val)
+            nr_val = sum(nr_vals) / len(nr_vals) if nr_vals else 0
+
+        overall_avg = (lte_val + nr_val) / 2 if (lte_val > 0 or nr_val > 0) else 0
+
+        table_data.append({
+            "运营商": op_name,
+            "LTE下行PRB(%)" if metric == "dl_prb" else "LTE上行PRB(%)": round(lte_val, 2),
+            "NR下行PRB(%)" if metric == "dl_prb" else "NR上行PRB(%)": round(nr_val, 2),
+            "整体平均(%)": round(overall_avg, 2),
+        })
+
+        chart_data.append({
+            "运营商": op_name,
+            "LTE": round(lte_val, 2),
+            "NR": round(nr_val, 2),
             "平均": round(overall_avg, 2),
         })
 
@@ -1783,7 +1989,7 @@ def format_site_history(site_cells: list, operators: list, operator_name: str = 
         title=f"{operator_name or '所有运营商'} {data_type_name}历史数据",
         summary=summary,
         table_data=table_data,
-        chart_type="line",
+        chart_type="bar",
         chart_keys=["LTE", "NR", "合计"],
         chart_data=chart_data,
         table_columns=table_columns,
@@ -1886,7 +2092,129 @@ def format_indicator_history(indicators: list, operators: list, metric: str, ope
         title=f"{operator_name or '所有运营商'} {metric_name}历史数据",
         summary=summary,
         table_data=table_data,
-        chart_type="line",
+        chart_type="bar",
+        chart_keys=["LTE", "NR"],
+        chart_data=chart_data,
+        table_columns=table_columns,
+        thinking=thinking,
+        followup_questions=followup_questions,
+    )
+
+
+# ==================== Function 14-17: Indicator History Functions ====================
+def format_ul_prb_history(indicators: list, operators: list, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
+    """
+    功能14: 中国联通历史上行负载
+    """
+    return _format_indicator_history(indicators, operators, "ul_prb", "上行负载(UL PRB)", operator_name, followup_questions)
+
+
+def format_dl_prb_history(indicators: list, operators: list, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
+    """
+    功能15: 中国联通历史下行负载
+    """
+    return _format_indicator_history(indicators, operators, "dl_prb", "下行负载(DL PRB)", operator_name, followup_questions)
+
+
+def format_ul_rate_history(indicators: list, operators: list, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
+    """
+    功能16: 中国联通历史上行速率
+    """
+    return _format_indicator_history(indicators, operators, "ul_rate", "上行速率(Mbps)", operator_name, followup_questions)
+
+
+def format_dl_rate_history(indicators: list, operators: list, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
+    """
+    功能17: 中国联通历史下行速率
+    """
+    return _format_indicator_history(indicators, operators, "dl_rate", "下行速率(Mbps)", operator_name, followup_questions)
+
+
+def _format_indicator_history(indicators: list, operators: list, metric: str,
+                              metric_name: str, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
+    """
+    Generic function to format indicator history metrics (DL/UL rate, DL/UL PRB).
+    """
+    if not indicators:
+        return {"content": "未找到历史数据", "chart": None, "data": None}
+
+    operator_map = _get_operator_map(operators)
+
+    # Filter by operator if specified
+    filtered = []
+    for ind in indicators:
+        if not isinstance(ind, dict):
+            continue
+        if operator_name:
+            op_id = ind.get("operatorId")
+            op_info = operator_map.get(op_id, {})
+            if operator_name not in op_info.get("name", "") and op_info.get("name", "") not in operator_name:
+                continue
+        filtered.append(ind)
+
+    if not filtered:
+        return {"content": f"未找到运营商 {operator_name} 的历史数据", "chart": None, "data": None}
+
+    # Get all months sorted
+    months = sorted(set(ind.get("dataMonth", "") for ind in filtered if isinstance(ind, dict)), reverse=True)
+
+    # Transform to long format
+    long_data = _transform_indicator_to_long(filtered, metric)
+    long_data = [d for d in long_data if d["value"] > 0]
+
+    # Group by operator and month
+    op_month_groups = {}
+    for d in long_data:
+        key = (d["operatorId"], d["dataMonth"])
+        if key not in op_month_groups:
+            op_month_groups[key] = []
+        op_month_groups[key].append(d)
+
+    metric_unit = "%" if "PRB" in metric_name else "Mbps"
+
+    # Build summary and table
+    table_columns = ["月份", "运营商", "制式", "频段", metric_name]
+    table_data = []
+    chart_data = []
+
+    for (op_id, month), records in sorted(op_month_groups.items(), key=lambda x: x[0][1], reverse=True):
+        op_info = operator_map.get(op_id, {"name": f"运营商{op_id}"})
+        op_name = op_info["name"]
+
+        lte_vals = [d["value"] for d in records if d["technology"] == "LTE"]
+        nr_vals = [d["value"] for d in records if d["technology"] == "NR"]
+        lte_avg = sum(lte_vals) / len(lte_vals) if lte_vals else 0
+        nr_avg = sum(nr_vals) / len(nr_vals) if nr_vals else 0
+
+        for d in records:
+            table_data.append({
+                "月份": month,
+                "运营商": op_name,
+                "制式": d["technology"],
+                "频段": d["band"],
+                metric_name: f"{d['value']:.2f}{metric_unit}",
+            })
+
+        chart_data.append({
+            "月份": month,
+            "运营商": op_name,
+            "LTE": round(lte_avg, 2),
+            "NR": round(nr_avg, 2),
+        })
+
+    summary = {
+        "运营商数": len(set(k[0] for k in op_month_groups.keys())),
+        "月份数": len(months),
+        "指标": metric_name,
+    }
+
+    thinking = _build_thinking_chain("", f"{metric}_history - {metric_name}历史查询", operator_name, "历史指标")
+
+    return _build_standard_response(
+        title=f"{operator_name or '所有运营商'} {metric_name}历史数据",
+        summary=summary,
+        table_data=table_data,
+        chart_type="bar",
         chart_keys=["LTE", "NR"],
         chart_data=chart_data,
         table_columns=table_columns,
@@ -1969,7 +2297,7 @@ def format_traffic_ratio_history(indicators: list, operators: list, operator_nam
         title=f"{operator_name or '所有运营商'} 分流指标历史数据",
         summary=summary,
         table_data=table_data,
-        chart_type="line",
+        chart_type="bar",
         chart_keys=["分流比", "时长驻留比", "流量驻留比", "终端渗透率"],
         chart_data=chart_data,
         table_columns=table_columns,
@@ -2003,26 +2331,52 @@ async def agent_stream(request: AgentRunRequest, _: bool = Depends(verify_api_ke
             result = await _process_agent_request(request.input, request.confirmed, locale)
 
             # Send result as SSE - check for error code format first
-            if "code" in result and "message" in result:
-                # New error code format
-                yield f"data: {{\"type\": \"error\", \"code\": {json.dumps(result['code'])}, \"message\": {json.dumps(result['message'])}, \"detail\": {json.dumps(result.get('detail'))}}}\n\n"
-            elif "error" in result:
-                # Legacy error format
-                yield f"data: {{\"type\": \"error\", \"content\": {json.dumps(result['error'])}}}\n\n"
-            elif "content" in result:
-                # Stream content in larger chunks for better performance
-                content = result["content"]
-                for i in range(0, len(content), 200):
-                    chunk = content[i:i+200]
-                    # Use standard SSE format - content as plain string
-                    yield f'data: {json.dumps({"type": "content", "content": chunk})}\n\n'
-                    await asyncio.sleep(0.01)  # Small delay for streaming effect
-                # Send chart data if available
-                if result.get("chart"):
-                    yield f'data: {json.dumps({"type": "chart", "chart": result["chart"]})}\n\n'
-                # Send followup questions if available
-                if result.get("followup_questions"):
-                    yield f'data: {json.dumps({"type": "followup", "questions": result["followup_questions"]})}\n\n'
+            if result is None:
+                yield f"data: {json.dumps({'type': 'error', 'content': 'No result returned'})}\n\n"
+            elif isinstance(result, dict):
+                if "code" in result and "message" in result:
+                    # New error code format
+                    yield f"data: {{\"type\": \"error\", \"code\": {json.dumps(result['code'])}, \"message\": {json.dumps(result['message'])}, \"detail\": {json.dumps(result.get('detail'))}}}\n\n"
+                elif "error" in result:
+                    # Legacy error format
+                    yield f"data: {{\"type\": \"error\", \"content\": {json.dumps(result['error'])}}}\n\n"
+                elif "content" in result:
+                    # Stream content in larger chunks for better performance
+                    content = result["content"]
+                    for i in range(0, len(content), 200):
+                        chunk = content[i:i+200]
+                        # Use standard SSE format - content as plain string
+                        yield f'data: {json.dumps({"type": "content", "content": chunk})}\n\n'
+                        await asyncio.sleep(0.01)  # Small delay for streaming effect
+                    # Send chart data if available
+                    if result.get("chart"):
+                        yield f'data: {json.dumps({"type": "chart", "chart": result["chart"]})}\n\n'
+                    # Send followup questions if available
+                    if result.get("followup_questions"):
+                        yield f'data: {json.dumps({"type": "followup", "questions": result["followup_questions"]})}\n\n'
+                else:
+                    # Structured response from _build_standard_response
+                    # Send thinking chain first if available
+                    thinking = result.get("thinking", "")
+                    if thinking:
+                        for i in range(0, len(thinking), 200):
+                            chunk = thinking[i:i+200]
+                            yield f'data: {json.dumps({"type": "content", "content": chunk})}\n\n'
+                            await asyncio.sleep(0.01)
+                    # Send structured data as a unified block
+                    yield f'data: {json.dumps({"type": "structured", "data": {
+                        "title": result.get("title", ""),
+                        "summary": result.get("summary", {}),
+                        "table_columns": result.get("table_columns", []),
+                        "table_data": result.get("table_data", []),
+                        "chart_type": result.get("chart_type", "bar"),
+                        "chart_keys": result.get("chart_keys", []),
+                        "chart_data": result.get("chart_data", []),
+                        "show_summary_in_content": result.get("show_summary_in_content", True)
+                    }})}\n\n'
+                    # Send followup questions if available
+                    if result.get("followup_questions"):
+                        yield f'data: {json.dumps({"type": "followup", "questions": result["followup_questions"]})}\n\n'
             else:
                 yield f"data: {{\"type\": \"content\", \"content\": {json.dumps(str(result))}}}\n\n"
 
@@ -2219,20 +2573,24 @@ def _build_thinking_chain(query: str, intent: str, operator_name: str = None, da
     return "<!-- thinking_start -->\n" + "\n".join(f"{i+1}. {s}" for i, s in enumerate(steps)) + "\n<!-- thinking_end -->"
 
 
-def _detect_data_category(user_input: str) -> str:
+def _detect_data_category(user_input: str) -> Tuple[str, bool]:
     """
     Detect the data category from user input for routing to appropriate formatter.
     Categories: site, cell, ul_prb, dl_prb, ul_rate, dl_rate, traffic_ratio, history
+    Returns: (metric, is_history)
     """
     text = user_input.lower()
 
-    # Check for history keywords
-    is_history = any(kw in text for kw in ['历史', '所有', '历年', '变化', '趋势'])
+    # Check for history keywords FIRST - this takes precedence
+    # Note: "所有" is removed because it means "all operators" not historical data
+    # in the context of "所有运营商下行速率"
+    is_history = any(kw in text for kw in ['历史', '历年', '变化', '趋势']) and '运营商' not in user_input
 
-    # Check for specific metric keywords
-    if '上行负载' in user_input or 'ulprb' in text or '上行prb' in text:
+    # Check for specific metric keywords - only set metric, keep is_history from above
+    # Note: Check UL/DL PRB before general "负载" to avoid overlap
+    if 'ul prb' in text or '上行负载' in user_input or 'ulprb' in text:
         metric = 'ul_prb'
-    elif '下行负载' in user_input or 'dlprb' in text or '下行prb' in text:
+    elif 'dl prb' in text or '下行负载' in user_input or 'dlprb' in text:
         metric = 'dl_prb'
     elif '上行速率' in user_input or 'ulrate' in text or '上行速度' in text:
         metric = 'ul_rate'
@@ -2310,6 +2668,29 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
                     method="GET",
                 )
 
+        # Helper to get operator summary data (from operator_summary table)
+        async def get_operator_summary_data(op_name: str = None):
+            if op_name:
+                result = await agent.call_java_service(
+                    service_name="nl2sql-service",
+                    endpoint=f"/operators/{op_name}/operator-summary/latest",
+                    method="GET",
+                )
+                if result.get("error"):
+                    # Fallback to all operators
+                    result = await agent.call_java_service(
+                        service_name="nl2sql-service",
+                        endpoint="/operators/all/operator-summary/latest",
+                        method="GET",
+                    )
+                return result
+            else:
+                return await agent.call_java_service(
+                    service_name="nl2sql-service",
+                    endpoint="/operators/all/operator-summary/latest",
+                    method="GET",
+                )
+
         # Helper to get site cells history
         async def get_site_cells_history(op_name: str = None):
             if op_name:
@@ -2330,20 +2711,20 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
             if op_name:
                 result = await agent.call_java_service(
                     service_name="nl2sql-service",
-                    endpoint=f"/operators/{op_name}/indicators/latest",
+                    endpoint=f"/operators/{op_name}/indicator-summary/latest",
                     method="GET",
                 )
                 if result.get("error"):
                     result = await agent.call_java_service(
                         service_name="nl2sql-service",
-                        endpoint="/operators/all/indicators/latest",
+                        endpoint="/operators/all/indicator-summary/latest",
                         method="GET",
                     )
                 return result
             else:
                 return await agent.call_java_service(
                     service_name="nl2sql-service",
-                    endpoint="/operators/all/indicators/latest",
+                    endpoint="/operators/all/indicator-summary/latest",
                     method="GET",
                 )
 
@@ -2352,13 +2733,13 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
             if op_name:
                 return await agent.call_java_service(
                     service_name="nl2sql-service",
-                    endpoint=f"/operators/{op_name}/indicators/history",
+                    endpoint=f"/operators/{op_name}/indicator-summary/history",
                     method="GET",
                 )
             else:
                 return await agent.call_java_service(
                     service_name="nl2sql-service",
-                    endpoint="/operators/all/indicators/latest",
+                    endpoint="/operators/all/indicator-summary/latest",
                     method="GET",
                 )
 
@@ -2385,7 +2766,15 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
                     if operator_name:
                         return format_operator_site_count(site_cells, operators, operator_name, followup_questions)
                     else:
-                        return format_all_operators_sites(site_cells, operators, followup_questions)
+                        # For "所有运营商站点" query, use operator_summary endpoint
+                        summary_result = await get_operator_summary_data()
+                        if summary_result.get("error"):
+                            # Fallback to site_info based data
+                            return format_all_operators_sites(site_cells, operators, followup_questions)
+                        summaries = summary_result if isinstance(summary_result, list) else summary_result.get("data", [])
+                        if not isinstance(summaries, list):
+                            summaries = [summaries] if summaries else []
+                        return format_all_operators_physical_sites(summaries, operators, followup_questions)
                 else:  # cells
                     if operator_name:
                         return format_operator_cell_count(site_cells, operators, operator_name, followup_questions)
@@ -2393,6 +2782,18 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
                         # For all operators cells, reuse logic
                         return format_operator_cell_count(site_cells, operators, None, followup_questions)
 
+            elif data_category == 'unknown' and intent == "indicator_data":
+                # Handle generic indicator queries (e.g., "查看指标信息")
+                # Route to traffic_ratio as default since it's the most common indicator query
+                result = await get_indicators_data(operator_name)
+                if result.get("error"):
+                    return get_error_response(GET_INDICATORS_FAILED, locale, result["error"])
+
+                indicators = result if isinstance(result, list) else result.get("data", [])
+                if not isinstance(indicators, list):
+                    indicators = [indicators] if indicators else []
+
+                return format_traffic_ratio(indicators, operators, operator_name, followup_questions)
             elif data_category in ['ul_prb', 'dl_prb', 'ul_rate', 'dl_rate', 'traffic_ratio']:
                 # Indicator query
                 if is_history:
@@ -2407,6 +2808,14 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
 
                     if data_category == 'traffic_ratio':
                         return format_traffic_ratio_history(indicators, operators, operator_name, followup_questions)
+                    elif data_category == 'ul_prb':
+                        return format_ul_prb_history(indicators, operators, operator_name, followup_questions)
+                    elif data_category == 'dl_prb':
+                        return format_dl_prb_history(indicators, operators, operator_name, followup_questions)
+                    elif data_category == 'ul_rate':
+                        return format_ul_rate_history(indicators, operators, operator_name, followup_questions)
+                    elif data_category == 'dl_rate':
+                        return format_dl_rate_history(indicators, operators, operator_name, followup_questions)
                     else:
                         return format_indicator_history(indicators, operators, data_category, operator_name, followup_questions)
                 else:
@@ -2425,6 +2834,12 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
                             return format_all_operators_dl_rate(indicators, operators, followup_questions)
                         else:
                             return format_all_operators_ul_rate(indicators, operators, followup_questions)
+                    # For "all operators" PRB queries (functions 12, 13)
+                    elif not operator_name and data_category in ['dl_prb', 'ul_prb']:
+                        if data_category == 'dl_prb':
+                            return format_all_operators_dl_prb(indicators, operators, followup_questions)
+                        else:
+                            return format_all_operators_ul_prb(indicators, operators, followup_questions)
                     elif data_category == 'ul_prb':
                         return format_ul_prb(indicators, operators, operator_name, followup_questions)
                     elif data_category == 'dl_prb':

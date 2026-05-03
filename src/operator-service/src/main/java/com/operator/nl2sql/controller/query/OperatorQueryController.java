@@ -3,6 +3,7 @@ package com.operator.nl2sql.controller.query;
 import com.operator.nl2sql.dto.OperatorNotFoundResponse;
 import com.operator.nl2sql.entity.OperatorInfo;
 import com.operator.nl2sql.entity.IndicatorInfo;
+import com.operator.nl2sql.entity.OperatorSummary;
 import com.operator.nl2sql.entity.SiteCellSummary;
 import com.operator.nl2sql.entity.SiteSummary;
 import com.operator.nl2sql.entity.IndicatorSummary;
@@ -326,6 +327,67 @@ public class OperatorQueryController {
     @GetMapping("/operators/all/indicators/traffic-metrics")
     public ResponseEntity<List<IndicatorSummary>> getAllOperatorsTrafficMetrics() {
         List<IndicatorSummary> summaries = operatorQueryService.getAllOperatorsIndicatorSummaryMetrics();
+        return ResponseEntity.ok(summaries);
+    }
+
+    // ==================== Operator Summary Endpoints (operator_summary table) ====================
+
+    /**
+     * Get latest operator summary for all operators (ALL technology)
+     * Returns lte_physical_site_num, nr_physical_site_num and other aggregated metrics
+     */
+    @GetMapping("/operators/all/operator-summary/latest")
+    public ResponseEntity<List<OperatorSummary>> getAllOperatorsSummaryLatest() {
+        List<OperatorSummary> summaries = operatorQueryService.getAllOperatorsSummaryLatest();
+        return ResponseEntity.ok(summaries);
+    }
+
+    /**
+     * Get latest operator summary for all operators by technology (LTE/NR/ALL)
+     */
+    @GetMapping("/operators/all/operator-summary/latest/by-technology")
+    public ResponseEntity<List<OperatorSummary>> getAllOperatorsSummaryLatestByTech() {
+        List<OperatorSummary> summaries = operatorQueryService.getAllOperatorsSummaryLatestByTech();
+        return ResponseEntity.ok(summaries);
+    }
+
+    /**
+     * Get latest summary for specific operator
+     */
+    @GetMapping("/operators/{operatorName}/operator-summary/latest")
+    public ResponseEntity<?> getOperatorSummaryLatest(@PathVariable String operatorName) {
+        List<OperatorInfo> operators = operatorQueryService.findByOperatorName(operatorName);
+        if (operators.isEmpty()) {
+            return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
+        }
+        OperatorInfo operator = operators.get(0);
+        OperatorSummary summary = operatorQueryService.getOperatorSummaryLatest(operator.getId());
+        if (summary == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(summary);
+    }
+
+    /**
+     * Get summary history for specific operator
+     */
+    @GetMapping("/operators/{operatorName}/operator-summary/history")
+    public ResponseEntity<?> getOperatorSummaryHistory(@PathVariable String operatorName) {
+        List<OperatorInfo> operators = operatorQueryService.findByOperatorName(operatorName);
+        if (operators.isEmpty()) {
+            return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
+        }
+        OperatorInfo operator = operators.get(0);
+        List<OperatorSummary> summaries = operatorQueryService.getOperatorSummaryHistory(operator.getId());
+        return ResponseEntity.ok(summaries);
+    }
+
+    /**
+     * Get latest operator summary by technology
+     */
+    @GetMapping("/operators/all/operator-summary/latest/{technology}")
+    public ResponseEntity<List<OperatorSummary>> getAllOperatorsSummaryByTechnology(@PathVariable String technology) {
+        List<OperatorSummary> summaries = operatorQueryService.getAllOperatorsSummaryByTechnology(technology);
         return ResponseEntity.ok(summaries);
     }
 }
