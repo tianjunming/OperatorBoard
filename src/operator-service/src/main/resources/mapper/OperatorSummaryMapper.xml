@@ -30,11 +30,9 @@
         <result property="trafficRatio" column="traffic_ratio"/>
         <result property="durationCampratio" column="duration_campratio"/>
         <result property="fallbackRatio" column="fallback_ratio"/>
-        <result property="createdTime" column="created_time"/>
-        <result property="updatedTime" column="updated_time"/>
     </resultMap>
 
-    <!-- Get all operators latest summary (ALL technology) -->
+    <!-- Get all operators latest summary (for each operator, get the latest row regardless of technology) -->
     <select id="findAllLatest" resultMap="OperatorSummaryResultMap">
         SELECT
             os.id,
@@ -61,16 +59,13 @@
             os.nr_avg_ul_prb,
             os.traffic_ratio,
             os.duration_campratio,
-            os.fallback_ratio,
-            os.created_time,
-            os.updated_time
+            os.fallback_ratio
         FROM operator_summary os
         JOIN operator_info oi ON os.operator_id = oi.id
-        WHERE os.technology = 'ALL'
-          AND os.data_month = (
-              SELECT MAX(os2.data_month) FROM operator_summary os2
-              WHERE os2.operator_id = os.operator_id AND os2.technology = 'ALL'
-          )
+        WHERE os.data_month = (
+            SELECT MAX(os2.data_month) FROM operator_summary os2
+            WHERE os2.operator_id = os.operator_id
+        )
         ORDER BY os.operator_id
     </select>
 
@@ -101,9 +96,7 @@
             os.nr_avg_ul_prb,
             os.traffic_ratio,
             os.duration_campratio,
-            os.fallback_ratio,
-            os.created_time,
-            os.updated_time
+            os.fallback_ratio
         FROM operator_summary os
         JOIN operator_info oi ON os.operator_id = oi.id
         WHERE os.data_month = (
@@ -140,9 +133,7 @@
             os.nr_avg_ul_prb,
             os.traffic_ratio,
             os.duration_campratio,
-            os.fallback_ratio,
-            os.created_time,
-            os.updated_time
+            os.fallback_ratio
         FROM operator_summary os
         JOIN operator_info oi ON os.operator_id = oi.id
         WHERE os.operator_id = #{operatorId}
@@ -180,9 +171,7 @@
             os.nr_avg_ul_prb,
             os.traffic_ratio,
             os.duration_campratio,
-            os.fallback_ratio,
-            os.created_time,
-            os.updated_time
+            os.fallback_ratio
         FROM operator_summary os
         JOIN operator_info oi ON os.operator_id = oi.id
         WHERE os.operator_id = #{operatorId}
@@ -217,9 +206,7 @@
             os.nr_avg_ul_prb,
             os.traffic_ratio,
             os.duration_campratio,
-            os.fallback_ratio,
-            os.created_time,
-            os.updated_time
+            os.fallback_ratio
         FROM operator_summary os
         JOIN operator_info oi ON os.operator_id = oi.id
         WHERE os.technology = #{technology}

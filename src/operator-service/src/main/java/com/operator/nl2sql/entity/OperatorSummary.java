@@ -52,7 +52,4 @@ public class OperatorSummary {
     private BigDecimal trafficRatio;
     private BigDecimal durationCampratio;
     private BigDecimal fallbackRatio;
-
-    private LocalDateTime createdTime;
-    private LocalDateTime updatedTime;
 }

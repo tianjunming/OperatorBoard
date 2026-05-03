@@ -9,6 +9,7 @@ from agent_framework.tools import BaseTool
 from agent_framework.skills import BaseSkill, SkillContext
 from agent_framework.rag import RAGRetriever
 
+from .config import load_operator_config
 from .capabilities.tools import HTTPServiceTool, JavaMicroserviceTool
 from .capabilities.rag import TelecomRAGRetriever, TelecomVectorStore
 from .capabilities.mcp import AgentMCPClient, SystemDataSource, RESTDataSource
@@ -30,7 +31,8 @@ class OperatorAgent(BaseAgent):
     - Skills: Operator data fetching and summarization via OperatorDataSkill, etc.
     """
 
-    def __init__(self, config: AgentConfig, intent_detection_config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: AgentConfig, intent_detection_config: Optional[Dict[str, Any]] = None,
+                 operator_aliases_config: Optional[Dict[str, Any]] = None):
         """Initialize the Operator Agent."""
         super().__init__(config)
 
@@ -43,6 +45,9 @@ class OperatorAgent(BaseAgent):
 
         # Intent detection config
         self._intent_detection_config = intent_detection_config or self._default_intent_detection_config()
+
+        # Operator aliases config (from file)
+        self._operator_aliases_config = operator_aliases_config or {}
 
         # Operator cache for dynamic mapping
         self._operators_cache: List[Dict[str, Any]] = []
@@ -97,72 +102,81 @@ class OperatorAgent(BaseAgent):
 
     def _build_operator_mapping(self, operators: List[Dict[str, Any]]) -> None:
         """
-        Build dynamic operator alias mapping from operator data.
+        Build operator alias mapping from configuration file and operator data.
 
         Args:
-            operators: List of operator dictionaries
+            operators: List of operator dictionaries from database
         """
         self._operator_mapping_cache = {}
 
+        # Load aliases from config
+        aliases_config = self._operator_aliases_config
+        chinese_operators = aliases_config.get("chinese_operators", [])
+        global_operators = aliases_config.get("global_operators", [])
+
+        # Build mapping from config file first
+        for op_config in chinese_operators:
+            official = op_config.get("official", "")
+            aliases = op_config.get("aliases", [])
+            cities = op_config.get("cities", [])
+
+            # Add official name
+            if official:
+                self._operator_mapping_cache[official.lower()] = official
+
+            # Add base aliases
+            for alias in aliases:
+                self._operator_mapping_cache[alias.lower()] = official
+
+            # Add city + operator aliases (city alias + "运营商" generic)
+            for city in cities:
+                for alias in aliases:
+                    # Skip if alias is not an operator type (like "中国移动" not "移动")
+                    if city in alias:
+                        continue
+                    city_alias = f"{city}{alias}" if len(alias) <= 2 else ""
+                    if city_alias:
+                        self._operator_mapping_cache[city_alias.lower()] = official
+                # Generic "city运营商" maps to this operator
+                self._operator_mapping_cache[f"{city}运营商".lower()] = official
+
+        for op_config in global_operators:
+            official = op_config.get("official", "")
+            aliases = op_config.get("aliases", [])
+            cities = op_config.get("cities", [])
+
+            # Add official name
+            if official:
+                self._operator_mapping_cache[official.lower()] = official
+
+            # Add base aliases
+            for alias in aliases:
+                self._operator_mapping_cache[alias.lower()] = official
+
+            # Add city + operator aliases
+            for city in cities:
+                for alias in aliases:
+                    if city.lower() in alias.lower():
+                        continue
+                    city_alias = f"{city.lower()} {alias.lower()}"
+                    self._operator_mapping_cache[city_alias] = official
+
+        # Now enhance with actual operators from database
+        # This ensures that even if config doesn't have an operator,
+        # we can still match it by its official name
+        db_operator_names = set()
         for op in operators:
             if not isinstance(op, dict):
                 continue
-
             official_name = op.get("operatorName", "")
             country = op.get("country", "")
-            region = op.get("region", "")
-            network_type = op.get("networkType", "")
+            if official_name:
+                self._operator_mapping_cache[official_name.lower()] = official_name
+                db_operator_names.add(official_name.lower())
 
-            if not official_name:
-                continue
-
-            # Add official name as-is (case insensitive)
-            self._operator_mapping_cache[official_name.lower()] = official_name
-
-            # Add country-specific aliases
-            if country and region:
-                # For Chinese operators, the database contains national-level data
-                # where each operator is associated with a primary region:
-                # - China Mobile = Beijing region
-                # - China Unicom = Shanghai region
-                # - China Telecom = Guangzhou region
-                # We do NOT create "city+operator" combination mappings
-                # as they don't correspond to actual database records
+                # For Chinese operators, also add country prefix
                 if country in ("中国", "China"):
-                    if "移动" in official_name or "Mobile" in official_name:
-                        # Add official name
-                        self._operator_mapping_cache["中国移动".lower()] = official_name
-                        self._operator_mapping_cache["移动".lower()] = official_name
-                        self._operator_mapping_cache["mobile".lower()] = official_name
-                    if "联通" in official_name or "Unicom" in official_name:
-                        # Add official name
-                        self._operator_mapping_cache["中国联通".lower()] = official_name
-                        self._operator_mapping_cache["联通".lower()] = official_name
-                        self._operator_mapping_cache["unicom".lower()] = official_name
-                    if "电信" in official_name or "Telecom" in official_name:
-                        # Add official name
-                        self._operator_mapping_cache["中国电信".lower()] = official_name
-                        self._operator_mapping_cache["电信".lower()] = official_name
-                        self._operator_mapping_cache["telecom".lower()] = official_name
-                # For global operators: "Deutsche Telekom" -> "Germany Deutsche Telekom"
-                else:
-                    # Add country name as alias
-                    self._operator_mapping_cache[f"{country} {official_name}".lower()] = official_name
-                    # Add short names
-                    if "Vodafone" in official_name:
-                        self._operator_mapping_cache["vodafone".lower()] = official_name
-                    if "Orange" in official_name:
-                        self._operator_mapping_cache["orange".lower()] = official_name
-                    if "Telefonica" in official_name:
-                        self._operator_mapping_cache["telefonica".lower()] = official_name
-                    if "Deutsche Telekom" in official_name or "Telekom" in official_name:
-                        self._operator_mapping_cache["telekom".lower()] = official_name
-                        self._operator_mapping_cache["deutsche telekom".lower()] = official_name
-                    if "BT Group" in official_name or "BT" in official_name:
-                        self._operator_mapping_cache["bt".lower()] = official_name
-                        self._operator_mapping_cache["bt group".lower()] = official_name
-                    if "T-Mobile" in official_name:
-                        self._operator_mapping_cache["t-mobile".lower()] = official_name
+                    self._operator_mapping_cache[f"中国{official_name}".lower()] = official_name
 
     def _get_operator_from_query(self, query: str) -> Optional[str]:
         """
@@ -470,15 +484,26 @@ class OperatorAgent(BaseAgent):
             intent = "unknown"
             operator_name = None
 
-            # Detect intent based on keywords
-            if "站点" in query_lower or "site" in query_lower:
+            # Detect intent based on keywords - check more specific first
+            # NOTE: For "all operators + indicator" queries (速率/负载/PRB),
+            # indicator detection takes precedence over operator_list
+            if "小区" in query_lower:
+                intent = "site_data"  # 小区 is site/cell data, not indicator
+            elif "站点" in query_lower or "site" in query_lower:
                 intent = "site_data"
             elif "指标" in query_lower or "indicator" in query_lower:
                 intent = "indicator_data"
             elif "最新" in query_lower or "latest" in query_lower:
                 intent = "latest_data"
+            # For indicator queries with all operators (速率/负载/PRB), use indicator_data not operator_list
             elif "运营商" in query_lower or "operator" in query_lower:
-                intent = "operator_list"
+                # Check if this is combined with indicator keywords (速率/负载/PRB)
+                if any(kw in query_lower for kw in ['速率', 'rate', '负载', 'prb', '上行', '下行']):
+                    intent = "indicator_data"
+                else:
+                    intent = "operator_list"
+            elif "cell" in query_lower or "负载" in query_lower or "prb" in query_lower or "速率" in query_lower or "rate" in query_lower:
+                intent = "indicator_data"
 
             # Extract operator name using dynamic mapping
             await self._fetch_operators()
@@ -492,6 +517,7 @@ class OperatorAgent(BaseAgent):
                 "limit": 50,
             }
 
+        # LLM-based intent detection
         llm_endpoint = config.get("llm_endpoint", "http://localhost:8081/v1/completions")
         llm_model = config.get("llm_model", "MiniMax-M2.1")
         api_key = config.get("api_key", "")
@@ -875,6 +901,7 @@ class OperatorAgentFactory:
         http_services: Optional[List[Dict[str, str]]] = None,
         mcp_clients: Optional[List[Dict[str, str]]] = None,
         intent_detection_config: Optional[Dict[str, Any]] = None,
+        operator_aliases_config: Optional[Dict[str, Any]] = None,
     ) -> OperatorAgent:
         """
         Create an OperatorAgent with configured capabilities.
@@ -885,10 +912,11 @@ class OperatorAgentFactory:
             http_services: List of HTTP service configs
             mcp_clients: List of MCP client configs
             intent_detection_config: Intent detection configuration
+            operator_aliases_config: Operator aliases configuration
         Returns:
             Configured OperatorAgent
         """
-        agent = OperatorAgent(config, intent_detection_config=intent_detection_config)
+        agent = OperatorAgent(config, intent_detection_config=intent_detection_config, operator_aliases_config=operator_aliases_config)
         await agent.initialize()
 
         if java_services:
@@ -935,9 +963,11 @@ class OperatorAgentFactory:
         operator_config = load_operator_config(config_dir)
         java_services = operator_config.get_java_services()
         intent_config = operator_config.get_intent_detection_config()
+        operator_aliases_config = operator_config.get_operator_aliases_config()
 
         return await OperatorAgentFactory.create_with_capabilities(
             config=config,
             java_services=java_services if java_services else None,
             intent_detection_config=intent_config if intent_config else None,
+            operator_aliases_config=operator_aliases_config if operator_aliases_config else None,
         )

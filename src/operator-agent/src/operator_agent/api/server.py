@@ -972,7 +972,7 @@ def _transform_indicator_to_long(indicators: list, metric: str = "dl_rate") -> l
 
     Returns:
         List of records in long format with fields:
-        operator_id, operator_name, data_month, band, technology, value
+        operator_id, operator_name, data_month, band, technology, value, lteAvg, nrAvg
     """
     # Map metric to field index in INDICATOR_BANDS tuple (dl_rate, ul_rate, dl_prb, ul_prb)
     metric_map = {
@@ -981,7 +981,15 @@ def _transform_indicator_to_long(indicators: list, metric: str = "dl_rate") -> l
         "dl_prb": 2,    # dl_prb field index
         "ul_prb": 3,    # ul_prb field index
     }
+    # Map metric to avg field names in IndicatorSummary
+    avg_field_map = {
+        "dl_rate": ("lteAvgDlRate", "nrAvgDlRate"),
+        "ul_rate": ("lteAvgUlRate", "nrAvgUlRate"),
+        "dl_prb": ("lteAvgDlPrb", "nrAvgDlPrb"),
+        "ul_prb": ("lteAvgUlPrb", "nrAvgUlPrb"),
+    }
     field_idx = metric_map.get(metric, 0)
+    lte_avg_key, nr_avg_key = avg_field_map.get(metric, ("lteAvgDlRate", "nrAvgDlRate"))
 
     result = []
     for ind in indicators:
@@ -989,6 +997,10 @@ def _transform_indicator_to_long(indicators: list, metric: str = "dl_rate") -> l
             continue
         op_id = ind.get("operatorId")
         data_month = ind.get("dataMonth", "")
+
+        # Extract avg values from IndicatorSummary
+        lte_avg_val = ind.get(lte_avg_key, 0) or 0
+        nr_avg_val = ind.get(nr_avg_key, 0) or 0
 
         for band_name, band_prefix, dl_rate_key, ul_rate_key, dl_prb_key, ul_prb_key in INDICATOR_BANDS:
             tech = "LTE" if band_name.startswith("LTE") else "NR"
@@ -999,6 +1011,8 @@ def _transform_indicator_to_long(indicators: list, metric: str = "dl_rate") -> l
                 "band": band_name,
                 "technology": tech,
                 "value": round(value, 2) if value else 0,
+                "lteAvg": round(lte_avg_val, 2) if lte_avg_val else 0,
+                "nrAvg": round(nr_avg_val, 2) if nr_avg_val else 0,
             })
     return result
 
@@ -1488,6 +1502,7 @@ def format_traffic_ratio(indicators: list, operators: list, operator_name: str =
 def format_all_operators(operators: list, followup_questions: list = None) -> Dict[str, Any]:
     """
     功能9: 查看所有运营商，返回所有运营商信息
+    支持按区域和国家分类呈现，用户可以逐层展开
     """
     if not operators:
         return {"content": "未找到运营商数据", "chart": None, "data": None}
@@ -1495,31 +1510,96 @@ def format_all_operators(operators: list, followup_questions: list = None) -> Di
     table_columns = ["运营商名称", "国家", "区域", "网络类型"]
     table_data = []
 
+    # Build tree structure for hierarchical display
+    tree_data = {}  # {region: {country: [operators]}}
+    china_provinces = {}  # {province: [operators]} for China operators
+
     for op in operators:
         if not isinstance(op, dict):
             continue
+
+        op_name = op.get("operatorName", "")
+        country = op.get("country", "")
+        region = op.get("region", "")
+
         table_data.append({
-            "运营商名称": op.get("operatorName", ""),
-            "国家": op.get("country", ""),
-            "区域": op.get("region", ""),
+            "运营商名称": op_name,
+            "国家": country,
+            "区域": region,
             "网络类型": op.get("networkType", ""),
         })
 
-    summary = {"运营商总数": len(table_data)}
+        # Build tree structure
+        if region not in tree_data:
+            tree_data[region] = {}
+        if country not in tree_data[region]:
+            tree_data[region][country] = []
+        tree_data[region][country].append({
+            "name": op_name,
+            "networkType": op.get("networkType", ""),
+        })
+
+    # Build hierarchical tree for frontend
+    hierarchical_tree = []
+    for region, countries in sorted(tree_data.items()):
+        region_node = {
+            "name": region,
+            "type": "region",
+            "children": []
+        }
+        for country, ops in sorted(countries.items()):
+            # Check if it's China (中国) to further categorize by province
+            if country == "中国":
+                # Group by province if available, otherwise group as single
+                province_groups = {}
+                for op in ops:
+                    # For now, put all China operators under "全国" since we don't have province info
+                    province = op.get("province", "全国")
+                    if province not in province_groups:
+                        province_groups[province] = []
+                    province_groups[province].append(op)
+
+                country_node = {
+                    "name": country,
+                    "type": "country",
+                    "children": []
+                }
+                for province, province_ops in sorted(province_groups.items()):
+                    country_node["children"].append({
+                        "name": province,
+                        "type": "province",
+                        "children": province_ops
+                    })
+                region_node["children"].append(country_node)
+            else:
+                country_node = {
+                    "name": country,
+                    "type": "country",
+                    "children": ops
+                }
+                region_node["children"].append(country_node)
+        hierarchical_tree.append(region_node)
+
+    summary = {"运营商总数": len(table_data), "区域数": len(tree_data)}
 
     thinking = _build_thinking_chain("", "operator_list - 运营商列表查询", None, "运营商信息")
 
-    return _build_standard_response(
+    result = _build_standard_response(
         title="运营商列表",
         summary=summary,
         table_data=table_data,
-        chart_type="none",
-        chart_keys=[],
-        chart_data=[],
+        chart_type="tree",
+        chart_keys=["区域", "国家", "省份"],
+        chart_data=hierarchical_tree,
         table_columns=table_columns,
         thinking=thinking,
         followup_questions=followup_questions,
     )
+
+    # Add hierarchical tree data for tree view display
+    result["hierarchical_tree"] = hierarchical_tree
+
+    return result
 
 
 # ==================== Function 10: All Operators Sites (Latest) ====================
@@ -2064,6 +2144,12 @@ def format_indicator_history(indicators: list, operators: list, metric: str, ope
         lte_avg = sum(lte_vals) / len(lte_vals) if lte_vals else 0
         nr_avg = sum(nr_vals) / len(nr_vals) if nr_vals else 0
 
+        # Get avg values from indicator_summary (lteAvgDlPrb, nrAvgDlPrb, etc.)
+        # Find the source record to extract avg fields
+        src_record = records[0] if records else {}
+        lte_avg_field = src_record.get("lteAvg") or 0
+        nr_avg_field = src_record.get("nrAvg") or 0
+
         for d in records:
             table_data.append({
                 "月份": month,
@@ -2078,6 +2164,8 @@ def format_indicator_history(indicators: list, operators: list, metric: str, ope
             "运营商": op_name,
             "LTE": round(lte_avg, 2),
             "NR": round(nr_avg, 2),
+            "LTE平均": round(lte_avg_field, 2) if lte_avg_field else 0,
+            "NR平均": round(nr_avg_field, 2) if nr_avg_field else 0,
         })
 
     summary = {
@@ -2093,7 +2181,7 @@ def format_indicator_history(indicators: list, operators: list, metric: str, ope
         summary=summary,
         table_data=table_data,
         chart_type="bar",
-        chart_keys=["LTE", "NR"],
+        chart_keys=["LTE", "NR", "LTE平均", "NR平均"],
         chart_data=chart_data,
         table_columns=table_columns,
         thinking=thinking,
@@ -2186,6 +2274,12 @@ def _format_indicator_history(indicators: list, operators: list, metric: str,
         lte_avg = sum(lte_vals) / len(lte_vals) if lte_vals else 0
         nr_avg = sum(nr_vals) / len(nr_vals) if nr_vals else 0
 
+        # Get avg values from indicator_summary (lteAvgDlPrb, nrAvgDlPrb, etc.)
+        # Find the source record to extract avg fields
+        src_record = records[0] if records else {}
+        lte_avg_field = src_record.get("lteAvg") or 0
+        nr_avg_field = src_record.get("nrAvg") or 0
+
         for d in records:
             table_data.append({
                 "月份": month,
@@ -2200,6 +2294,8 @@ def _format_indicator_history(indicators: list, operators: list, metric: str,
             "运营商": op_name,
             "LTE": round(lte_avg, 2),
             "NR": round(nr_avg, 2),
+            "LTE平均": round(lte_avg_field, 2) if lte_avg_field else 0,
+            "NR平均": round(nr_avg_field, 2) if nr_avg_field else 0,
         })
 
     summary = {
@@ -2215,7 +2311,7 @@ def _format_indicator_history(indicators: list, operators: list, metric: str,
         summary=summary,
         table_data=table_data,
         chart_type="bar",
-        chart_keys=["LTE", "NR"],
+        chart_keys=["LTE", "NR", "LTE平均", "NR平均"],
         chart_data=chart_data,
         table_columns=table_columns,
         thinking=thinking,
@@ -2873,8 +2969,10 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
             if nl2sql_result.get("error"):
                 return get_error_response(NL2SQL_QUERY_FAILED, locale, nl2sql_result["error"])
 
-            data = nl2sql_result.get("data", []) if isinstance(nl2sql_result, dict) else nl2sql_result
+            # Extract results - NL2SQL service uses "results" field, not "data"
+            data = nl2sql_result.get("results", []) if isinstance(nl2sql_result, dict) else nl2sql_result
             if not data:
+                data = nl2sql_result.get("data", []) if isinstance(nl2sql_result, dict) else nl2sql_result
                 return {"content": "未找到相关数据"}
 
             lines = [f"# 查询结果\n\n共找到 {len(data) if isinstance(data, list) else 1} 条记录\n"]
@@ -2895,8 +2993,10 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
             if nl2sql_result.get("error"):
                 return get_error_response(NL2SQL_QUERY_FAILED, locale, nl2sql_result["error"])
 
-            data = nl2sql_result.get("data", []) if isinstance(nl2sql_result, dict) else nl2sql_result
+            # Extract results - NL2SQL service uses "results" field, not "data"
+            data = nl2sql_result.get("results", []) if isinstance(nl2sql_result, dict) else nl2sql_result
             if not data:
+                data = nl2sql_result.get("data", []) if isinstance(nl2sql_result, dict) else nl2sql_result
                 return {"content": "未找到相关数据"}
 
             lines = [f"# 查询结果\n\n共找到 {len(data) if isinstance(data, list) else 1} 条记录\n"]

@@ -112,6 +112,24 @@ class OperatorAgentConfig:
             "prompt_template": "",
         }
 
+    def load_operator_aliases_config(self) -> Dict[str, Any]:
+        """Load operator aliases configuration from operator_aliases.yaml."""
+        aliases_file = self.config_dir / "operator_aliases.yaml"
+        if not aliases_file.exists():
+            return {}
+
+        with open(aliases_file, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+
+    def get_operator_aliases_config(self) -> Dict[str, Any]:
+        """
+        Get operator aliases configuration.
+
+        Returns:
+            Operator aliases config with chinese_operators and global_operators
+        """
+        return self.load_operator_aliases_config()
+
     def _expand_env_vars(self, value: str) -> str:
         """Expand environment variables in config values."""
         if not isinstance(value, str):
