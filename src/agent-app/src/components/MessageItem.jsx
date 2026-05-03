@@ -289,7 +289,7 @@ function MessageItem({ message, onResend, isStreaming, streamingContent, onFeedb
             </>
           )}
 
-          {isUser && <div className="message-text">{content}</div>}
+          {isUser && <div className="message-text">{content || '(empty message)'}</div>}
         </div>
 
         {/* Footer */}
