@@ -27,6 +27,12 @@ export function parseThinkingChain(content) {
  */
 export function parseStructuredBlocks(content) {
   const blocks = [];
+
+  // Guard against empty, null, or non-string content
+  if (!content || typeof content !== 'string') {
+    return blocks;
+  }
+
   let remaining = content;
   let currentIdx = 0;
 
@@ -52,17 +58,47 @@ export function parseStructuredBlocks(content) {
   while (foundMatch) {
     foundMatch = false;
     for (const { regex, type, parse } of blockPatterns) {
-      const match = textContent.match(regex);
-      if (match) {
-        foundMatch = true;
-        const before = textContent.slice(0, match.index);
-        if (before.trim()) {
-          blocks.push({ type: 'text', content: before.trim() });
+      // For toggle blocks, use global regex to find ALL matches
+      if (type === 'toggle') {
+        const toggleRegex = /\[toggle\][\s\S]*?\[\/toggle\]/g;
+        const toggleMatches = textContent.match(toggleRegex);
+        if (toggleMatches && toggleMatches.length > 0) {
+          foundMatch = true;
+          // Process each toggle match
+          let lastIndex = 0;
+          for (let i = 0; i < toggleMatches.length; i++) {
+            const m = toggleMatches[i];
+            const matchIndex = textContent.indexOf(m, lastIndex);
+            // Add text before this match as text block
+            if (matchIndex > lastIndex) {
+              const textBefore = textContent.slice(lastIndex, matchIndex).trim();
+              if (textBefore) {
+                blocks.push({ type: 'text', content: textBefore });
+              }
+            }
+            // Add toggle block
+            const parsed = parse(m);
+            blocks.push({ type, ...parsed });
+            lastIndex = matchIndex + m.length;
+          }
+          // Update remaining text content for next iteration
+          textContent = textContent.slice(lastIndex);
+          break;
         }
-        const parsed = parse(match);
-        blocks.push({ type, ...parsed });
-        textContent = textContent.slice(match.index + match[0].length);
-        break; // Restart from first pattern after successful match
+      } else {
+        // For other block types, use existing single-match logic
+        const match = textContent.match(regex);
+        if (match) {
+          foundMatch = true;
+          const before = textContent.slice(0, match.index);
+          if (before.trim()) {
+            blocks.push({ type: 'text', content: before.trim() });
+          }
+          const parsed = parse(match);
+          blocks.push({ type, ...parsed });
+          textContent = textContent.slice(match.index + match[0].length);
+          break;
+        }
       }
     }
   }
@@ -235,15 +271,18 @@ function parseToggleBlock(match) {
             });
             return obj;
           });
+        } else if (key === 'chart_column') {
+          data.chartColumn = value;
         } else if (key === 'chart_keys') {
           data.chartKeys = value.split(',');
         } else if (key === 'chart_data') {
           const entries = value.split(';').filter(r => r.trim());
+          const columnKey = data.chartColumn || data.chartKeys?.[0] || 'name';
           data.chartData = entries.map(entry => {
             const cells = entry.split(',');
             const obj = {};
             if (data.chartKeys && data.chartKeys[0]) {
-              obj[data.chartKeys[0]] = cells[0] || ''; // 月份
+              obj[columnKey] = cells[0] || '';
               data.chartKeys.slice(1).forEach((k, i) => {
                 obj[k] = parseFloat(cells[i + 1]) || 0;
               });
@@ -266,7 +305,7 @@ function parseToggleBlock(match) {
     // Build chart structure
     const chart = {
       type: 'bar',
-      column: data.chartKeys?.[0] || '月份',
+      column: data.chartColumn || data.chartKeys?.[0] || 'name',
       keys: data.chartKeys?.slice(1) || ['总站点', '总小区'],
       data: data.chartData || []
     };
