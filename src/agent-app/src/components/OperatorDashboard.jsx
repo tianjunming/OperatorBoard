@@ -35,12 +35,18 @@ import {
   calculateSiteSummaryTotals,
   generateOperatorComparisonData,
   generateTrafficMetricsData,
+  transformSiteSummaryToBandData,
+  transformIndicatorSummaryToRateData,
+  transformIndicatorSummaryToPRBData,
 } from '../utils/dataTransformers';
 import {
   useAllOperatorsSiteSummary,
   useAllOperatorsIndicatorSummary,
-  useAllOperatorsTrafficMetrics,
 } from '../hooks/useOperatorData';
+import OperatorTree from './OperatorTree';
+import {
+  buildOperatorsTree,
+} from '../utils/dataTransformers';
 import '../styles/Dashboard.css';
 
 const API_BASE = '/api';
@@ -61,6 +67,9 @@ export default function OperatorDashboard() {
     tables: true
   });
 
+  // Chart comparison state - operators to show in traffic metrics chart
+  const [selectedCountryForChart, setSelectedCountryForChart] = useState(null);
+  
   // Data states
   const [operators, setOperators] = useState([]);
   const [allOperatorsData, setAllOperatorsData] = useState({});
@@ -70,7 +79,6 @@ export default function OperatorDashboard() {
   // V2 Summary data hooks
   const { data: allSiteSummary, isLoading: loadingSiteSummary } = useAllOperatorsSiteSummary();
   const { data: allIndicatorSummary, isLoading: loadingIndicatorSummary } = useAllOperatorsIndicatorSummary();
-  const { data: allTrafficMetrics, isLoading: loadingTrafficMetrics } = useAllOperatorsTrafficMetrics();
 
   // Transform V2 data
   const siteSummaryTransformed = useMemo(() => {
@@ -81,15 +89,49 @@ export default function OperatorDashboard() {
     return transformIndicatorSummaryData(allIndicatorSummary || []);
   }, [allIndicatorSummary]);
 
+  // Traffic metrics for chart - filtered by selected country
   const trafficMetricsData = useMemo(() => {
-    return generateTrafficMetricsData(allIndicatorSummary || []);
-  }, [allIndicatorSummary]);
+    const allData = generateTrafficMetricsData(allIndicatorSummary || []);
+    if (selectedCountryForChart) {
+      const countryOps = operators.filter(op => op.country === selectedCountryForChart);
+      const countryOpIds = countryOps.map(op => op.id);
+      return allData.filter(m => countryOpIds.includes(m.operatorId));
+    }
+    return allData;
+  }, [allIndicatorSummary, selectedCountryForChart, operators]);
+
+  // Get unique countries for selector
+  const availableCountries = useMemo(() => {
+    const countries = [...new Set(operators.map(op => op.country).filter(c => c))];
+    return countries.sort();
+  }, [operators]);
 
   const operatorComparisonData = useMemo(() => {
     return generateOperatorComparisonData(allSiteSummary || []);
   }, [allSiteSummary]);
 
+  // Build operators tree for left panel
+  const operatorsTree = useMemo(() => {
+    return buildOperatorsTree(operators);
+  }, [operators]);
+
   const isLoading = loadingOperators || loadingData;
+
+  // Get current operator info (must be before useEffect that uses it)
+  const selectedOperator = useMemo(() =>
+    operators.find(op => op.id === selectedOperatorId),
+    [operators, selectedOperatorId]
+  );
+
+  // Auto-select country and operators when main selected operator changes
+  useEffect(() => {
+    if (selectedOperatorId && operators.length > 0) {
+      const op = operators.find(o => o.id === selectedOperatorId);
+      if (op) {
+        setSelectedCountryForChart(op.country);
+      }
+    }
+  }, [selectedOperatorId, operators]);
 
   // Fetch operators list and set selected operator from V2 data
   useEffect(() => {
@@ -179,18 +221,36 @@ export default function OperatorDashboard() {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Get current operator info
-  const selectedOperator = useMemo(() =>
-    operators.find(op => op.id === selectedOperatorId),
-    [operators, selectedOperatorId]
-  );
+  // Handle operator selection from tree
+  const handleTreeSelect = useCallback((operator) => {
+    setSelectedOperatorId(operator.id);
+  }, []);
 
   // Transform data for current operator
   const siteCells = selectedOperatorData?.siteCells || [];
   const latestIndicators = selectedOperatorData?.indicators || [];
-  const bandCellData = useMemo(() => transformBandCellData(siteCells), [siteCells]);
-  const indicatorByBandData = useMemo(() => transformIndicatorData(latestIndicators), [latestIndicators]);
-  const prbByBandData = useMemo(() => transformPRBData(latestIndicators), [latestIndicators]);
+
+  // Use V2 siteSummary/indicatorSummary data for charts when available, otherwise fall back to legacy API
+  const bandCellData = useMemo(() => {
+    if (selectedOperatorData?.siteSummary) {
+      return transformSiteSummaryToBandData(selectedOperatorData.siteSummary);
+    }
+    return transformBandCellData(siteCells);
+  }, [selectedOperatorData, siteCells]);
+
+  const indicatorByBandData = useMemo(() => {
+    if (selectedOperatorData?.indicatorSummary) {
+      return transformIndicatorSummaryToRateData(selectedOperatorData.indicatorSummary);
+    }
+    return transformIndicatorData(latestIndicators);
+  }, [selectedOperatorData, latestIndicators]);
+
+  const prbByBandData = useMemo(() => {
+    if (selectedOperatorData?.indicatorSummary) {
+      return transformIndicatorSummaryToPRBData(selectedOperatorData.indicatorSummary);
+    }
+    return transformPRBData(latestIndicators);
+  }, [selectedOperatorData, latestIndicators]);
   const cellDistributionData = useMemo(() => aggregateCellDistribution(bandCellData), [bandCellData]);
 
   // Calculate metrics from V2 data
@@ -220,15 +280,22 @@ export default function OperatorDashboard() {
     return calculateTotals(siteCells);
   }, [selectedOperatorData, siteCells]);
 
-  // V2 traffic metrics - directly from API (returns { operatorId, operator_name, traffic_ratio, duration_campratio, ... })
+  // V2 traffic metrics - from indicator summary data
   const trafficMetrics = useMemo(() => {
-    if (!selectedOperatorId || !allTrafficMetrics?.length) return null;
-    return allTrafficMetrics.find(m =>
+    if (!selectedOperatorId || !allIndicatorSummary?.length) return null;
+    // Find the record for selected operator from indicator summary
+    const record = allIndicatorSummary.find(m =>
       m.operatorId === selectedOperatorId ||
-      m.operator_id === selectedOperatorId ||
-      m.operator_name === operators.find(o => o.id === selectedOperatorId)?.operatorName
+      m.operator_id === selectedOperatorId
     );
-  }, [selectedOperatorId, allTrafficMetrics, operators]);
+    if (!record) return null;
+    return {
+      trafficRatio: record.trafficRatio || record.traffic_ratio || 0,
+      durationCampratio: record.durationCampratio || record.duration_campratio || 0,
+      terminalPenetration: record.terminalPenetration || record.terminal_penetration || 0,
+      fallbackRatio: record.fallbackRatio || record.fallback_ratio || 0,
+    };
+  }, [selectedOperatorId, allIndicatorSummary]);
 
   // Operator summary for comparison
   const operatorSummaries = useMemo(() => {
@@ -279,9 +346,20 @@ export default function OperatorDashboard() {
   );
 
   return (
-    <div className="dashboard" ref={dashboardRef}>
-      {/* Header */}
-      <div className="dashboard-header">
+    <div className="dashboard-with-tree">
+      {/* Left Panel - Operator Tree */}
+      <div className="operator-tree-panel">
+        <OperatorTree
+          data={operatorsTree}
+          selectedOperatorId={selectedOperatorId}
+          onSelect={handleTreeSelect}
+        />
+      </div>
+
+      {/* Right Content - Dashboard */}
+      <div className="dashboard-content">
+        {/* Header */}
+        <div className="dashboard-header">
         <div className="dashboard-title">
           <h2>
             <Activity size={24} className="header-icon" />
@@ -515,7 +593,7 @@ export default function OperatorDashboard() {
                         <Network size={24} />
                       </div>
                       <div className="metric-content">
-                        <div className="metric-label">分流比</div>
+                        <div className="metric-label">流量分流比</div>
                         <div className="metric-value">{((trafficMetrics.trafficRatio || trafficMetrics.traffic_ratio || 0) * 100).toFixed(1)}%</div>
                         <div className="metric-sub">分流到5G流量占比</div>
                       </div>
@@ -525,9 +603,29 @@ export default function OperatorDashboard() {
                         <Users size={24} />
                       </div>
                       <div className="metric-content">
-                        <div className="metric-label">驻留比</div>
+                        <div className="metric-label">时长驻留比</div>
                         <div className="metric-value">{((trafficMetrics.durationCampratio || trafficMetrics.duration_campratio || 0) * 100).toFixed(1)}%</div>
                         <div className="metric-sub">5G终端在5G网络驻留比例</div>
+                      </div>
+                    </div>
+                    <div className="metric-card">
+                      <div className="metric-icon">
+                        <Signal size={24} />
+                      </div>
+                      <div className="metric-content">
+                        <div className="metric-label">流量驻留比</div>
+                        <div className="metric-value">{((trafficMetrics.terminalPenetration || trafficMetrics.terminal_penetration || 0) * 100).toFixed(1)}%</div>
+                        <div className="metric-sub">5G终端流量占比</div>
+                      </div>
+                    </div>
+                    <div className="metric-card">
+                      <div className="metric-icon">
+                        <ArrowDown size={24} />
+                      </div>
+                      <div className="metric-content">
+                        <div className="metric-label">回落比</div>
+                        <div className="metric-value">{((trafficMetrics.fallbackRatio || trafficMetrics.fallback_ratio || 0) * 100).toFixed(1)}%</div>
+                        <div className="metric-sub">终端回流4G比例</div>
                       </div>
                     </div>
                   </>
@@ -586,7 +684,7 @@ export default function OperatorDashboard() {
                 </div>
 
                 {/* DL/UL Rate */}
-                <div className="chart-card span-2">
+                <div className="chart-card span-3">
                   <h3><TrendingUp size={16} /> 各频段速率对比</h3>
                   <div className="chart-container">
                     <ResponsiveContainer width="100%" height="100%">
@@ -604,7 +702,7 @@ export default function OperatorDashboard() {
                 </div>
 
                 {/* PRB Usage */}
-                <div className="chart-card span-2">
+                <div className="chart-card span-3">
                   <h3><Wifi size={16} /> PRB利用率对比</h3>
                   <div className="chart-container">
                     <ResponsiveContainer width="100%" height="100%">
@@ -621,20 +719,37 @@ export default function OperatorDashboard() {
                   </div>
                 </div>
 
-                {/* V2 Traffic Metrics Comparison - 分流比/驻留比 */}
+                {/* V2 Traffic Metrics Comparison */}
                 {trafficMetricsData.length > 0 && (
-                  <div className="chart-card span-2">
-                    <h3><Network size={16} /> 分流比/驻留比对比 (V2)</h3>
+                  <div className="chart-card span-3">
+                    <h3><Network size={16} /> 流量/时长/终端指标对比</h3>
+                    <div className="chart-controls" style={{ display: 'flex', gap: '12px', marginBottom: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <select
+                        value={selectedCountryForChart || ''}
+                        onChange={(e) => setSelectedCountryForChart(e.target.value || null)}
+                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border-light)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                      >
+                        <option value="">全部国家</option>
+                        {availableCountries.map(country => (
+                          <option key={country} value={country}>{country}</option>
+                        ))}
+                      </select>
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginLeft: 'auto' }}>
+                        共 {trafficMetricsData.length} 个运营商
+                      </span>
+                    </div>
                     <div className="chart-container">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={trafficMetricsData} layout="vertical">
+                        <BarChart data={trafficMetricsData}>
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis type="number" domain={[0, 100]} />
-                          <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11 }} />
+                          <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                          <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
                           <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
                           <Legend />
-                          <Bar dataKey="分流比" fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} />
-                          <Bar dataKey="驻留比" fill={CHART_COLORS[1]} radius={[0, 4, 4, 0]} />
+                          <Bar dataKey="流量分流比" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="时长驻留比" fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="流量驻留比" fill={CHART_COLORS[2]} radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="回落比" fill={CHART_COLORS[3]} radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -727,6 +842,7 @@ export default function OperatorDashboard() {
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }

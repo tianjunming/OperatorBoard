@@ -343,10 +343,11 @@ export function transformSiteSummaryToBandData(siteSummary) {
   const result = [];
   for (const band of BANDS) {
     // Handle both camelCase and snake_case field names
-    const lteSite = siteSummary[`lte${band}Site`] || siteSummary[`lte_${band.replace('M', 'M_')}_site`] || 0;
-    const lteCell = siteSummary[`lte${band}Cell`] || siteSummary[`lte_${band.replace('M', 'M_')}_cell`] || 0;
-    const nrSite = siteSummary[`nr${band}Site`] || siteSummary[`nr_${band.replace('M', 'M_')}_site`] || 0;
-    const nrCell = siteSummary[`nr${band}Cell`] || siteSummary[`nr_${band.replace('M', 'M_')}_cell`] || 0;
+    // camelCase: lte700MSite, snake_case: lte_700M_site
+    const lteSite = siteSummary[`lte${band}Site`] || siteSummary[`lte_${band}_site`] || 0;
+    const lteCell = siteSummary[`lte${band}Cell`] || siteSummary[`lte_${band}_cell`] || 0;
+    const nrSite = siteSummary[`nr${band}Site`] || siteSummary[`nr_${band}_site`] || 0;
+    const nrCell = siteSummary[`nr${band}Cell`] || siteSummary[`nr_${band}_cell`] || 0;
 
     if (lteSite > 0 || nrSite > 0 || lteCell > 0 || nrCell > 0) {
       result.push({
@@ -365,7 +366,7 @@ export function transformSiteSummaryToBandData(siteSummary) {
 
 /**
  * Transform indicator summary to rate chart data
- * @param {Object} indicatorSummary - Indicator summary object
+ * @param {Object} indicatorSummary - Indicator summary object (from V2 indicator_summary table)
  * @returns {Array} Chart data by band
  */
 export function transformIndicatorSummaryToRateData(indicatorSummary) {
@@ -374,8 +375,9 @@ export function transformIndicatorSummaryToRateData(indicatorSummary) {
   const result = [];
   for (const band of BANDS) {
     // Handle both camelCase and snake_case field names
-    const dlRate = indicatorSummary[`lte${band}DlRate`] || indicatorSummary[`nr${band}DlRate`] || 0;
-    const ulRate = indicatorSummary[`lte${band}UlRate`] || indicatorSummary[`nr${band}UlRate`] || 0;
+    // camelCase: lte700MDlRate, snake_case: lte_700M_dl_rate
+    const dlRate = indicatorSummary[`lte${band}DlRate`] || indicatorSummary[`lte_${band}_dl_rate`] || 0;
+    const ulRate = indicatorSummary[`lte${band}UlRate`] || indicatorSummary[`lte_${band}_ul_rate`] || 0;
 
     if (parseFloat(dlRate) > 0 || parseFloat(ulRate) > 0) {
       result.push({
@@ -390,7 +392,7 @@ export function transformIndicatorSummaryToRateData(indicatorSummary) {
 
 /**
  * Transform indicator summary to PRB chart data
- * @param {Object} indicatorSummary - Indicator summary object
+ * @param {Object} indicatorSummary - Indicator summary object (from V2 indicator_summary table)
  * @returns {Array} Chart data by band
  */
 export function transformIndicatorSummaryToPRBData(indicatorSummary) {
@@ -399,8 +401,9 @@ export function transformIndicatorSummaryToPRBData(indicatorSummary) {
   const result = [];
   for (const band of BANDS) {
     // Handle both camelCase and snake_case field names
-    const dlPrb = indicatorSummary[`lte${band}DlPrb`] || indicatorSummary[`nr${band}DlPrb`] || 0;
-    const ulPrb = indicatorSummary[`lte${band}UlPrb`] || indicatorSummary[`nr${band}UlPrb`] || 0;
+    // camelCase: lte700MDlPrb, snake_case: lte_700M_dl_prb
+    const dlPrb = indicatorSummary[`lte${band}DlPrb`] || indicatorSummary[`lte_${band}_dl_prb`] || 0;
+    const ulPrb = indicatorSummary[`lte${band}UlPrb`] || indicatorSummary[`lte_${band}_ul_prb`] || 0;
 
     if (parseFloat(dlPrb) > 0 || parseFloat(ulPrb) > 0) {
       result.push({
@@ -490,13 +493,16 @@ export function generateTrafficMetricsData(indicatorSummaries) {
   if (!indicatorSummaries?.length) return [];
 
   const transformed = transformIndicatorSummaryData(indicatorSummaries);
-  return Object.values(transformed.trafficMetrics).map(metric => ({
-    name: metric.operatorName,
-    '分流比': metric.trafficRatio * 100, // Convert to percentage
-    '驻留比': metric.durationCampratio * 100,
-    '终端渗透率': metric.terminalPenetration * 100,
-    '回流比': metric.fallbackRatio * 100,
-  }));
+  return Object.values(transformed.trafficMetrics)
+    .filter(metric => metric.trafficRatio > 0 || metric.durationCampratio > 0)
+    .map(metric => ({
+      operatorId: metric.operatorId,
+      name: metric.operatorName,
+      '流量分流比': (metric.trafficRatio || 0) * 100, // Convert to percentage
+      '时长驻留比': (metric.durationCampratio || 0) * 100,
+      '流量驻留比': (metric.terminalPenetration || 0) * 100,
+      '回落比': (metric.fallbackRatio || 0) * 100,
+    }));
 }
 
 /**
@@ -567,4 +573,43 @@ export function extractTrafficMetrics(indicatorSummaries) {
     terminalPenetration: item.terminalPenetration,
     fallbackRatio: item.fallbackRatio,
   }));
+}
+
+/**
+ * Build hierarchical operators tree from flat operators list
+ * Structure: Region → Country → Operators
+ * @param {Array} operators - Flat operators list with country/region fields
+ * @returns {Array} Tree structure: [{ name: 'Asia-Pacific', type: 'region', children: [{ name: 'China', type: 'country', children: [...] }] }]
+ */
+export function buildOperatorsTree(operators) {
+  if (!operators || !operators.length) return [];
+
+  const tree = {};
+  operators.forEach(op => {
+    const country = op.country || 'Unknown';
+    const region = op.region || 'Unknown';
+    if (!tree[region]) tree[region] = {};
+    if (!tree[region][country]) tree[region][country] = [];
+    tree[region][country].push({
+      id: op.operatorId || op.id,
+      name: op.operatorName || op.name || op.operator_name,
+      country,
+      region,
+      ...op,
+    });
+  });
+
+  return Object.entries(tree)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([region, countries]) => ({
+      name: region,
+      type: 'region',
+      children: Object.entries(countries)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([country, ops]) => ({
+          name: country,
+          type: 'country',
+          children: ops.sort((a, b) => a.name.localeCompare(b.name)),
+        })),
+    }));
 }

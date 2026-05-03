@@ -7,6 +7,32 @@
   scroll-behavior: smooth;
 }
 
+/* Left-Right Layout with Tree */
+.dashboard-with-tree {
+  display: flex;
+  height: 100%;
+}
+
+.operator-tree-panel {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-color);
+  overflow-y: auto;
+}
+
+.dashboard-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.dashboard-content .dashboard {
+  padding: var(--space-xl);
+  max-width: 1600px;
+  margin: 0 auto;
+  height: 100%;
+  overflow-y: auto;
+}
+
 /* Header */
 .dashboard-header {
   display: flex;
@@ -369,6 +395,10 @@
   grid-column: span 2;
 }
 
+.chart-card.span-3 {
+  grid-column: span 3;
+}
+
 .chart-card h3 {
   margin: 0 0 var(--space-lg) 0;
   font-size: var(--font-size-base);
@@ -555,6 +585,10 @@
     grid-column: span 2;
   }
 
+  .chart-card.span-3 {
+    grid-column: span 2;
+  }
+
   .comparison-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -582,7 +616,8 @@
     grid-template-columns: 1fr;
   }
 
-  .chart-card.span-2 {
+  .chart-card.span-2,
+  .chart-card.span-3 {
     grid-column: span 1;
   }
 
