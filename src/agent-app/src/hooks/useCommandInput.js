@@ -65,8 +65,7 @@ export function useCommandInput(onCommand, onClear) {
     );
   }, [query]);
 
-  // Handle input change
-  const handleChange = useCallback((value) => {
+  const handleInputChange = useCallback((value) => {
     setInput(value);
 
     // Check for slash command trigger
@@ -166,9 +165,17 @@ export function useCommandInput(onCommand, onClear) {
     setQuery('');
   }, []);
 
+  // Reset input state
+  const resetInput = useCallback(() => {
+    setInput('');
+    setQuery('');
+    setShowCommandPanel(false);
+    setShowMentionPanel(false);
+  }, []);
+
   return {
     input,
-    setInput: handleChange,
+    setInput: handleInputChange,
     inputRef,
     showCommandPanel,
     showMentionPanel,
@@ -178,6 +185,7 @@ export function useCommandInput(onCommand, onClear) {
     selectCommand,
     insertMention,
     closePanels,
+    resetInput,
     query,
   };
 }

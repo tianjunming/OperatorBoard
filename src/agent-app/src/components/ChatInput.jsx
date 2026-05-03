@@ -17,6 +17,7 @@ function ChatInput({ onSend, disabled, placeholder, messages, onClear }) {
     selectCommand,
     insertMention,
     closePanels,
+    resetInput,
   } = useCommandInput(onSend, onClear);
 
   const textareaRef = inputRef;
@@ -43,16 +44,18 @@ function ChatInput({ onSend, disabled, placeholder, messages, onClear }) {
     setTimeout(updatePanelDirection, 0);
   }, [updatePanelDirection]);
 
-  const handleSubmit = useCallback((e) => {
+  const handleSubmit = useCallback(async (e) => {
     e?.preventDefault();
     if (input.trim() && !disabled) {
-      onSend(input.trim());
-      setInput('');
+      const textToSend = input.trim();
+      resetInput();
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
+      // Pass text directly instead of reading from state
+      await onSend(textToSend);
     }
-  }, [input, disabled, onSend, setInput]);
+  }, [input, disabled, onSend, resetInput]);
 
   const handleKeyDown = useCallback((e) => {
     // Handle command panel navigation
