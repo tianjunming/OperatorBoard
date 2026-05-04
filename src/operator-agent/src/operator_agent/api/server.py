@@ -1337,23 +1337,16 @@ def _format_indicator_metric(indicators: list, operators: list, metric: str,
     months = sorted(set(ind.get("dataMonth", "") for ind in indicators if isinstance(ind, dict)), reverse=True)
     latest_month = months[0] if months else ""
 
-    # Filter by latest month and operator
-    filtered = []
-    for ind in indicators:
-        if not isinstance(ind, dict):
-            continue
-        if ind.get("dataMonth") != latest_month:
-            continue
-        if operator_name:
-            op_id = ind.get("operatorId")
-            op_info = operator_map.get(op_id, {})
-            op_name = op_info.get("name", "")
-            ind_op_name = ind.get("operatorName", "")
-            # Check if operator name matches (both directions for partial match)
-            # Also compare with the operatorName directly from indicator data to handle encoding issues
-            if operator_name not in op_name and op_name not in operator_name and operator_name not in ind_op_name and ind_op_name not in operator_name:
-                continue
-        filtered.append(ind)
+    # Filter by latest month only
+    # Note: operator filtering is NOT needed here because:
+    # 1. When get_indicators_data(op_name) is called with a specific operator,
+    #    the Java service endpoint /operators/{op_name}/indicator-summary/latest
+    #    already returns only that operator's data (or falls back to all operators
+    #    with /operators/all/indicator-summary/latest if not found).
+    # 2. The fallback to all operators happens when the specific operator is not
+    #    found in the database (e.g., "China Mobile" not found but "中国移动" exists).
+    # 3. In case of fallback, we want to show all operators' data anyway.
+    filtered = [ind for ind in indicators if isinstance(ind, dict) and ind.get("dataMonth") == latest_month]
 
     if not filtered:
         return {"content": f"未找到运营商 {operator_name} 的指标数据", "chart": None, "data": None}
@@ -1442,19 +1435,8 @@ def format_traffic_ratio(indicators: list, operators: list, operator_name: str =
     months = sorted(set(ind.get("dataMonth", "") for ind in indicators if isinstance(ind, dict)), reverse=True)
     latest_month = months[0] if months else ""
 
-    # Filter by latest month and operator
-    filtered = []
-    for ind in indicators:
-        if not isinstance(ind, dict):
-            continue
-        if ind.get("dataMonth") != latest_month:
-            continue
-        if operator_name:
-            op_id = ind.get("operatorId")
-            op_info = operator_map.get(op_id, {})
-            if operator_name not in op_info.get("name", "") and op_info.get("name", "") not in operator_name:
-                continue
-        filtered.append(ind)
+    # Filter by latest month only (same rationale as _format_indicator_metric)
+    filtered = [ind for ind in indicators if isinstance(ind, dict) and ind.get("dataMonth") == latest_month]
 
     if not filtered:
         return {"content": f"未找到运营商 {operator_name} 的指标数据", "chart": None, "data": None}
@@ -1471,10 +1453,10 @@ def format_traffic_ratio(indicators: list, operators: list, operator_name: str =
         op_info = operator_map.get(op_id, {"name": f"运营商{op_id}"})
         op_name = op_info["name"]
 
-        traffic_ratio = ind.get("trafficRatio") or 0
-        duration_ratio = ind.get("durationCampratio") or 0
-        traffic_camp_ratio = ind.get("trafficCampratio") or 0
-        terminal_pen = ind.get("terminalPenetration") or 0
+        traffic_ratio = (ind.get("trafficRatio") or 0) * 100
+        duration_ratio = (ind.get("durationCampratio") or 0) * 100
+        traffic_camp_ratio = (ind.get("trafficCampratio") or 0) * 100
+        terminal_pen = (ind.get("terminalPenetration") or 0) * 100
 
         table_data.append({
             "运营商": op_name,
@@ -2295,14 +2277,20 @@ def _format_indicator_history(indicators: list, operators: list, metric: str,
     operator_map = _get_operator_map(operators)
 
     # Filter by operator if specified
+    # Note: Since get_indicators_history may return data for a specific operator
+    # (via /operators/{op_name}/indicator-summary/history endpoint), we filter
+    # using the same logic as _format_indicator_metric to handle name mismatches.
     filtered = []
     for ind in indicators:
         if not isinstance(ind, dict):
             continue
         if operator_name:
-            op_id = ind.get("operatorId")
-            op_info = operator_map.get(op_id, {})
-            if operator_name not in op_info.get("name", "") and op_info.get("name", "") not in operator_name:
+            ind_op_name = ind.get("operatorName", "")
+            op_lower = operator_name.lower()
+            ind_op_lower = ind_op_name.lower()
+            if (op_lower != ind_op_lower and
+                op_lower not in ind_op_lower and
+                ind_op_lower not in op_lower):
                 continue
         filtered.append(ind)
 
@@ -2396,22 +2384,8 @@ def format_traffic_ratio_history(indicators: list, operators: list, operator_nam
 
     operator_map = _get_operator_map(operators)
 
-    # Filter by operator if specified
-    filtered = []
-    for ind in indicators:
-        if not isinstance(ind, dict):
-            continue
-        if operator_name:
-            op_id = ind.get("operatorId")
-            op_info = operator_map.get(op_id, {})
-            if operator_name not in op_info.get("name", "") and op_info.get("name", "") not in operator_name:
-                continue
-        filtered.append(ind)
-
-    if not filtered:
-        return {"content": f"未找到运营商 {operator_name} 的历史数据", "chart": None, "data": None}
-
-    # Sort by month
+    # No operator filtering needed (same rationale as _format_indicator_history)
+    filtered = [ind for ind in indicators if isinstance(ind, dict)]
     sorted_data = sorted(filtered, key=lambda x: x.get("dataMonth", ""), reverse=True)
 
     table_columns = ["月份", "运营商", "分流比", "时长驻留比", "流量驻留比", "终端渗透率"]
@@ -2426,10 +2400,10 @@ def format_traffic_ratio_history(indicators: list, operators: list, operator_nam
         op_name = op_info["name"]
         month = ind.get("dataMonth", "")
 
-        traffic_ratio = ind.get("trafficRatio") or 0
-        duration_ratio = ind.get("durationCampratio") or 0
-        traffic_camp_ratio = ind.get("trafficCampratio") or 0
-        terminal_pen = ind.get("terminalPenetration") or 0
+        traffic_ratio = (ind.get("trafficRatio") or 0) * 100
+        duration_ratio = (ind.get("durationCampratio") or 0) * 100
+        traffic_camp_ratio = (ind.get("trafficCampratio") or 0) * 100
+        terminal_pen = (ind.get("terminalPenetration") or 0) * 100
 
         table_data.append({
             "月份": month,
