@@ -2589,20 +2589,17 @@ def _generate_followup_questions(user_input: str, intent: str, operator_name: st
         if operator_name:
             questions.extend([
                 f"{operator_name} 最新站点数量是多少？",
-                f"{operator_name} 最新小区数量是多少？",
-                f"{operator_name} 近期指标变化趋势如何？",
+                f"{operator_name} 各频段站点变化趋势如何？",
             ])
         else:
             questions.extend([
                 f"查看所有运营商（{op_list_str}）最新站点数据",
-                f"各运营商最新小区数量对比",
-                f"各运营商近期指标变化趋势",
+                f"各运营商站点数量历年变化趋势",
             ])
     elif is_site_query:
-        # User asked about sites
+        # User asked about sites - only recommend site-related questions (no cells)
         if operator_name:
             questions.extend([
-                f"{operator_name} 的小区数量是多少？",
                 f"{operator_name} 各频段站点分布如何？",
                 f"{operator_name} 最新指标数据有哪些？",
                 f"对比 {operator_name} 历史站点变化趋势",
@@ -2611,43 +2608,52 @@ def _generate_followup_questions(user_input: str, intent: str, operator_name: st
             questions.extend([
                 f"查看 {op_list_str} 等运营商的站点数据",
                 f"各运营商站点数量对比",
-                f"查看更多运营商小区数据",
             ])
     elif is_cell_query:
-        # User asked about cells
+        # User asked about cells - only recommend cell-related questions (no sites)
         if operator_name:
             questions.extend([
-                f"{operator_name} 的站点数量是多少？",
                 f"{operator_name} 各频段小区分布如何？",
-                f"{operator_name} 的上下行负载是多少？",
+                f"{operator_name} 上行负载是多少？",
+                f"{operator_name} 下行负载是多少？",
                 f"{operator_name} 的速率指标如何？",
             ])
         else:
             questions.extend([
                 f"对比 {op_list_str} 等运营商小区数量",
                 f"查看各运营商小区指标分布",
-                f"各运营商站点与小区比例",
+                f"各运营商小区上行负载对比",
+                f"各运营商小区下行负载对比",
             ])
     elif is_indicator_query or is_traffic_query:
-        # User asked about indicators
+        # User asked about indicators - avoid mixing up/down with other types
         if operator_name:
-            questions.extend([
-                f"{operator_name} 的站点和小区数量是多少？",
-                f"{operator_name} 各频段指标对比如何？",
-                f"{operator_name} 与其他运营商指标对比",
-                f"查看 {operator_name} 历史指标变化趋势",
-            ])
+            if is_traffic_query:
+                questions.extend([
+                    f"{operator_name} 各频段指标对比如何？",
+                    f"{operator_name} 与其他运营商指标对比",
+                    f"查看 {operator_name} 历史指标变化趋势",
+                ])
+            else:
+                questions.extend([
+                    f"{operator_name} 各频段指标对比如何？",
+                    f"{operator_name} 与其他运营商指标对比",
+                ])
         else:
-            questions.extend([
-                f"对比 {op_list_str} 等运营商指标",
-                f"各运营商最新站点小区数据",
-                f"查看更多频段详细指标",
-            ])
+            if is_traffic_query:
+                questions.extend([
+                    f"对比 {op_list_str} 等运营商指标",
+                    f"查看更多频段详细指标",
+                ])
+            else:
+                questions.extend([
+                    f"对比 {op_list_str} 等运营商指标",
+                    f"各运营商最新站点小区数据",
+                ])
     else:
         # Generic query - provide broad suggestions
         if operator_name:
             questions.extend([
-                f"{operator_name} 站点和小区数量统计",
                 f"{operator_name} 各频段网络指标",
                 f"{operator_name} 最新网络性能如何？",
                 f"查看 {operator_name} 历史数据变化",
@@ -2655,9 +2661,7 @@ def _generate_followup_questions(user_input: str, intent: str, operator_name: st
         else:
             questions.extend([
                 f"查看 {op_list_str} 等运营商站点数据",
-                f"各运营商小区数量对比",
                 f"最新网络指标对比分析",
-                f"查看更多频段指标详情",
             ])
 
     # Remove duplicates while preserving order
