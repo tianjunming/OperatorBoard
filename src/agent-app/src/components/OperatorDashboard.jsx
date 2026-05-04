@@ -35,6 +35,8 @@ import {
   calculateSiteSummaryTotals,
   generateOperatorComparisonData,
   generateTrafficMetricsData,
+  generateRateComparisonData,
+  generatePRBComparisonData,
   transformSiteSummaryToBandData,
   transformIndicatorSummaryToRateData,
   transformIndicatorSummaryToPRBData,
@@ -69,7 +71,7 @@ export default function OperatorDashboard() {
 
   // Chart comparison state - operators to show in traffic metrics chart
   const [selectedCountryForChart, setSelectedCountryForChart] = useState(null);
-  
+
   // Data states
   const [operators, setOperators] = useState([]);
   const [allOperatorsData, setAllOperatorsData] = useState({});
@@ -79,6 +81,16 @@ export default function OperatorDashboard() {
   // V2 Summary data hooks
   const { data: allSiteSummary, isLoading: loadingSiteSummary } = useAllOperatorsSiteSummary();
   const { data: allIndicatorSummary, isLoading: loadingIndicatorSummary } = useAllOperatorsIndicatorSummary();
+
+  // All operators rate comparison data (for multi-operator comparison)
+  const allOperatorsRateComparison = useMemo(() => {
+    return generateRateComparisonData(allIndicatorSummary || []);
+  }, [allIndicatorSummary]);
+
+  // All operators PRB comparison data (for multi-operator comparison)
+  const allOperatorsPRBComparison = useMemo(() => {
+    return generatePRBComparisonData(allIndicatorSummary || []);
+  }, [allIndicatorSummary]);
 
   // Transform V2 data
   const siteSummaryTransformed = useMemo(() => {
@@ -686,17 +698,20 @@ export default function OperatorDashboard() {
 
                 {/* DL/UL Rate */}
                 <div className="chart-card span-3">
-                  <h3><TrendingUp size={16} /> 各频段速率对比</h3>
+                  <h3><TrendingUp size={16} /> {showComparison ? '各运营商速率对比' : '各频段速率对比'}</h3>
                   <div className="chart-container">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={indicatorByBandData}>
+                      <BarChart data={showComparison && allOperatorsRateComparison.dlRateData.length > 0 ? allOperatorsRateComparison.dlRateData : indicatorByBandData}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                         <YAxis />
                         <Tooltip formatter={(value, name) => [`${value} Mbps`, name]} />
                         <Legend />
                         <Bar dataKey="下行速率" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="上行速率" fill={CHART_COLORS[2]} radius={[4, 4, 0, 0]} />
+                        {!showComparison && <Bar dataKey="上行速率" fill={CHART_COLORS[2]} radius={[4, 4, 0, 0]} />}
+                        {showComparison && allOperatorsRateComparison.dlRateData.length > 0 && (
+                          <Bar dataKey="下行速率-NR" fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} />
+                        )}
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -704,17 +719,20 @@ export default function OperatorDashboard() {
 
                 {/* PRB Usage */}
                 <div className="chart-card span-3">
-                  <h3><Wifi size={16} /> PRB利用率对比</h3>
+                  <h3><Wifi size={16} /> {showComparison ? '各运营商PRB利用率对比' : 'PRB利用率对比'}</h3>
                   <div className="chart-container">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={prbByBandData}>
+                      <BarChart data={showComparison && allOperatorsPRBComparison.dlPrbData.length > 0 ? allOperatorsPRBComparison.dlPrbData : prbByBandData}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                         <YAxis domain={[0, 100]} />
                         <Tooltip formatter={(value, name) => [`${value}%`, name]} />
                         <Legend />
                         <Bar dataKey="下行PRB" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="上行PRB" fill={CHART_COLORS[3]} radius={[4, 4, 0, 0]} />
+                        {!showComparison && <Bar dataKey="上行PRB" fill={CHART_COLORS[3]} radius={[4, 4, 0, 0]} />}
+                        {showComparison && allOperatorsPRBComparison.dlPrbData.length > 0 && (
+                          <Bar dataKey="下行PRB-NR" fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} />
+                        )}
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

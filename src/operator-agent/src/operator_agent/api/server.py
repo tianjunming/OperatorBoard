@@ -1495,6 +1495,135 @@ def format_traffic_ratio(indicators: list, operators: list, operator_name: str =
     )
 
 
+# ==================== Indicator Comparison: All operators in same country ====================
+def format_indicator_comparison(indicators: list, operators: list, operator_name: str = None, followup_questions: list = None) -> Dict[str, Any]:
+    """
+    功能: 运营商指标对比 - 显示同一国家下所有运营商的完整指标对比
+    当用户询问"中国联通与其他运营商指标对比"时，识别国家并展示对比数据
+    """
+    if not indicators:
+        return {"content": "未找到指标数据", "chart": None, "data": None}
+
+    operator_map = _get_operator_map(operators)
+
+    # Get latest month
+    months = sorted(set(ind.get("dataMonth", "") for ind in indicators if isinstance(ind, dict)), reverse=True)
+    latest_month = months[0] if months else ""
+
+    # Filter by latest month
+    filtered = [ind for ind in indicators if isinstance(ind, dict) and ind.get("dataMonth") == latest_month]
+
+    if not filtered:
+        return {"content": "未找到指标数据", "chart": None, "data": None}
+
+    # Build operator country map for filtering
+    op_country_map = {}
+    for op_id, op_info in operator_map.items():
+        op_country_map[op_id] = op_info.get("country", "")
+
+    # Determine target country - use the operator_name's country if specified
+    target_country = None
+    if operator_name:
+        for op_id, op_info in operator_map.items():
+            if op_info.get("name") == operator_name:
+                target_country = op_info.get("country", "")
+                break
+
+    # If no target country found but operator_name specified, find the country of that operator
+    if not target_country and operator_name:
+        # Find operator in indicators
+        for ind in filtered:
+            op_id = ind.get("operatorId")
+            op_name_ind = ind.get("operatorName", "") or ind.get("operator_name", "")
+            if op_name_ind == operator_name:
+                target_country = op_country_map.get(op_id, "")
+                break
+
+    # Filter operators in the same country
+    if target_country:
+        filtered = [ind for ind in filtered if op_country_map.get(ind.get("operatorId"), "") == target_country]
+
+    if not filtered:
+        # Fallback: show all operators
+        pass
+
+    # Extract all available metrics for comparison
+    table_columns = ["运营商", "LTE下行速率", "NR下行速率", "LTE上行速率", "NR上行速率",
+                     "LTE下行PRB", "NR下行PRB", "LTE上行PRB", "NR上行PRB",
+                     "分流比", "时长驻留比", "流量驻留比"]
+    table_data = []
+    chart_data = []
+
+    for ind in filtered:
+        if not isinstance(ind, dict):
+            continue
+        op_id = ind.get("operatorId")
+        op_info = operator_map.get(op_id, {"name": f"运营商{op_id}"})
+        op_name = op_info["name"]
+
+        # Rate metrics (Mbps)
+        lte_dl_rate = ind.get("lteAvgDlRate") or ind.get("lte_avg_dl_rate") or 0
+        nr_dl_rate = ind.get("nrAvgDlRate") or ind.get("nr_avg_dl_rate") or 0
+        lte_ul_rate = ind.get("lteAvgUlRate") or ind.get("lte_avg_ul_rate") or 0
+        nr_ul_rate = ind.get("nrAvgUlRate") or ind.get("nr_avg_ul_rate") or 0
+
+        # PRB metrics (%)
+        lte_dl_prb = ind.get("lteAvgDlPrb") or ind.get("lte_avg_dl_prb") or 0
+        nr_dl_prb = ind.get("nrAvgDlPrb") or ind.get("nr_avg_dl_prb") or 0
+        lte_ul_prb = ind.get("lteAvgUlPrb") or ind.get("lte_avg_ul_prb") or 0
+        nr_ul_prb = ind.get("nrAvgUlPrb") or ind.get("nr_avg_ul_prb") or 0
+
+        # Traffic metrics (convert to %)
+        traffic_ratio = (ind.get("trafficRatio") or ind.get("traffic_ratio") or 0) * 100
+        duration_ratio = (ind.get("durationCampratio") or ind.get("duration_campratio") or 0) * 100
+        traffic_camp_ratio = (ind.get("trafficCampratio") or ind.get("traffic_campratio") or 0) * 100
+
+        table_data.append({
+            "运营商": op_name,
+            "LTE下行速率": round(float(lte_dl_rate), 2),
+            "NR下行速率": round(float(nr_dl_rate), 2),
+            "LTE上行速率": round(float(lte_ul_rate), 2),
+            "NR上行速率": round(float(nr_ul_rate), 2),
+            "LTE下行PRB": round(float(lte_dl_prb), 2),
+            "NR下行PRB": round(float(nr_dl_prb), 2),
+            "LTE上行PRB": round(float(lte_ul_prb), 2),
+            "NR上行PRB": round(float(nr_ul_prb), 2),
+            "分流比": round(traffic_ratio, 2),
+            "时长驻留比": round(duration_ratio, 2),
+            "流量驻留比": round(traffic_camp_ratio, 2),
+        })
+
+        chart_data.append({
+            "运营商": op_name,
+            "下行速率": round(float(lte_dl_rate) + float(nr_dl_rate), 2),
+            "上行速率": round(float(lte_ul_rate) + float(nr_ul_rate), 2),
+            "下行PRB": round(float(lte_dl_prb) + float(nr_dl_prb), 2),
+            "上行PRB": round(float(lte_ul_prb) + float(nr_ul_prb), 2),
+            "分流比": round(traffic_ratio, 2),
+        })
+
+    summary = {
+        "运营商数": len(filtered),
+        "数据月份": latest_month,
+        "国家/地区": target_country or "全部",
+    }
+
+    thinking = _build_thinking_chain("", "indicator_comparison - 同国家运营商指标对比", operator_name, "网络指标")
+
+    return _build_standard_response(
+        title=f"{target_country or '全部'}运营商指标对比",
+        summary=summary,
+        table_data=table_data,
+        chart_type="bar",
+        chart_keys=["下行速率", "上行速率", "下行PRB", "上行PRB", "分流比"],
+        chart_data=chart_data,
+        table_columns=table_columns,
+        chart_column="运营商",
+        thinking=thinking,
+        followup_questions=followup_questions,
+    )
+
+
 # ==================== Function 9: All Operators List ====================
 def format_all_operators(operators: list, followup_questions: list = None) -> Dict[str, Any]:
     """
@@ -2833,7 +2962,7 @@ def _build_thinking_chain(query: str, intent: str, operator_name: str = None, da
 def _detect_data_category(user_input: str) -> Tuple[str, bool]:
     """
     Detect the data category from user input for routing to appropriate formatter.
-    Categories: site, cell, ul_prb, dl_prb, ul_rate, dl_rate, traffic_ratio, history
+    Categories: site, cell, ul_prb, dl_prb, ul_rate, dl_rate, traffic_ratio, comparison, history
     Returns: (metric, is_history)
     """
     text = user_input.lower()
@@ -2842,6 +2971,10 @@ def _detect_data_category(user_input: str) -> Tuple[str, bool]:
     # Note: "所有" is removed because it means "all operators" not historical data
     # in the context of "所有运营商下行速率"
     is_history = any(kw in text for kw in ['历史', '历年', '变化', '趋势']) and not any(kw in user_input for kw in ['所有', '全部', '各运营商'])
+
+    # Check for comparison keywords - this takes precedence for indicator queries
+    is_comparison = any(kw in text for kw in ['对比', '比较', '指标对比']) or \
+                    any(kw in text for kw in ['与其他', '与其他运营商']) and '指标' in user_input
 
     # Check for specific metric keywords - only set metric, keep is_history from above
     # Note: Check UL/DL PRB before general "负载" to avoid overlap
@@ -2855,6 +2988,9 @@ def _detect_data_category(user_input: str) -> Tuple[str, bool]:
         metric = 'dl_rate'
     elif '分流' in user_input or '驻留' in user_input or '流量比' in text:
         metric = 'traffic_ratio'
+    elif '指标' in user_input and is_comparison:
+        # Comparison query with "指标" keyword - show all indicators
+        metric = 'indicator_comparison'
     elif '站点' in user_input:
         metric = 'sites'
     elif '小区' in user_input:
@@ -3118,6 +3254,9 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
                         return format_dl_rate(indicators, operators, operator_name, followup_questions)
                     elif data_category == 'traffic_ratio':
                         return format_traffic_ratio(indicators, operators, operator_name, followup_questions)
+                    elif data_category == 'indicator_comparison':
+                        # Format all indicators for comparison - show all metrics from same country operators
+                        return format_indicator_comparison(indicators, operators, operator_name, followup_questions)
                     else:
                         return format_ul_prb(indicators, operators, operator_name, followup_questions)
 
