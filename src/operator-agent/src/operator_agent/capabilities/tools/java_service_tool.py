@@ -3,6 +3,7 @@
 from typing import Any, Dict, List, Optional
 from pydantic import Field
 import httpx
+from urllib.parse import quote
 
 from agent_framework.tools import BaseTool
 
@@ -94,8 +95,12 @@ class JavaMicroserviceTool(BaseTool):
         headers = tool_input.get("headers", {})
 
         # Substitute path parameters in endpoint
+        # URL-encode non-ASCII AND space path parameter values (e.g., Chinese operator names)
         for key, value in path_params.items():
-            endpoint = endpoint.replace(f"{{{key}}}", str(value))
+            if isinstance(value, str) and (not value.isascii() or ' ' in value):
+                endpoint = endpoint.replace(f"{{{key}}}", quote(value, safe=''))
+            else:
+                endpoint = endpoint.replace(f"{{{key}}}", str(value))
 
         url = f"{self.base_url}{self.api_prefix}{endpoint}"
 
@@ -145,10 +150,16 @@ class JavaMicroserviceTool(BaseTool):
         Returns:
             API response
         """
+        path_params = path_params or {}
+        # URL-encode path parameter values that contain non-ASCII characters (e.g., Chinese operator names)
+        for key, value in path_params.items():
+            if isinstance(value, str) and not value.isascii():
+                path_params[key] = quote(value, safe='')
+
         return await self.run({
             "endpoint": endpoint,
             "method": method,
-            "path_params": path_params or {},
+            "path_params": path_params,
             "query_params": query_params,
             "body": body,
         })

@@ -1,8 +1,8 @@
 # OperatorBoard 系统规格说明书 (SPEC)
 
-**文档版本**: 1.5
+**文档版本**: 1.6
 **编制日期**: 2026-04-12
-**更新日期**: 2026-04-12
+**更新日期**: 2026-05-04
 **项目代号**: OperatorBoard
 **文档状态**: 已拆分
 **参考标准**: Google API Design Guide | OpenAPI 3.0 | Stripe Error Format | GitHub RFC 7807
@@ -1190,6 +1190,7 @@ Content-Type: application/json
 | 1.0 | 2026-04-10 | 初始版本 |
 | 1.1 | 2026-04-11 | 增加region字段支持多地区 |
 | 1.2 | 2026-04-12 | 重构数据模型：规范化表结构，新增band_name字段 |
+| 1.3 | 2026-05-04 | 新增operator_summary表、V4/V5 migration迁移脚本 |
 
 #### 5.1.2 site_info (站点信息表)
 
@@ -1891,6 +1892,7 @@ OperatorBoard/
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.6 | 2026-05-04 | OperatorSummary V4/V5 migration、Permission cache权限缓存、审计日志、data-scope数据范围控制 |
 | 1.5 | 2026-04-12 | 交互体验优化：智能图表推荐、KPI卡片(Sparkline)、模糊查询确认对话框、骨架屏、useStreamingAgent增强 |
 | 1.4 | 2026-04-12 | 新增indicator_info汇总指标字段：lte_avg_*、nr_avg_*、traffic_ratio、duration_campratio、fallback_ratio |
 | 1.3 | 2026-04-12 | 重构数据模型：规范化表结构，新增band_name字段，site_info/indicator_info/band_info表 |

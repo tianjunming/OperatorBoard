@@ -457,7 +457,7 @@ public class PromptSanitizer {
 | `band_info` | id | 维度表 | 频段信息 (21个频段) |
 | `site_info` | id | 事实表 | 站点数据 (按运营商/频段/月) |
 | `indicator_info` | id | 事实表 | 指标数据 (按运营商/频段/月) |
-| `operator_total_site` | id | 聚合表 | 运营商月度站点汇总 |
+| `operator_summary` | id | 聚合表 | 运营商月度站点汇总 |
 
 **site_info 事实表字段:**
 - id, operator_id, band_id, band_name, data_month, site_num, cell_num, technology
@@ -469,9 +469,11 @@ public class PromptSanitizer {
 - 流量: total_traffic, dl_traffic, ul_traffic
 - 用户: online_users, nr_users
 - 终端: terminal_penetration_ratio
-- **LTE汇总: lte_avg_dl_rate, lte_avg_ul_rate, lte_avg_dl_prb, lte_avg_ul_prb**
-- **NR汇总: nr_avg_dl_rate, nr_avg_ul_rate, nr_avg_dl_prb, nr_avg_ul_prb**
-- **分流比: traffic_ratio, duration_campratio, fallback_ratio**
+
+**汇总指标通过 SQL 聚合计算:**
+- 分流比: traffic_ratio = NR流量 / 总流量
+- 时长驻留比: duration_campratio = NR用户 / 总用户
+- 回流比: fallback_ratio = LTE用户 / 总用户
 
 **band_info 频段列表:**
 - LTE: LTE700M_FDD, LTE800M_FDD, LTE900M_FDD, LTE1400M_FDD, LTE1800M_FDD, LTE2100M_FDD, LTE2300M_FDD, LTE2300M_TDD, LTE2600M_FDD, LTE2600M_TDD
@@ -913,6 +915,21 @@ npx playwright test --ui
 | 任务 | 优先级 | 说明 |
 |------|--------|------|
 | - | - | 所有计划任务已完成 |
+
+### 8.3 新增功能
+
+#### Permission Cache 权限缓存
+| 任务 | 状态 | 实现方式 |
+|------|------|----------|
+| 用户权限缓存 | ✅ 已完成 | `permission_cache.py` 内存缓存 |
+| 数据范围权限 | ✅ 已完成 | `data_scope.py` 数据范围控制 |
+| 审计日志 | ✅ 已完成 | `audit.py` + `audit_log` 表 |
+
+#### Database Migration V4/V5
+| 任务 | 状态 | 实现方式 |
+|------|------|----------|
+| V4 Migration | ✅ 已完成 | 填充 operator_summary 空值 |
+| V5 Migration | ✅ 已完成 | 跨技术类型 null 值填充 |
 
 ### 8.3 MCP 传输层实现
 

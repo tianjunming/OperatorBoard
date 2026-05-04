@@ -1,48 +1,86 @@
 import React from 'react';
 import {
   Sparkles,
-  Database,
-  BarChart2,
-  Radio,
+  Building2,
+  BarChart3,
   TrendingUp,
-  Globe,
-  Antenna,
+  Search,
+  Clock,
 } from 'lucide-react';
 import { useI18n } from '../i18n';
 import './Welcome.css';
 
-// 核心能力 - 4个关键功能
+// 核心能力 - 5个关键功能
 const CAPABILITIES = [
-  { icon: Database, title: 'NL2SQL', desc: '自然语言查询数据库' },
-  { icon: BarChart2, title: '智能可视化', desc: '自动生成数据图表' },
-  { icon: Radio, title: '站点分析', desc: '运营商站点分布统计' },
-  { icon: TrendingUp, title: '指标监控', desc: '网络KPI实时追踪' },
+  { icon: Building2, title: '站点分析', desc: '站点数量与分布统计' },
+  { icon: BarChart3, title: '小区分布', desc: '频段与小区分布' },
+  { icon: TrendingUp, title: '指标分析', desc: 'KPI与性能指标' },
+  { icon: Clock, title: '历史趋势', desc: '数据变化趋势' },
+  { icon: Search, title: '智能查询', desc: '自然语言数据分析' },
 ];
 
-// 分类推荐问题 - 6个精选示例
+// 分类推荐问题 - 7类核心功能（对应20个核心查询）
 const EXAMPLE_CATEGORIES = [
   {
-    label: '站点查询',
-    icon: Globe,
+    label: '运营商总览',
+    icon: Building2,
     examples: [
-      '中国联通有多少站点？',
-      '各运营商5G站点排名',
+      '查看所有运营商',
+      '各运营商站点数量',
+      '各运营商小区数量',
     ],
   },
   {
-    label: '小区查询',
-    icon: Antenna,
+    label: '站点统计',
+    icon: BarChart3,
     examples: [
-      '各运营商小区数量统计',
-      'NR 2600M频段小区分布',
+      '中国联通有多少站点',
+      '中国联通各频段站点',
+      '中国联通历史站点',
     ],
   },
   {
-    label: '指标分析',
+    label: '小区统计',
+    icon: Building2,
+    examples: [
+      '中国联通有多少小区',
+      '中国联通各频段小区',
+      '中国联通历史小区',
+    ],
+  },
+  {
+    label: '负载分析',
     icon: TrendingUp,
     examples: [
-      '最新月各运营商指标',
-      '对比两家运营商覆盖',
+      '中国联通小区上行负载',
+      '中国联通小区下行负载',
+      '中国联通历史负载',
+    ],
+  },
+  {
+    label: '速率分析',
+    icon: TrendingUp,
+    examples: [
+      '中国联通小区上行速率',
+      '中国联通小区下行速率',
+      '中国联通历史速率',
+    ],
+  },
+  {
+    label: '分流指标',
+    icon: BarChart3,
+    examples: [
+      '中国联通小区分流指标',
+      '中国联通历史分流指标',
+    ],
+  },
+  {
+    label: '多维对比',
+    icon: Search,
+    examples: [
+      '所有运营商下行速率',
+      '所有运营商小区下行负载',
+      '所有运营商小区上行负载',
     ],
   },
 ];
@@ -87,9 +125,30 @@ function Welcome({ onExampleClick }) {
         <h3 className="examples-title">
           {locale === 'zh' ? '试试这样问' : 'Try Asking'}
         </h3>
-        <div className="examples-categories">
-          {EXAMPLE_CATEGORIES.map((cat, i) => (
+        <div className="examples-row examples-row-1">
+          {EXAMPLE_CATEGORIES.slice(0, 3).map((cat, i) => (
             <div key={i} className="example-category">
+              <div className="category-header">
+                <cat.icon size={14} />
+                <span>{cat.label}</span>
+              </div>
+              <div className="category-examples">
+                {cat.examples.map((ex, j) => (
+                  <button
+                    key={j}
+                    className="example-item"
+                    onClick={() => onExampleClick?.(ex)}
+                  >
+                    {ex}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="examples-row examples-row-2">
+          {EXAMPLE_CATEGORIES.slice(3).map((cat, i) => (
+            <div key={i + 3} className="example-category">
               <div className="category-header">
                 <cat.icon size={14} />
                 <span>{cat.label}</span>

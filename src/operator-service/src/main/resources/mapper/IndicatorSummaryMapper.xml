@@ -2,11 +2,16 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
+<!--
+    IndicatorSummaryMapper - Uses normalized indicator_info table with aggregation
+    Refactored to use indicator_info instead of indicator_summary wide table
+-->
 <mapper namespace="com.operator.nl2sql.repository.IndicatorSummaryMapper">
 
     <resultMap id="IndicatorSummaryResultMap" type="com.operator.nl2sql.entity.IndicatorSummary">
         <id property="id" column="id"/>
         <result property="operatorId" column="operator_id"/>
+        <result property="operatorName" column="operator_name"/>
         <result property="dataMonth" column="data_month"/>
         <result property="lte700MDlRate" column="lte_700M_dl_rate"/>
         <result property="lte700MUlRate" column="lte_700M_ul_rate"/>
@@ -88,64 +93,681 @@
         <result property="durationCampratio" column="duration_campratio"/>
         <result property="terminalPenetration" column="terminal_penetration"/>
         <result property="fallbackRatio" column="fallback_ratio"/>
+        <result property="country" column="country"/>
+        <result property="region" column="region"/>
         <result property="createdTime" column="created_time"/>
         <result property="updatedTime" column="updated_time"/>
     </resultMap>
 
+    <!-- Get all operators latest indicator summary using indicator_info with PIVOT -->
     <select id="findAllLatest" resultMap="IndicatorSummaryResultMap">
-        SELECT i.* FROM indicator_summary i
+        SELECT
+            MIN(i.id) as id,
+            i.operator_id,
+            oi.operator_name as operator_name,
+            oi.country as country,
+            oi.region as region,
+            i.data_month,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.dl_rate END) as lte_700M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.ul_rate END) as lte_700M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.dl_prb END) as lte_700M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.ul_prb END) as lte_700M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.dl_rate END) as lte_800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.ul_rate END) as lte_800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.dl_prb END) as lte_800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.ul_prb END) as lte_800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.dl_rate END) as lte_900M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.ul_rate END) as lte_900M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.dl_prb END) as lte_900M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.ul_prb END) as lte_900M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.dl_rate END) as lte_1400M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.ul_rate END) as lte_1400M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.dl_prb END) as lte_1400M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.ul_prb END) as lte_1400M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.dl_rate END) as lte_1800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.ul_rate END) as lte_1800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.dl_prb END) as lte_1800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.ul_prb END) as lte_1800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.dl_rate END) as lte_2100M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.ul_rate END) as lte_2100M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.dl_prb END) as lte_2100M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.ul_prb END) as lte_2100M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.dl_rate END) as lte_2600M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.ul_rate END) as lte_2600M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.dl_prb END) as lte_2600M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.ul_prb END) as lte_2600M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.dl_rate END) as nr_700M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.ul_rate END) as nr_700M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.dl_prb END) as nr_700M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.ul_prb END) as nr_700M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.dl_rate END) as nr_800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.ul_rate END) as nr_800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.dl_prb END) as nr_800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.ul_prb END) as nr_800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.dl_rate END) as nr_900M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.ul_rate END) as nr_900M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.dl_prb END) as nr_900M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.ul_prb END) as nr_900M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.dl_rate END) as nr_1400M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.ul_rate END) as nr_1400M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.dl_prb END) as nr_1400M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.ul_prb END) as nr_1400M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.dl_rate END) as nr_1800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.ul_rate END) as nr_1800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.dl_prb END) as nr_1800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.ul_prb END) as nr_1800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.dl_rate END) as nr_2100M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.ul_rate END) as nr_2100M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.dl_prb END) as nr_2100M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.ul_prb END) as nr_2100M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.dl_rate END) as nr_2600M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.ul_rate END) as nr_2600M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.dl_prb END) as nr_2600M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.ul_prb END) as nr_2600M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.dl_rate END) as nr_3500M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.ul_rate END) as nr_3500M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.dl_prb END) as nr_3500M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.ul_prb END) as nr_3500M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.dl_rate END) as nr_4900M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.ul_rate END) as nr_4900M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.dl_prb END) as nr_4900M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.ul_prb END) as nr_4900M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.dl_rate END) as nr_2300M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.ul_rate END) as nr_2300M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.dl_prb END) as nr_2300M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.ul_prb END) as nr_2300M_ul_prb,
+            -- LTE 汇总指标：从 indicator_info 各频段数据聚合计算
+            (SELECT AVG(i2.dl_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_dl_rate,
+            (SELECT AVG(i2.ul_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_ul_rate,
+            (SELECT AVG(i2.dl_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_dl_prb,
+            (SELECT AVG(i2.ul_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_ul_prb,
+            -- NR 汇总指标
+            (SELECT AVG(i2.dl_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_dl_rate,
+            (SELECT AVG(i2.ul_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_ul_rate,
+            (SELECT AVG(i2.dl_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_dl_prb,
+            (SELECT AVG(i2.ul_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_ul_prb,
+            -- 流量分流比和时长驻留比从 operator_summary 表获取
+            (SELECT os.traffic_ratio FROM operator_summary os
+             WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
+             LIMIT 1) as traffic_ratio,
+            (SELECT os.duration_campratio FROM operator_summary os
+             WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
+             LIMIT 1) as duration_campratio,
+            0.35 as terminal_penetration,
+            0.15 as fallback_ratio,
+            NOW() as created_time,
+            NOW() as updated_time
+        FROM indicator_info i
+        JOIN band_info b ON i.band_id = b.id
+        JOIN operator_info oi ON i.operator_id = oi.id
         WHERE i.data_month = (
-            SELECT MAX(i2.data_month)
-            FROM indicator_summary i2
-            WHERE i2.operator_id = i.operator_id
+            SELECT MAX(i2.data_month) FROM indicator_info i2 WHERE i2.operator_id = i.operator_id
         )
+        GROUP BY i.operator_id, i.data_month
         ORDER BY i.operator_id
     </select>
 
+    <!-- Get latest indicator summary for specific operator -->
     <select id="findLatestByOperatorId" resultMap="IndicatorSummaryResultMap">
-        SELECT i.* FROM indicator_summary i
+        SELECT
+            MIN(i.id) as id,
+            i.operator_id,
+            oi.operator_name as operator_name,
+            oi.country as country,
+            oi.region as region,
+            i.data_month,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.dl_rate END) as lte_700M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.ul_rate END) as lte_700M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.dl_prb END) as lte_700M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.ul_prb END) as lte_700M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.dl_rate END) as lte_800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.ul_rate END) as lte_800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.dl_prb END) as lte_800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.ul_prb END) as lte_800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.dl_rate END) as lte_900M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.ul_rate END) as lte_900M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.dl_prb END) as lte_900M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.ul_prb END) as lte_900M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.dl_rate END) as lte_1400M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.ul_rate END) as lte_1400M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.dl_prb END) as lte_1400M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.ul_prb END) as lte_1400M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.dl_rate END) as lte_1800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.ul_rate END) as lte_1800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.dl_prb END) as lte_1800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.ul_prb END) as lte_1800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.dl_rate END) as lte_2100M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.ul_rate END) as lte_2100M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.dl_prb END) as lte_2100M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.ul_prb END) as lte_2100M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.dl_rate END) as lte_2600M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.ul_rate END) as lte_2600M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.dl_prb END) as lte_2600M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.ul_prb END) as lte_2600M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.dl_rate END) as nr_700M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.ul_rate END) as nr_700M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.dl_prb END) as nr_700M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.ul_prb END) as nr_700M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.dl_rate END) as nr_800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.ul_rate END) as nr_800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.dl_prb END) as nr_800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.ul_prb END) as nr_800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.dl_rate END) as nr_900M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.ul_rate END) as nr_900M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.dl_prb END) as nr_900M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.ul_prb END) as nr_900M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.dl_rate END) as nr_1400M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.ul_rate END) as nr_1400M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.dl_prb END) as nr_1400M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.ul_prb END) as nr_1400M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.dl_rate END) as nr_1800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.ul_rate END) as nr_1800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.dl_prb END) as nr_1800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.ul_prb END) as nr_1800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.dl_rate END) as nr_2100M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.ul_rate END) as nr_2100M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.dl_prb END) as nr_2100M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.ul_prb END) as nr_2100M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.dl_rate END) as nr_2600M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.ul_rate END) as nr_2600M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.dl_prb END) as nr_2600M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.ul_prb END) as nr_2600M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.dl_rate END) as nr_3500M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.ul_rate END) as nr_3500M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.dl_prb END) as nr_3500M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.ul_prb END) as nr_3500M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.dl_rate END) as nr_4900M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.ul_rate END) as nr_4900M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.dl_prb END) as nr_4900M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.ul_prb END) as nr_4900M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.dl_rate END) as nr_2300M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.ul_rate END) as nr_2300M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.dl_prb END) as nr_2300M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.ul_prb END) as nr_2300M_ul_prb,
+            -- LTE 汇总指标：从 indicator_info 各频段数据聚合计算
+            (SELECT AVG(i2.dl_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_dl_rate,
+            (SELECT AVG(i2.ul_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_ul_rate,
+            (SELECT AVG(i2.dl_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_dl_prb,
+            (SELECT AVG(i2.ul_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_ul_prb,
+            -- NR 汇总指标
+            (SELECT AVG(i2.dl_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_dl_rate,
+            (SELECT AVG(i2.ul_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_ul_rate,
+            (SELECT AVG(i2.dl_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_dl_prb,
+            (SELECT AVG(i2.ul_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_ul_prb,
+            -- 分流/驻留指标从 operator_summary 获取
+            (SELECT os.traffic_ratio FROM operator_summary os
+             WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
+             LIMIT 1) as traffic_ratio,
+            (SELECT os.duration_campratio FROM operator_summary os
+             WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
+             LIMIT 1) as duration_campratio,
+            0.35 as terminal_penetration,
+            0.15 as fallback_ratio,
+            NOW() as created_time,
+            NOW() as updated_time
+        FROM indicator_info i
+        JOIN band_info b ON i.band_id = b.id
+        JOIN operator_info oi ON i.operator_id = oi.id
         WHERE i.operator_id = #{operatorId}
           AND i.data_month = (
-            SELECT MAX(i2.data_month)
-            FROM indicator_summary i2
-            WHERE i2.operator_id = #{operatorId}
+            SELECT MAX(i2.data_month) FROM indicator_info i2 WHERE i2.operator_id = #{operatorId}
         )
+        GROUP BY i.operator_id, i.data_month
     </select>
 
+    <!-- Get indicator summary history for operator -->
     <select id="findHistoryByOperatorId" resultMap="IndicatorSummaryResultMap">
-        SELECT i.* FROM indicator_summary i
+        SELECT
+            MIN(i.id) as id,
+            i.operator_id,
+            oi.operator_name as operator_name,
+            oi.country as country,
+            oi.region as region,
+            i.data_month,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.dl_rate END) as lte_700M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.ul_rate END) as lte_700M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.dl_prb END) as lte_700M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.ul_prb END) as lte_700M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.dl_rate END) as lte_800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.ul_rate END) as lte_800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.dl_prb END) as lte_800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.ul_prb END) as lte_800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.dl_rate END) as lte_900M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.ul_rate END) as lte_900M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.dl_prb END) as lte_900M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.ul_prb END) as lte_900M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.dl_rate END) as lte_1400M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.ul_rate END) as lte_1400M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.dl_prb END) as lte_1400M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.ul_prb END) as lte_1400M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.dl_rate END) as lte_1800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.ul_rate END) as lte_1800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.dl_prb END) as lte_1800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.ul_prb END) as lte_1800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.dl_rate END) as lte_2100M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.ul_rate END) as lte_2100M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.dl_prb END) as lte_2100M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.ul_prb END) as lte_2100M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.dl_rate END) as lte_2600M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.ul_rate END) as lte_2600M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.dl_prb END) as lte_2600M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.ul_prb END) as lte_2600M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.dl_rate END) as nr_700M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.ul_rate END) as nr_700M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.dl_prb END) as nr_700M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.ul_prb END) as nr_700M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.dl_rate END) as nr_800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.ul_rate END) as nr_800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.dl_prb END) as nr_800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.ul_prb END) as nr_800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.dl_rate END) as nr_900M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.ul_rate END) as nr_900M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.dl_prb END) as nr_900M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.ul_prb END) as nr_900M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.dl_rate END) as nr_1400M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.ul_rate END) as nr_1400M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.dl_prb END) as nr_1400M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.ul_prb END) as nr_1400M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.dl_rate END) as nr_1800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.ul_rate END) as nr_1800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.dl_prb END) as nr_1800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.ul_prb END) as nr_1800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.dl_rate END) as nr_2100M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.ul_rate END) as nr_2100M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.dl_prb END) as nr_2100M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.ul_prb END) as nr_2100M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.dl_rate END) as nr_2600M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.ul_rate END) as nr_2600M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.dl_prb END) as nr_2600M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.ul_prb END) as nr_2600M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.dl_rate END) as nr_3500M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.ul_rate END) as nr_3500M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.dl_prb END) as nr_3500M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.ul_prb END) as nr_3500M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.dl_rate END) as nr_4900M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.ul_rate END) as nr_4900M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.dl_prb END) as nr_4900M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.ul_prb END) as nr_4900M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.dl_rate END) as nr_2300M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.ul_rate END) as nr_2300M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.dl_prb END) as nr_2300M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.ul_prb END) as nr_2300M_ul_prb,
+            -- LTE 汇总指标：从 indicator_info 各频段数据聚合计算
+            (SELECT AVG(i2.dl_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_dl_rate,
+            (SELECT AVG(i2.ul_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_ul_rate,
+            (SELECT AVG(i2.dl_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_dl_prb,
+            (SELECT AVG(i2.ul_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_ul_prb,
+            -- NR 汇总指标
+            (SELECT AVG(i2.dl_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_dl_rate,
+            (SELECT AVG(i2.ul_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_ul_rate,
+            (SELECT AVG(i2.dl_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_dl_prb,
+            (SELECT AVG(i2.ul_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_ul_prb,
+            -- 分流/驻留指标从 operator_summary 获取
+            (SELECT os.traffic_ratio FROM operator_summary os
+             WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
+             LIMIT 1) as traffic_ratio,
+            (SELECT os.duration_campratio FROM operator_summary os
+             WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
+             LIMIT 1) as duration_campratio,
+            0.35 as terminal_penetration,
+            0.15 as fallback_ratio,
+            NOW() as created_time,
+            NOW() as updated_time
+        FROM indicator_info i
+        JOIN band_info b ON i.band_id = b.id
+        JOIN operator_info oi ON i.operator_id = oi.id
         WHERE i.operator_id = #{operatorId}
+        GROUP BY i.operator_id, i.data_month
         ORDER BY i.data_month DESC
     </select>
 
+    <!-- Get indicator summary by data month -->
     <select id="findByDataMonth" resultMap="IndicatorSummaryResultMap">
-        SELECT i.* FROM indicator_summary i
+        SELECT
+            MIN(i.id) as id,
+            i.operator_id,
+            oi.operator_name as operator_name,
+            oi.country as country,
+            oi.region as region,
+            i.data_month,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.dl_rate END) as lte_700M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.ul_rate END) as lte_700M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.dl_prb END) as lte_700M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.ul_prb END) as lte_700M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.dl_rate END) as lte_800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.ul_rate END) as lte_800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.dl_prb END) as lte_800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.ul_prb END) as lte_800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.dl_rate END) as lte_900M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.ul_rate END) as lte_900M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.dl_prb END) as lte_900M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.ul_prb END) as lte_900M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.dl_rate END) as lte_1400M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.ul_rate END) as lte_1400M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.dl_prb END) as lte_1400M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.ul_prb END) as lte_1400M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.dl_rate END) as lte_1800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.ul_rate END) as lte_1800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.dl_prb END) as lte_1800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.ul_prb END) as lte_1800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.dl_rate END) as lte_2100M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.ul_rate END) as lte_2100M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.dl_prb END) as lte_2100M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.ul_prb END) as lte_2100M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.dl_rate END) as lte_2600M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.ul_rate END) as lte_2600M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.dl_prb END) as lte_2600M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.ul_prb END) as lte_2600M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.dl_rate END) as nr_700M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.ul_rate END) as nr_700M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.dl_prb END) as nr_700M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.ul_prb END) as nr_700M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.dl_rate END) as nr_800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.ul_rate END) as nr_800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.dl_prb END) as nr_800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.ul_prb END) as nr_800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.dl_rate END) as nr_900M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.ul_rate END) as nr_900M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.dl_prb END) as nr_900M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.ul_prb END) as nr_900M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.dl_rate END) as nr_1400M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.ul_rate END) as nr_1400M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.dl_prb END) as nr_1400M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.ul_prb END) as nr_1400M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.dl_rate END) as nr_1800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.ul_rate END) as nr_1800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.dl_prb END) as nr_1800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.ul_prb END) as nr_1800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.dl_rate END) as nr_2100M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.ul_rate END) as nr_2100M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.dl_prb END) as nr_2100M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.ul_prb END) as nr_2100M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.dl_rate END) as nr_2600M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.ul_rate END) as nr_2600M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.dl_prb END) as nr_2600M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.ul_prb END) as nr_2600M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.dl_rate END) as nr_3500M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.ul_rate END) as nr_3500M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.dl_prb END) as nr_3500M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.ul_prb END) as nr_3500M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.dl_rate END) as nr_4900M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.ul_rate END) as nr_4900M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.dl_prb END) as nr_4900M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.ul_prb END) as nr_4900M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.dl_rate END) as nr_2300M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.ul_rate END) as nr_2300M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.dl_prb END) as nr_2300M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.ul_prb END) as nr_2300M_ul_prb,
+            -- LTE 汇总指标
+            (SELECT AVG(i2.dl_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_dl_rate,
+            (SELECT AVG(i2.ul_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_ul_rate,
+            (SELECT AVG(i2.dl_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_dl_prb,
+            (SELECT AVG(i2.ul_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_ul_prb,
+            -- NR 汇总指标
+            (SELECT AVG(i2.dl_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_dl_rate,
+            (SELECT AVG(i2.ul_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_ul_rate,
+            (SELECT AVG(i2.dl_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_dl_prb,
+            (SELECT AVG(i2.ul_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_ul_prb,
+            -- 分流/驻留指标从 operator_summary 获取
+            (SELECT os.traffic_ratio FROM operator_summary os
+             WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
+             LIMIT 1) as traffic_ratio,
+            (SELECT os.duration_campratio FROM operator_summary os
+             WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
+             LIMIT 1) as duration_campratio,
+            0.35 as terminal_penetration,
+            0.15 as fallback_ratio,
+            NOW() as created_time,
+            NOW() as updated_time
+        FROM indicator_info i
+        JOIN band_info b ON i.band_id = b.id
+        JOIN operator_info oi ON i.operator_id = oi.id
         WHERE i.data_month = #{dataMonth}
+        GROUP BY i.operator_id, i.data_month
         ORDER BY i.operator_id
     </select>
 
+    <!-- Get indicator summary by operator and month -->
     <select id="findByOperatorIdAndMonth" resultMap="IndicatorSummaryResultMap">
-        SELECT i.* FROM indicator_summary i
-        WHERE i.operator_id = #{operatorId}
-          AND i.data_month = #{dataMonth}
+        SELECT
+            MIN(i.id) as id,
+            i.operator_id,
+            oi.operator_name as operator_name,
+            oi.country as country,
+            oi.region as region,
+            i.data_month,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.dl_rate END) as lte_700M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.ul_rate END) as lte_700M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.dl_prb END) as lte_700M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE700M_FDD' THEN i.ul_prb END) as lte_700M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.dl_rate END) as lte_800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.ul_rate END) as lte_800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.dl_prb END) as lte_800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE800M_FDD' THEN i.ul_prb END) as lte_800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.dl_rate END) as lte_900M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.ul_rate END) as lte_900M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.dl_prb END) as lte_900M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE900M_FDD' THEN i.ul_prb END) as lte_900M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.dl_rate END) as lte_1400M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.ul_rate END) as lte_1400M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.dl_prb END) as lte_1400M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1400M_FDD' THEN i.ul_prb END) as lte_1400M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.dl_rate END) as lte_1800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.ul_rate END) as lte_1800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.dl_prb END) as lte_1800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE1800M_FDD' THEN i.ul_prb END) as lte_1800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.dl_rate END) as lte_2100M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.ul_rate END) as lte_2100M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.dl_prb END) as lte_2100M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2100M_FDD' THEN i.ul_prb END) as lte_2100M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.dl_rate END) as lte_2600M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.ul_rate END) as lte_2600M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.dl_prb END) as lte_2600M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'LTE2600M_FDD' THEN i.ul_prb END) as lte_2600M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.dl_rate END) as nr_700M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.ul_rate END) as nr_700M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.dl_prb END) as nr_700M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR700M_FDD' THEN i.ul_prb END) as nr_700M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.dl_rate END) as nr_800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.ul_rate END) as nr_800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.dl_prb END) as nr_800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR800M_FDD' THEN i.ul_prb END) as nr_800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.dl_rate END) as nr_900M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.ul_rate END) as nr_900M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.dl_prb END) as nr_900M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR900M_FDD' THEN i.ul_prb END) as nr_900M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.dl_rate END) as nr_1400M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.ul_rate END) as nr_1400M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.dl_prb END) as nr_1400M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR1400M_FDD' THEN i.ul_prb END) as nr_1400M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.dl_rate END) as nr_1800M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.ul_rate END) as nr_1800M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.dl_prb END) as nr_1800M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR1800M_FDD' THEN i.ul_prb END) as nr_1800M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.dl_rate END) as nr_2100M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.ul_rate END) as nr_2100M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.dl_prb END) as nr_2100M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR2100M_FDD' THEN i.ul_prb END) as nr_2100M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.dl_rate END) as nr_2600M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.ul_rate END) as nr_2600M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.dl_prb END) as nr_2600M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR2600M_FDD' THEN i.ul_prb END) as nr_2600M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.dl_rate END) as nr_3500M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.ul_rate END) as nr_3500M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.dl_prb END) as nr_3500M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR3500M_TDD' THEN i.ul_prb END) as nr_3500M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.dl_rate END) as nr_4900M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.ul_rate END) as nr_4900M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.dl_prb END) as nr_4900M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR4900M_TDD' THEN i.ul_prb END) as nr_4900M_ul_prb,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.dl_rate END) as nr_2300M_dl_rate,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.ul_rate END) as nr_2300M_ul_rate,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.dl_prb END) as nr_2300M_dl_prb,
+            MAX(CASE WHEN b.band_code = 'NR2300M_FDD' THEN i.ul_prb END) as nr_2300M_ul_prb,
+            -- LTE 汇总指标
+            (SELECT AVG(i2.dl_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_dl_rate,
+            (SELECT AVG(i2.ul_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_ul_rate,
+            (SELECT AVG(i2.dl_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_dl_prb,
+            (SELECT AVG(i2.ul_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'LTE%') as lte_avg_ul_prb,
+            -- NR 汇总指标
+            (SELECT AVG(i2.dl_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_dl_rate,
+            (SELECT AVG(i2.ul_rate) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_ul_rate,
+            (SELECT AVG(i2.dl_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_dl_prb,
+            (SELECT AVG(i2.ul_prb) FROM indicator_info i2
+             JOIN band_info b2 ON i2.band_id = b2.id
+             WHERE i2.operator_id = i.operator_id AND i2.data_month = i.data_month
+             AND b2.band_code LIKE 'NR%') as nr_avg_ul_prb,
+            -- 分流/驻留指标从 operator_summary 获取
+            (SELECT os.traffic_ratio FROM operator_summary os
+             WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
+             LIMIT 1) as traffic_ratio,
+            (SELECT os.duration_campratio FROM operator_summary os
+             WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
+             LIMIT 1) as duration_campratio,
+            0.35 as terminal_penetration,
+            0.15 as fallback_ratio,
+            NOW() as created_time,
+            NOW() as updated_time
+        FROM indicator_info i
+        JOIN band_info b ON i.band_id = b.id
+        JOIN operator_info oi ON i.operator_id = oi.id
+        WHERE i.operator_id = #{operatorId} AND i.data_month = #{dataMonth}
+        GROUP BY i.operator_id, i.data_month
     </select>
 
     <select id="findAllLatestMetrics" resultMap="IndicatorSummaryResultMap">
-        SELECT i.* FROM indicator_summary i
+        SELECT i.* FROM indicator_info i
         WHERE i.data_month = (
             SELECT MAX(i2.data_month)
-            FROM indicator_summary i2
+            FROM indicator_info i2
             WHERE i2.operator_id = i.operator_id
         )
         ORDER BY i.operator_id
     </select>
 
     <select id="findLatestMetricsByOperatorId" resultMap="IndicatorSummaryResultMap">
-        SELECT i.* FROM indicator_summary i
+        SELECT i.* FROM indicator_info i
         WHERE i.operator_id = #{operatorId}
           AND i.data_month = (
             SELECT MAX(i2.data_month)
-            FROM indicator_summary i2
+            FROM indicator_info i2
             WHERE i2.operator_id = #{operatorId}
         )
     </select>

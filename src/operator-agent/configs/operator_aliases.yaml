@@ -1,0 +1,2135 @@
+# Operator Alias Configuration
+# Maps operator aliases to official operator names for query resolution
+# Supports Chinese and global operators with city-based aliases
+
+# Chinese Operators
+# Format: official_name -> [aliases]
+chinese_operators:
+  # China Mobile variants
+  - official: "China Mobile"
+    aliases:
+      - "中国移动"
+      - "移动"
+      - "mobile"
+      - "中国移动通信"
+    cities:
+      - "北京"
+      - "上海"
+      - "广州"
+      - "深圳"
+      - "杭州"
+      - "成都"
+      - "武汉"
+      - "西安"
+      - "重庆"
+      - "南京"
+      - "苏州"
+      - "天津"
+      - "青岛"
+      - "长沙"
+      - "郑州"
+      - "济南"
+      - "福州"
+      - "厦门"
+      - "东莞"
+      - "佛山"
+
+  # China Unicom variants
+  - official: "China Unicom"
+    aliases:
+      - "中国联通"
+      - "联通"
+      - "unicom"
+      - "中国通信联通"
+    cities:
+      - "北京"
+      - "上海"
+      - "广州"
+      - "深圳"
+      - "杭州"
+      - "成都"
+      - "武汉"
+      - "西安"
+      - "重庆"
+      - "南京"
+      - "苏州"
+      - "天津"
+      - "青岛"
+      - "长沙"
+      - "郑州"
+      - "济南"
+      - "福州"
+      - "厦门"
+      - "东莞"
+      - "佛山"
+
+  # China Telecom variants
+  - official: "China Telecom"
+    aliases:
+      - "中国电信"
+      - "电信"
+      - "telecom"
+      - "中国电信股份"
+    cities:
+      - "北京"
+      - "上海"
+      - "广州"
+      - "深圳"
+      - "杭州"
+      - "成都"
+      - "武汉"
+      - "西安"
+      - "重庆"
+      - "南京"
+      - "苏州"
+      - "天津"
+      - "青岛"
+      - "长沙"
+      - "郑州"
+      - "济南"
+      - "福州"
+      - "厦门"
+      - "东莞"
+      - "佛山"
+
+# Global Operators
+# Format: official_name -> {aliases, cities}
+global_operators:
+  # ===== Europe =====
+  # UK
+  - official: "Vodafone Group"
+    aliases:
+      - "vodafone"
+      - "vodafone uk"
+    cities:
+      - "London"
+      - "Manchester"
+      - "Birmingham"
+      - "Leeds"
+      - "Glasgow"
+      - "Liverpool"
+      - "Edinburgh"
+      - "Bristol"
+
+  - official: "BT Group"
+    aliases:
+      - "bt"
+      - "bt group"
+      - "british telecom"
+      - "ee"
+      - "plusnet"
+    cities:
+      - "London"
+      - "Manchester"
+      - "Birmingham"
+      - "Leeds"
+      - "Glasgow"
+      - "Liverpool"
+      - "Edinburgh"
+      - "Bristol"
+
+  - official: "Virgin Media"
+    aliases:
+      - "virgin"
+      - "virgin media"
+    cities:
+      - "London"
+      - "Manchester"
+      - "Birmingham"
+      - "Leeds"
+
+  # Germany
+  - official: "Deutsche Telekom"
+    aliases:
+      - "telekom"
+      - "deutsche telekom"
+      - "t-mobile"
+      - "tmobile"
+      - "telekom deutschland"
+    cities:
+      - "Berlin"
+      - "Munich"
+      - "Frankfurt"
+      - "Hamburg"
+      - "Cologne"
+      - "Dusseldorf"
+      - "Stuttgart"
+      - "Leipzig"
+      - "Dortmund"
+      - "Essen"
+
+  - official: "Vodafone Germany"
+    aliases:
+      - "vodafone de"
+      - "vodafone deutschland"
+    cities:
+      - "Berlin"
+      - "Munich"
+      - "Frankfurt"
+      - "Hamburg"
+      - "Cologne"
+      - "Dusseldorf"
+      - "Stuttgart"
+
+  - official: "Telefonica Germany"
+    aliases:
+      - "o2"
+      - "telefonica germany"
+      - "o2 de"
+      - "o2 germany"
+    cities:
+      - "Berlin"
+      - "Munich"
+      - "Hamburg"
+      - "Frankfurt"
+      - "Cologne"
+      - "Stuttgart"
+      - "Dusseldorf"
+      - "Dortmund"
+      - "Essen"
+      - "Leipzig"
+
+  # France
+  - official: "Orange S.A."
+    aliases:
+      - "orange"
+      - "orange france"
+      - "france telecom"
+    cities:
+      - "Paris"
+      - "Lyon"
+      - "Marseille"
+      - "Nice"
+      - "Nantes"
+      - "Toulouse"
+      - "Bordeaux"
+      - "Lille"
+      - "Strasbourg"
+
+  - official: "SFR"
+    aliases:
+      - "sfr"
+      - "altice"
+      - "numERICABLE"
+    cities:
+      - "Paris"
+      - "Lyon"
+      - "Marseille"
+      - "Nice"
+      - "Nantes"
+      - "Toulouse"
+      - "Bordeaux"
+
+  - official: "Bouygues Telecom"
+    aliases:
+      - "bouygues"
+      - "bouygues telecom"
+    cities:
+      - "Paris"
+      - "Lyon"
+      - "Marseille"
+      - "Nice"
+      - "Nantes"
+      - "Toulouse"
+      - "Bordeaux"
+
+  # Spain
+  - official: "Telefonica S.A."
+    aliases:
+      - "telefonica"
+      - "movistar"
+      - "telefonica espana"
+    cities:
+      - "Madrid"
+      - "Barcelona"
+      - "Seville"
+      - "Valencia"
+      - "Zaragoza"
+      - "Malaga"
+      - "Bilbao"
+      - "Murcia"
+
+  - official: "Vodafone Spain"
+    aliases:
+      - "vodafone espana"
+      - "vodafone ES"
+    cities:
+      - "Madrid"
+      - "Barcelona"
+      - "Seville"
+      - "Valencia"
+      - "Zaragoza"
+      - "Malaga"
+
+  - official: "Orange Spain"
+    aliases:
+      - "orange espana"
+      - "orange ES"
+    cities:
+      - "Madrid"
+      - "Barcelona"
+      - "Seville"
+      - "Valencia"
+      - "Zaragoza"
+      - "Malaga"
+
+  # Italy
+  - official: "Telecom Italia"
+    aliases:
+      - "tim"
+      - "telecom italia"
+      - "telecom italia mobile"
+      - "tim Italia"
+    cities:
+      - "Rome"
+      - "Milan"
+      - "Naples"
+      - "Turin"
+      - "Palermo"
+      - "Genoa"
+      - "Bologna"
+      - "Florence"
+
+  - official: "Vodafone Italy"
+    aliases:
+      - "vodafone italia"
+      - "vodafone IT"
+    cities:
+      - "Rome"
+      - "Milan"
+      - "Naples"
+      - "Turin"
+      - "Palermo"
+      - "Genoa"
+
+  - official: "Wind Tre"
+    aliases:
+      - "wind"
+      - "tre"
+      - "wind tre"
+      - "windtre"
+    cities:
+      - "Rome"
+      - "Milan"
+      - "Naples"
+      - "Turin"
+      - "Palermo"
+      - "Genoa"
+
+  # Netherlands
+  - official: "KPN"
+    aliases:
+      - "kpn"
+      - "kpn telecom"
+    cities:
+      - "Amsterdam"
+      - "Rotterdam"
+      - "The Hague"
+      - "Utrecht"
+      - "Eindhoven"
+      - "Groningen"
+
+  - official: "Vodafone Netherlands"
+    aliases:
+      - "vodafone nl"
+      - "vodafone nederland"
+    cities:
+      - "Amsterdam"
+      - "Rotterdam"
+      - "The Hague"
+      - "Utrecht"
+      - "Eindhoven"
+
+  - official: "T-Mobile Netherlands"
+    aliases:
+      - "t-mobile nl"
+      - "tmobile nl"
+    cities:
+      - "Amsterdam"
+      - "Rotterdam"
+      - "The Hague"
+      - "Utrecht"
+      - "Eindhoven"
+
+  # Belgium
+  - official: "Proximus"
+    aliases:
+      - "proximus"
+      - "base"
+      - "belgacom"
+    cities:
+      - "Brussels"
+      - "Antwerp"
+      - "Ghent"
+      - "Charleroi"
+      - "Liège"
+
+  - official: "Orange Belgium"
+    aliases:
+      - "orange belgique"
+      - "orange BE"
+    cities:
+      - "Brussels"
+      - "Antwerp"
+      - "Ghent"
+      - "Charleroi"
+
+  # Switzerland
+  - official: "Swisscom"
+    aliases:
+      - "swisscom"
+      - "swisscom mobile"
+    cities:
+      - "Zurich"
+      - "Geneva"
+      - "Basel"
+      - "Bern"
+      - "Lausanne"
+      - "Winterthur"
+
+  - official: "Sunrise"
+    aliases:
+      - "sunrise"
+      - "sunrise communications"
+    cities:
+      - "Zurich"
+      - "Geneva"
+      - "Basel"
+      - "Bern"
+      - "Lausanne"
+
+  - official: "Salt"
+    aliases:
+      - "salt"
+      - "salt mobile"
+    cities:
+      - "Zurich"
+      - "Geneva"
+      - "Basel"
+      - "Bern"
+      - "Lausanne"
+
+  # Austria
+  - official: "A1 Telekom Austria"
+    aliases:
+      - "A1"
+      - "A1 Telekom"
+      - "Telekom Austria"
+      - "奥地利A1"
+    cities:
+      - "Vienna"
+      - "Graz"
+      - "Linz"
+      - "Salzburg"
+      - "Innsbruck"
+      - "Klagenfurt"
+
+  - official: "Magenta"
+    aliases:
+      - "magenta"
+      - "Magenta Telekom"
+      - "T-Mobile Austria"
+      - "TMA"
+      - "奥地利TMA"
+      - "奥地利magenta"
+    cities:
+      - "Vienna"
+      - "Graz"
+      - "Linz"
+      - "Salzburg"
+      - "Innsbruck"
+      - "Klagenfurt"
+
+  - official: "Hutchison Drei"
+    aliases:
+      - "Drei"
+      - "3 Austria"
+      - "hutchison"
+      - "奥地利Drei"
+    cities:
+      - "Vienna"
+      - "Graz"
+      - "Linz"
+      - "Salzburg"
+      - "Innsbruck"
+      - "Klagenfurt"
+
+  # Scandinavia
+  - official: "Telenor"
+    aliases:
+      - "telenor"
+      - "telenor group"
+    cities:
+      - "Oslo"
+      - "Bergen"
+      - "Trondheim"
+      - "Stavanger"
+      - "Copenhagen"
+      - "Stockholm"
+      - "Helsinki"
+
+  - official: "Telia"
+    aliases:
+      - "telia"
+      - "telia company"
+      - "telia sonera"
+    cities:
+      - "Stockholm"
+      - "Gothenburg"
+      - "Malmo"
+      - "Oslo"
+      - "Bergen"
+      - "Copenhagen"
+      - "Helsinki"
+
+  - official: " Elisa"
+    aliases:
+      - "elisa"
+      - "elisa oyj"
+    cities:
+      - "Helsinki"
+      - "Espoo"
+      - "Tampere"
+      - "Vantaa"
+      - "Turku"
+
+  - official: "DNA"
+    aliases:
+      - "dna"
+      - "dna oyj"
+    cities:
+      - "Helsinki"
+      - "Espoo"
+      - "Tampere"
+      - "Vantaa"
+      - "Turku"
+
+  - official: "Tele2"
+    aliases:
+      - "tele2"
+      - "tele2 group"
+    cities:
+      - "Stockholm"
+      - "Gothenburg"
+      - "Malmo"
+      - "Oslo"
+      - "Copenhagen"
+
+  # Poland
+  - official: "Polkomtel"
+    aliases:
+      - "plus"
+      - "plus gsm"
+      - "polkomtel"
+    cities:
+      - "Warsaw"
+      - "Krakow"
+      - "Gdansk"
+      - "Poznan"
+      - "Wroclaw"
+      - "Lodz"
+
+  - official: "Orange Polska"
+    aliases:
+      - "orange polska"
+      - "orange PL"
+      - "tp sa"
+    cities:
+      - "Warsaw"
+      - "Krakow"
+      - "Gdansk"
+      - "Poznan"
+      - "Wroclaw"
+      - "Lodz"
+
+  - official: "T-Mobile Poland"
+    aliases:
+      - "t-mobile polska"
+      - "tmobile pl"
+    cities:
+      - "Warsaw"
+      - "Krakow"
+      - "Gdansk"
+      - "Poznan"
+      - "Wroclaw"
+
+  - official: "Play"
+    aliases:
+      - "play"
+      - "play communications"
+    cities:
+      - "Warsaw"
+      - "Krakow"
+      - "Gdansk"
+      - "Poznan"
+      - "Wroclaw"
+
+  # Czech Republic
+  - official: "O2 Czech Republic"
+    aliases:
+      - "o2"
+      - "o2 czech"
+      - "telefonica czech"
+    cities:
+      - "Prague"
+      - "Brno"
+      - "Ostrava"
+      - "Plzen"
+      - "Liberec"
+
+  - official: "T-Mobile Czech Republic"
+    aliases:
+      - "t-mobile czech"
+      - "tmobile cz"
+    cities:
+      - "Prague"
+      - "Brno"
+      - "Ostrava"
+      - "Plzen"
+
+  - official: "Vodafone Czech Republic"
+    aliases:
+      - "vodafone czech"
+      - "vodafone cz"
+    cities:
+      - "Prague"
+      - "Brno"
+      - "Ostrava"
+      - "Plzen"
+
+  # Hungary
+  - official: "Magyar Telekom"
+    aliases:
+      - "telekom"
+      - "magyar telekom"
+      - "t-mobile hungary"
+    cities:
+      - "Budapest"
+      - "Debrecen"
+      - "Szeged"
+      - "Miskolc"
+      - "Pecs"
+
+  - official: "Vodafone Hungary"
+    aliases:
+      - "vodafone hungary"
+      - "vodafone HU"
+    cities:
+      - "Budapest"
+      - "Debrecen"
+      - "Szeged"
+      - "Miskolc"
+
+  - official: "Telenor Hungary"
+    aliases:
+      - "telenor hungary"
+      - "telenor HU"
+    cities:
+      - "Budapest"
+      - "Debrecen"
+      - "Szeged"
+      - "Miskolc"
+
+  # Portugal
+  - official: "Vodafone Portugal"
+    aliases:
+      - "vodafone pt"
+      - "vodafone portugal"
+    cities:
+      - "Lisbon"
+      - "Porto"
+      - "Faro"
+      - "Coimbra"
+      - "Braga"
+
+  - official: "NOS"
+    aliases:
+      - "nos"
+      - "nos communications"
+    cities:
+      - "Lisbon"
+      - "Porto"
+      - "Faro"
+      - "Coimbra"
+      - "Braga"
+
+  - official: "MEO"
+    aliases:
+      - "meo"
+      - "pt telecom"
+    cities:
+      - "Lisbon"
+      - "Porto"
+      - "Faro"
+      - "Coimbra"
+      - "Braga"
+
+  # Ireland
+  - official: "Vodafone Ireland"
+    aliases:
+      - "vodafone IE"
+      - "vodafone ir"
+    cities:
+      - "Dublin"
+      - "Cork"
+      - "Galway"
+      - "Limerick"
+      - "Waterford"
+
+  - official: "Three Ireland"
+    aliases:
+      - "three"
+      - "3 ireland"
+      - "three IE"
+    cities:
+      - "Dublin"
+      - "Cork"
+      - "Galway"
+      - "Limerick"
+
+  # ===== Americas =====
+  # USA
+  - official: "Verizon Communications"
+    aliases:
+      - "verizon"
+      - "verizon wireless"
+      - "verizon wireless 5g"
+    cities:
+      - "New York"
+      - "Los Angeles"
+      - "Chicago"
+      - "Houston"
+      - "Phoenix"
+      - "Philadelphia"
+      - "San Antonio"
+      - "San Diego"
+      - "Dallas"
+      - "San Jose"
+      - "Austin"
+      - "Jacksonville"
+      - "Fort Worth"
+      - "Columbus"
+      - "Charlotte"
+      - "Detroit"
+
+  - official: "AT&T Inc."
+    aliases:
+      - "at&t"
+      - "att"
+      - "at and t"
+      - "at&t wireless"
+    cities:
+      - "Dallas"
+      - "Los Angeles"
+      - "New York"
+      - "Chicago"
+      - "Houston"
+      - "Phoenix"
+      - "San Antonio"
+      - "San Diego"
+      - "Philadelphia"
+      - "San Jose"
+      - "Austin"
+      - "Jacksonville"
+      - "Fort Worth"
+      - "Columbus"
+      - "Charlotte"
+      - "Detroit"
+
+  - official: "T-Mobile US"
+    aliases:
+      - "t-mobile"
+      - "tmobile"
+      - "t-mobile usa"
+      - "sprint"
+      - "sprint nextel"
+    cities:
+      - "New York"
+      - "Los Angeles"
+      - "Chicago"
+      - "Houston"
+      - "Phoenix"
+      - "Philadelphia"
+      - "San Antonio"
+      - "San Diego"
+      - "Dallas"
+      - "San Jose"
+      - "Austin"
+      - "Seattle"
+      - "Denver"
+      - "Detroit"
+
+  - official: "US Cellular"
+    aliases:
+      - "us cellular"
+      - "us cellular corp"
+    cities:
+      - "Chicago"
+      - "Milwaukee"
+      - "Kansas City"
+      - "Minneapolis"
+      - "Denver"
+
+  - official: "Dish Wireless"
+    aliases:
+      - "dish"
+      - "dish wireless"
+      - "boost"
+      - "boost mobile"
+      - "boost infinite"
+    cities:
+      - "Denver"
+      - "Las Vegas"
+      - "Phoenix"
+      - "Los Angeles"
+
+  # Canada
+  - official: "Bell Canada"
+    aliases:
+      - "bell"
+      - "bell mobility"
+      - "bell ca"
+    cities:
+      - "Toronto"
+      - "Montreal"
+      - "Vancouver"
+      - "Calgary"
+      - "Edmonton"
+      - "Ottawa"
+
+  - official: "Rogers Communications"
+    aliases:
+      - "rogers"
+      - "rogers wireless"
+      - "rogers ca"
+    cities:
+      - "Toronto"
+      - "Montreal"
+      - "Vancouver"
+      - "Calgary"
+      - "Edmonton"
+      - "Ottawa"
+
+  - official: "Telus"
+    aliases:
+      - "telus"
+      - "telus mobility"
+      - "telus CA"
+    cities:
+      - "Toronto"
+      - "Montreal"
+      - "Vancouver"
+      - "Calgary"
+      - "Edmonton"
+      - "Ottawa"
+
+  - official: "Videotron"
+    aliases:
+      - "videotron"
+      - "vtm"
+    cities:
+      - "Montreal"
+      - "Quebec City"
+      - "Ottawa"
+      - "Sherbrooke"
+      - "Trois-Rivieres"
+
+  # Brazil
+  - official: "Vivo"
+    aliases:
+      - "vivo"
+      - "telefonica brasil"
+      - "telefonica vivo"
+    cities:
+      - "Sao Paulo"
+      - "Rio de Janeiro"
+      - "Brasilia"
+      - "Salvador"
+      - "Fortaleza"
+      - "Belo Horizonte"
+
+  - official: "Claro"
+    aliases:
+      - "claro"
+      - "claro brasil"
+      - "america movil"
+    cities:
+      - "Sao Paulo"
+      - "Rio de Janeiro"
+      - "Brasilia"
+      - "Salvador"
+      - "Fortaleza"
+      - "Belo Horizonte"
+
+  - official: "TIM Brasil"
+    aliases:
+      - "tim"
+      - "tim brasil"
+      - "telecom italia mobile"
+    cities:
+      - "Sao Paulo"
+      - "Rio de Janeiro"
+      - "Brasilia"
+      - "Salvador"
+      - "Fortaleza"
+      - "Belo Horizonte"
+
+  - official: "Oi"
+    aliases:
+      - "oi"
+      - "oi brasil"
+      - "oi movel"
+    cities:
+      - "Rio de Janeiro"
+      - "Sao Paulo"
+      - "Brasilia"
+      - "Salvador"
+      - "Fortaleza"
+
+  # Mexico
+  - official: "Telcel"
+    aliases:
+      - "telcel"
+      - "america movil"
+      - "telcel mx"
+    cities:
+      - "Mexico City"
+      - "Guadalajara"
+      - "Monterrey"
+      - "Puebla"
+      - "Tijuana"
+      - "Leon"
+
+  - official: "AT&T Mexico"
+    aliases:
+      - "at&t mexico"
+      - "att mx"
+    cities:
+      - "Mexico City"
+      - "Guadalajara"
+      - "Monterrey"
+      - "Puebla"
+      - "Tijuana"
+
+  - official: "Movistar Mexico"
+    aliases:
+      - "movistar mx"
+      - "telefonica mx"
+    cities:
+      - "Mexico City"
+      - "Guadalajara"
+      - "Monterrey"
+      - "Puebla"
+      - "Tijuana"
+
+  # Argentina
+  - official: "Movistar Argentina"
+    aliases:
+      - "movistar"
+      - "telefonica argentina"
+    cities:
+      - "Buenos Aires"
+      - "Cordoba"
+      - "Rosario"
+      - "Mendoza"
+      - "La Plata"
+
+  - official: "Claro Argentina"
+    aliases:
+      - "claro ar"
+      - "claro argentina"
+    cities:
+      - "Buenos Aires"
+      - "Cordoba"
+      - "Rosario"
+      - "Mendoza"
+
+  - official: "Personal"
+    aliases:
+      - "personal"
+      - "personal Argentina"
+      - "telecom argentina"
+    cities:
+      - "Buenos Aires"
+      - "Cordoba"
+      - "Rosario"
+      - "Mendoza"
+
+  # Chile
+  - official: "Entel Chile"
+    aliases:
+      - "entel"
+      - "entel chile"
+    cities:
+      - "Santiago"
+      - "Valparaiso"
+      - "Concepcion"
+      - "La Serena"
+
+  - official: "Movistar Chile"
+    aliases:
+      - "movistar cl"
+      - "telefonica chile"
+    cities:
+      - "Santiago"
+      - "Valparaiso"
+      - "Concepcion"
+      - "La Serena"
+
+  - official: "Claro Chile"
+    aliases:
+      - "claro cl"
+      - "claro chile"
+    cities:
+      - "Santiago"
+      - "Valparaiso"
+      - "Concepcion"
+
+  # Colombia
+  - official: "Claro Colombia"
+    aliases:
+      - "claro co"
+      - "claro colombia"
+      - " america movil"
+    cities:
+      - "Bogota"
+      - "Medellin"
+      - "Cali"
+      - "Barranquilla"
+      - "Cartagena"
+
+  - official: "Movistar Colombia"
+    aliases:
+      - "movistar co"
+      - "telefonica colombia"
+    cities:
+      - "Bogota"
+      - "Medellin"
+      - "Cali"
+      - "Barranquilla"
+
+  - official: "Tigo"
+    aliases:
+      - "tigo"
+      - "tigo col"
+      - "millicom"
+    cities:
+      - "Bogota"
+      - "Medellin"
+      - "Cali"
+      - "Barranquilla"
+
+  # Peru
+  - official: "Movistar Peru"
+    aliases:
+      - "movistar pe"
+      - "telefonica peru"
+    cities:
+      - "Lima"
+      - "Arequipa"
+      - "Trujillo"
+      - "Cusco"
+
+  - official: "Claro Peru"
+    aliases:
+      - "claro pe"
+      - "claro peru"
+    cities:
+      - "Lima"
+      - "Arequipa"
+      - "Trujillo"
+
+  - official: "Entel Peru"
+    aliases:
+      - "entel pe"
+      - "entel peru"
+    cities:
+      - "Lima"
+      - "Arequipa"
+      - "Trujillo"
+
+  # ===== Asia Pacific =====
+  # Japan
+  - official: "NTT Docomo"
+    aliases:
+      - "docomo"
+      - "ntt docomo"
+      - "docomobile"
+    cities:
+      - "Tokyo"
+      - "Yokohama"
+      - "Osaka"
+      - "Nagoya"
+      - "Sapporo"
+      - "Fukuoka"
+      - "Kobe"
+      - "Kyoto"
+
+  - official: "Softbank"
+    aliases:
+      - "softbank"
+      - "softbank mobile"
+      - "sb"
+      - "softbank corp"
+    cities:
+      - "Tokyo"
+      - "Yokohama"
+      - "Osaka"
+      - "Nagoya"
+      - "Sapporo"
+      - "Fukuoka"
+
+  - official: "KDDI"
+    aliases:
+      - "kddi"
+      - "au"
+      - "kddi au"
+      - "au by kddi"
+    cities:
+      - "Tokyo"
+      - "Yokohama"
+      - "Osaka"
+      - "Nagoya"
+      - "Sapporo"
+      - "Fukuoka"
+
+  - official: "Rakuten Mobile"
+    aliases:
+      - "rakuten"
+      - "rakuten mobile"
+      - "乐天"
+    cities:
+      - "Tokyo"
+      - "Yokohama"
+      - "Osaka"
+      - "Nagoya"
+
+  # South Korea
+  - official: "SK Telecom"
+    aliases:
+      - "sk telecom"
+      - "sk"
+      - "skt"
+      - "SKT"
+      - "sk telecom korea"
+    cities:
+      - "Seoul"
+      - "Busan"
+      - "Incheon"
+      - "Daegu"
+      - "Daejeon"
+      - "Gwangju"
+      - "Suwon"
+      - "Ulsan"
+
+  - official: "KT Corporation"
+    aliases:
+      - "kt"
+      - "kt corp"
+      - "korea telecom"
+      - "KT"
+      - "olleh"
+      - "kt corp korea"
+    cities:
+      - "Seoul"
+      - "Busan"
+      - "Incheon"
+      - "Daegu"
+      - "Daejeon"
+      - "Gwangju"
+      - "Suwon"
+      - "Ulsan"
+
+  - official: "LG Uplus"
+    aliases:
+      - "lg uplus"
+      - "lguplus"
+      - "lg u"
+      - "LG"
+      - "lg uplus corp"
+    cities:
+      - "Seoul"
+      - "Busan"
+      - "Incheon"
+      - "Daegu"
+      - "Daejeon"
+      - "Gwangju"
+      - "Suwon"
+      - "Ulsan"
+
+  # China
+  - official: "China Mobile"
+    aliases:
+      - "中国移动"
+      - "移动"
+      - "china mobile"
+      - "cmcc"
+    cities:
+      - "Beijing"
+      - "Shanghai"
+      - "Guangzhou"
+      - "Shenzhen"
+      - "Hangzhou"
+      - "Chengdu"
+      - "Wuhan"
+      - "Xian"
+
+  - official: "China Unicom"
+    aliases:
+      - "中国联通"
+      - "联通"
+      - "china unicom"
+      - "cucc"
+    cities:
+      - "Beijing"
+      - "Shanghai"
+      - "Guangzhou"
+      - "Shenzhen"
+      - "Hangzhou"
+      - "Chengdu"
+      - "Wuhan"
+      - "Xian"
+
+  - official: "China Telecom"
+    aliases:
+      - "中国电信"
+      - "电信"
+      - "china telecom"
+      - "ctcc"
+    cities:
+      - "Beijing"
+      - "Shanghai"
+      - "Guangzhou"
+      - "Shenzhen"
+      - "Hangzhou"
+      - "Chengdu"
+      - "Wuhan"
+      - "Xian"
+
+  # India
+  - official: "Reliance Jio"
+    aliases:
+      - "jio"
+      - "reliance jio"
+      - "jio"
+      - "relianc jio"
+    cities:
+      - "Mumbai"
+      - "Delhi"
+      - "Bangalore"
+      - "Hyderabad"
+      - "Chennai"
+      - "Kolkata"
+      - "Ahmedabad"
+      - "Pune"
+      - "Jaipur"
+      - "Lucknow"
+
+  - official: "Bharti Airtel"
+    aliases:
+      - "airtel"
+      - "airtel india"
+      - "bharti airtel"
+      - "airtel.in"
+    cities:
+      - "Mumbai"
+      - "Delhi"
+      - "Bangalore"
+      - "Hyderabad"
+      - "Chennai"
+      - "Kolkata"
+      - "Ahmedabad"
+      - "Pune"
+
+  - official: "Vodafone Idea"
+    aliases:
+      - "vodafone idea"
+      - "vi"
+      - "vodafone in"
+      - "idea"
+      - "idea cellular"
+    cities:
+      - "Mumbai"
+      - "Delhi"
+      - "Bangalore"
+      - "Hyderabad"
+      - "Chennai"
+      - "Kolkata"
+
+  - official: "BSNL"
+    aliases:
+      - "bsnl"
+      - "bsnl india"
+      - " BSNL"
+    cities:
+      - "Mumbai"
+      - "Delhi"
+      - "Bangalore"
+      - "Hyderabad"
+      - "Chennai"
+
+  # Singapore
+  - official: "Singtel"
+    aliases:
+      - "singtel"
+      - "singapore telecom"
+      - "singtel sg"
+    cities:
+      - "Singapore"
+      - "Jurong"
+      - "Tampines"
+      - "Woodlands"
+
+  - official: "Starhub"
+    aliases:
+      - "starhub"
+      - "star hub"
+      - "starhub sg"
+    cities:
+      - "Singapore"
+      - "Jurong"
+      - "Tampines"
+      - "Woodlands"
+
+  - official: "M1"
+    aliases:
+      - "m1"
+      - "m1 singapore"
+      - "m1 sg"
+    cities:
+      - "Singapore"
+      - "Jurong"
+      - "Tampines"
+      - "Woodlands"
+
+  # Malaysia
+  - official: "Maxis"
+    aliases:
+      - "maxis"
+      - "maxis malaysia"
+      - "maxis my"
+    cities:
+      - "Kuala Lumpur"
+      - "Petaling Jaya"
+      - "Johor Bahru"
+      - "Penang"
+
+  - official: "Celcom"
+    aliases:
+      - "celcom"
+      - "celcom malaysia"
+      - "celcom my"
+    cities:
+      - "Kuala Lumpur"
+      - "Petaling Jaya"
+      - "Johor Bahru"
+      - "Penang"
+
+  - official: "Digi.com"
+    aliases:
+      - "digi"
+      - "digi malaysia"
+      - "digi my"
+    cities:
+      - "Kuala Lumpur"
+      - "Petaling Jaya"
+      - "Johor Bahru"
+      - "Penang"
+
+  - official: "U Mobile"
+    aliases:
+      - "u mobile"
+      - "umobile"
+    cities:
+      - "Kuala Lumpur"
+      - "Petaling Jaya"
+      - "Johor Bahru"
+      - "Penang"
+
+  # Indonesia
+  - official: "Telkomsel"
+    aliases:
+      - "telkomsel"
+      - "telkomsel indonesia"
+      - "telkomsel my"
+    cities:
+      - "Jakarta"
+      - "Surabaya"
+      - "Bandung"
+      - "Medan"
+      - "Makassar"
+
+  - official: "Indosat Ooredoo"
+    aliases:
+      - "indosat"
+      - "indosat ooredoo"
+      - "indosat io"
+    cities:
+      - "Jakarta"
+      - "Surabaya"
+      - "Bandung"
+      - "Medan"
+      - "Makassar"
+
+  - official: "XL Axiata"
+    aliases:
+      - "xl"
+      - "xl axiata"
+      - "xl my"
+    cities:
+      - "Jakarta"
+      - "Surabaya"
+      - "Bandung"
+      - "Medan"
+      - "Makassar"
+
+  - official: "Smartfren"
+    aliases:
+      - "smartfren"
+      - "smart fren"
+    cities:
+      - "Jakarta"
+      - "Surabaya"
+      - "Bandung"
+      - "Medan"
+
+  # Thailand
+  - official: "Advanced Info Service"
+    aliases:
+      - "ais"
+      - "ais thailand"
+      - "advanced info"
+    cities:
+      - "Bangkok"
+      - "Chiang Mai"
+      - "Pattaya"
+      - "Phuket"
+      - "Hat Yai"
+
+  - official: "True Corporation"
+    aliases:
+      - "true"
+      - "true corp"
+      - "true corporation"
+      - "true move"
+    cities:
+      - "Bangkok"
+      - "Chiang Mai"
+      - "Pattaya"
+      - "Phuket"
+      - "Hat Yai"
+
+  - official: "DTAC"
+    aliases:
+      - "dtac"
+      - "dtac thailand"
+      - "dont cha"
+    cities:
+      - "Bangkok"
+      - "Chiang Mai"
+      - "Pattaya"
+      - "Phuket"
+      - "Hat Yai"
+
+  # Philippines
+  - official: "Globe Telecom"
+    aliases:
+      - "globe"
+      - "globe telecom"
+      - "globe ph"
+    cities:
+      - "Manila"
+      - "Quezon City"
+      - "Cebu City"
+      - "Davao City"
+      - "Caloocan"
+
+  - official: "Smart Communications"
+    aliases:
+      - "smart"
+      - "smart communications"
+      - "smart ph"
+      - "smart sun"
+    cities:
+      - "Manila"
+      - "Quezon City"
+      - "Cebu City"
+      - "Davao City"
+      - "Caloocan"
+
+  - official: "PLDT"
+    aliases:
+      - "pldt"
+      - "pldt inc"
+    cities:
+      - "Manila"
+      - "Quezon City"
+      - "Cebu City"
+      - "Davao City"
+
+  # Vietnam
+  - official: "Viettel Mobile"
+    aliases:
+      - "viettel"
+      - "viettel mobile"
+      - "viettel vn"
+      - "mobifone"
+    cities:
+      - "Hanoi"
+      - "Ho Chi Minh City"
+      - "Da Nang"
+      - "Hai Phong"
+      - "Can Tho"
+
+  - official: "Vinaphone"
+    aliases:
+      - "vinaphone"
+      - "vina phone"
+      - "vnfone"
+    cities:
+      - "Hanoi"
+      - "Ho Chi Minh City"
+      - "Da Nang"
+      - "Hai Phong"
+
+  - official: "Mobifone"
+    aliases:
+      - "mobifone"
+      - "mobi"
+      - "mobifone vn"
+    cities:
+      - "Hanoi"
+      - "Ho Chi Minh City"
+      - "Da Nang"
+      - "Hai Phong"
+
+  # Australia
+  - official: "Telstra"
+    aliases:
+      - "telstra"
+      - "telstra australia"
+      - "telstra au"
+    cities:
+      - "Sydney"
+      - "Melbourne"
+      - "Brisbane"
+      - "Perth"
+      - "Adelaide"
+      - "Gold Coast"
+      - "Canberra"
+      - "Newcastle"
+
+  - official: "Optus"
+    aliases:
+      - "optus"
+      - "optus australia"
+      - "optus au"
+      - "singtel optus"
+    cities:
+      - "Sydney"
+      - "Melbourne"
+      - "Brisbane"
+      - "Perth"
+      - "Adelaide"
+      - "Gold Coast"
+      - "Canberra"
+
+  - official: "Vodafone Australia"
+    aliases:
+      - "vodafone au"
+      - "vodafone australia"
+      - "vodafone ANZ"
+    cities:
+      - "Sydney"
+      - "Melbourne"
+      - "Brisbane"
+      - "Perth"
+      - "Adelaide"
+      - "Gold Coast"
+
+  - official: "TPG Telecom"
+    aliases:
+      - "tpg"
+      - "tpg telecom"
+      - "tpg au"
+    cities:
+      - "Sydney"
+      - "Melbourne"
+      - "Brisbane"
+      - "Perth"
+      - "Adelaide"
+
+  # New Zealand
+  - official: "Spark New Zealand"
+    aliases:
+      - "spark"
+      - "spark nz"
+      - "telecom nz"
+      - "spark new zealand"
+    cities:
+      - "Auckland"
+      - "Wellington"
+      - "Christchurch"
+      - "Hamilton"
+      - "Dunedin"
+
+  - official: "One NZ"
+    aliases:
+      - "one nz"
+      - "one nz telecom"
+      - "2degrees"
+    cities:
+      - "Auckland"
+      - "Wellington"
+      - "Christchurch"
+      - "Hamilton"
+      - "Dunedin"
+
+  - official: "Vodafone New Zealand"
+    aliases:
+      - "vodafone nz"
+      - "vodafone new zealand"
+    cities:
+      - "Auckland"
+      - "Wellington"
+      - "Christchurch"
+      - "Hamilton"
+      - "Dunedin"
+
+  # ===== Middle East =====
+  # Saudi Arabia
+  - official: "STC"
+    aliases:
+      - "stc"
+      - "saudi telecom"
+      - "saudi telecom company"
+      - "stc.sa"
+    cities:
+      - "Riyadh"
+      - "Jeddah"
+      - "Mecca"
+      - "Medina"
+      - "Dammam"
+
+  - official: "Mobily"
+    aliases:
+      - "mobily"
+      - "mobily sa"
+      - "etihad etisalat"
+    cities:
+      - "Riyadh"
+      - "Jeddah"
+      - "Mecca"
+      - "Medina"
+      - "Dammam"
+
+  - official: "Zain Saudi Arabia"
+    aliases:
+      - "zain"
+      - "zain sa"
+      - "zain ksa"
+    cities:
+      - "Riyadh"
+      - "Jeddah"
+      - "Mecca"
+      - "Medina"
+      - "Dammam"
+
+  # UAE
+  - official: "Etisalat"
+    aliases:
+      - "etisalat"
+      - "etisalat uae"
+      - "etisalat by e&"
+    cities:
+      - "Dubai"
+      - "Abu Dhabi"
+      - "Sharjah"
+      - "Al Ain"
+
+  - official: "du"
+    aliases:
+      - "du"
+      - "du UAE"
+      - "emirates integrated"
+    cities:
+      - "Dubai"
+      - "Abu Dhabi"
+      - "Sharjah"
+      - "Al Ain"
+
+  # Qatar
+  - official: "Ooredoo"
+    aliases:
+      - "ooredoo"
+      - "ooredoo qatar"
+      - "qatar telecom"
+    cities:
+      - "Doha"
+      - "Al Rayyan"
+      - "Al Wakra"
+
+  - official: "Vodafone Qatar"
+    aliases:
+      - "vodafone qatar"
+      - "vodafone qa"
+    cities:
+      - "Doha"
+      - "Al Rayyan"
+      - "Al Wakra"
+
+  # Kuwait
+  - official: "Zain Kuwait"
+    aliases:
+      - "zain"
+      - "zain kw"
+      - "zain kwait"
+    cities:
+      - "Kuwait City"
+      - "Al Ahmadi"
+      - "Hawalli"
+      - "Salmiya"
+
+  - official: "Ooredoo Kuwait"
+    aliases:
+      - "ooredoo kw"
+      - "kwt"
+    cities:
+      - "Kuwait City"
+      - "Al Ahmadi"
+      - "Hawalli"
+      - "Salmiya"
+
+  - official: "STC Kuwait"
+    aliases:
+      - "stc kw"
+      - "saudi telecom kuwait"
+    cities:
+      - "Kuwait City"
+      - "Al Ahmadi"
+      - "Hawalli"
+      - "Salmiya"
+
+  # Bahrain
+  - official: "Batelco"
+    aliases:
+      - "batelco"
+      - "batelco bh"
+    cities:
+      - "Manama"
+      - "Riffa"
+      - "Muharraq"
+      - "Hamad Town"
+
+  - official: "Zain Bahrain"
+    aliases:
+      - "zain bh"
+      - "zain bahrain"
+    cities:
+      - "Manama"
+      - "Riffa"
+      - "Muharraq"
+      - "Hamad Town"
+
+  - official: "STC Bahrain"
+    aliases:
+      - "stc bh"
+      - "viva"
+      - "viva bahrain"
+    cities:
+      - "Manama"
+      - "Riffa"
+      - "Muharraq"
+      - "Hamad Town"
+
+  # ===== Africa =====
+  # South Africa
+  - official: "Vodacom"
+    aliases:
+      - "vodacom"
+      - "vodacom south africa"
+      - "vodacom za"
+    cities:
+      - "Johannesburg"
+      - "Cape Town"
+      - "Durban"
+      - "Pretoria"
+      - "Port Elizabeth"
+
+  - official: "MTN South Africa"
+    aliases:
+      - "mtn"
+      - "mtn sa"
+      - "mtn south africa"
+    cities:
+      - "Johannesburg"
+      - "Cape Town"
+      - "Durban"
+      - "Pretoria"
+      - "Port Elizabeth"
+
+  - official: "Telkom South Africa"
+    aliases:
+      - "telkom"
+      - "telkom sa"
+      - "telkom south africa"
+    cities:
+      - "Johannesburg"
+      - "Cape Town"
+      - "Durban"
+      - "Pretoria"
+
+  # Nigeria
+  - official: "MTN Nigeria"
+    aliases:
+      - "mtn nigeria"
+      - "mtn ng"
+      - "mtn Nigeria communications"
+    cities:
+      - "Lagos"
+      - "Abuja"
+      - "Port Harcourt"
+      - "Kano"
+      - "Ibadan"
+
+  - official: "Airtel Nigeria"
+    aliases:
+      - "airtel nigeria"
+      - "airtel ng"
+      - "airtel Nigeria"
+    cities:
+      - "Lagos"
+      - "Abuja"
+      - "Port Harcourt"
+      - "Kano"
+      - "Ibadan"
+
+  - official: "Glo Mobile"
+    aliases:
+      - "glo"
+      - "glo mobile"
+      - "glo ng"
+      - "globacom"
+    cities:
+      - "Lagos"
+      - "Abuja"
+      - "Port Harcourt"
+      - "Kano"
+      - "Ibadan"
+
+  - official: "9mobile"
+    aliases:
+      - "9mobile"
+      - "etisalat nigeria"
+      - "9mobile ng"
+    cities:
+      - "Lagos"
+      - "Abuja"
+      - "Port Harcourt"
+      - "Kano"
+
+  # Kenya
+  - official: "Safaricom"
+    aliases:
+      - "safari"
+      - "safricom"
+      - "safari kenya"
+      - "safricom ke"
+    cities:
+      - "Nairobi"
+      - "Mombasa"
+      - "Kisumu"
+      - "Nakuru"
+      - "Eldoret"
+
+  - official: "Airtel Kenya"
+    aliases:
+      - "airtel kenya"
+      - "airtel ke"
+    cities:
+      - "Nairobi"
+      - "Mombasa"
+      - "Kisumu"
+      - "Nakuru"
+
+  - official: "Telkom Kenya"
+    aliases:
+      - "telkom kenya"
+      - "telkom ke"
+      - "telkom mobile"
+    cities:
+      - "Nairobi"
+      - "Mombasa"
+      - "Kisumu"
+      - "Nakuru"
+
+  # Egypt
+  - official: "Vodafone Egypt"
+    aliases:
+      - "vodafone egypt"
+      - "vodafone eg"
+    cities:
+      - "Cairo"
+      - "Alexandria"
+      - "Giza"
+      - "Shubra El Kheima"
+      - "Port Said"
+
+  - official: "Etisalat Egypt"
+    aliases:
+      - "etisalat egypt"
+      - "etisalat eg"
+    cities:
+      - "Cairo"
+      - "Alexandria"
+      - "Giza"
+      - "Shubra El Kheima"
+
+  - official: "Orange Egypt"
+    aliases:
+      - "orange egypt"
+      - "orange eg"
+      - "etisalat misr"
+    cities:
+      - "Cairo"
+      - "Alexandria"
+      - "Giza"
+      - "Shubra El Kheima"
+
+  - official: "WE"
+    aliases:
+      - "we"
+      - "te data"
+      - "te-data"
+    cities:
+      - "Cairo"
+      - "Alexandria"
+      - "Giza"
+      - "Shubra El Kheima"
+
+  # Morocco
+  - official: "Maroc Telecom"
+    aliases:
+      - "iam"
+      - "maroc telecom"
+      - "maroc telecom mobile"
+      - "mtp"
+    cities:
+      - "Casablanca"
+      - "Rabat"
+      - "Fez"
+      - "Marrakech"
+      - "Agadir"
+
+  - official: "Orange Morocco"
+    aliases:
+      - "orange morocco"
+      - "orange ma"
+    cities:
+      - "Casablanca"
+      - "Rabat"
+      - "Fez"
+      - "Marrakech"
+      - "Agadir"
+
+  - official: "Inwi"
+    aliases:
+      - "inwi"
+      - "inwi morocco"
+      - "inwi ma"
+    cities:
+      - "Casablanca"
+      - "Rabat"
+      - "Fez"
+      - "Marrakech"
+      - "Agadir"
+
+  # Tanzania
+  - official: "Vodacom Tanzania"
+    aliases:
+      - "vodacom tz"
+      - "vodacom tanzania"
+    cities:
+      - "Dar es Salaam"
+      - "Mwanza"
+      - "Arusha"
+      - "Dodoma"
+
+  - official: "Airtel Tanzania"
+    aliases:
+      - "airtel tanzania"
+      - "airtel tz"
+    cities:
+      - "Dar es Salaam"
+      - "Mwanza"
+      - "Arusha"
+      - "Dodoma"
+
+  - official: "Tigo Tanzania"
+    aliases:
+      - "tigo tz"
+      - "tigo tanzania"
+      - "millicom tanzania"
+    cities:
+      - "Dar es Salaam"
+      - "Mwanza"
+      - "Arusha"
+      - "Dodoma"
+
+  # Ghana
+  - official: "MTN Ghana"
+    aliases:
+      - "mtn ghana"
+      - "mtn gh"
+    cities:
+      - "Accra"
+      - "Kumasi"
+      - "Tamale"
+      - "Sekondi-Takoradi"
+
+  - official: "Vodafone Ghana"
+    aliases:
+      - "vodafone ghana"
+      - "vodafone gh"
+    cities:
+      - "Accra"
+      - "Kumasi"
+      - "Tamale"
+      - "Sekondi-Takoradi"
+
+  - official: "AirtelTigo Ghana"
+    aliases:
+      - "airtelig"
+      - "airtel ghana"
+      - "tigo ghana"
+      - "aireltigo"
+    cities:
+      - "Accra"
+      - "Kumasi"
+      - "Tamale"
+
+  # ===== Russia & CIS =====
+  - official: "MTS"
+    aliases:
+      - "mts"
+      - "mts russia"
+      - "mobile tele systems"
+    cities:
+      - "Moscow"
+      - "Saint Petersburg"
+      - "Novosibirsk"
+      - "Yekaterinburg"
+      - "Kazan"
+
+  - official: "MegaFon"
+    aliases:
+      - "megafon"
+      - "megafon russia"
+      - "mega fon"
+    cities:
+      - "Moscow"
+      - "Saint Petersburg"
+      - "Novosibirsk"
+      - "Yekaterinburg"
+      - "Kazan"
+
+  - official: "Beeline"
+    aliases:
+      - "beeline"
+      - "beeline russia"
+      - "veon"
+    cities:
+      - "Moscow"
+      - "Saint Petersburg"
+      - "Novosibirsk"
+      - "Yekaterinburg"
+      - "Kazan"
+
+  - official: "Tele2 Russia"
+    aliases:
+      - "tele2"
+      - "tele2 russia"
+      - "tele2 ru"
+    cities:
+      - "Moscow"
+      - "Saint Petersburg"
+      - "Novosibirsk"
+      - "Yekaterinburg"
+      - "Kazan"
+
+  - official: "Yota"
+    aliases:
+      - "yota"
+      - "yota russia"
+    cities:
+      - "Moscow"
+      - "Saint Petersburg"
+      - "Novosibirsk"
+      - "Yekaterinburg"
+
+  # Ukraine
+  - official: "Kyivstar"
+    aliases:
+      - "kyivstar"
+      - "kyiv star"
+      - "kyivstar ua"
+    cities:
+      - "Kyiv"
+      - "Kharkiv"
+      - "Odesa"
+      - "Dnipro"
+      - "Donetsk"
+
+  - official: "Vodafone Ukraine"
+    aliases:
+      - "vodafone ukraine"
+      - "vodafone ua"
+      - "mts ukraine"
+    cities:
+      - "Kyiv"
+      - "Kharkiv"
+      - "Odesa"
+      - "Dnipro"
+      - "Donetsk"
+
+  - official: "lifecell"
+    aliases:
+      - "lifecell"
+      - "life cell"
+      - "lifecell ua"
+    cities:
+      - "Kyiv"
+      - "Kharkiv"
+      - "Odesa"
+      - "Dnipro"
+
+  # Kazakhstan
+  - official: "Kcell"
+    aliases:
+      - "kcell"
+      - "k-cell"
+      - "kcell kz"
+    cities:
+      - "Almaty"
+      - "Astana"
+      - "Shymkent"
+      - "Karaganda"
+
+  - official: "Beeline Kazakhstan"
+    aliases:
+      - "beeline kz"
+      - "beeline kazakhstan"
+    cities:
+      - "Almaty"
+      - "Astana"
+      - "Shymkent"
+      - "Karaganda"
+
+  - official: "Tele2 Kazakhstan"
+    aliases:
+      - "tele2 kz"
+      - "tele2 kazakhstan"
+    cities:
+      - "Almaty"
+      - "Astana"
+      - "Shymkent"

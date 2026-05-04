@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 public class IndicatorSummary {
     private Long id;
     private Long operatorId;
+    private String operatorName;
     private String dataMonth;
 
     // LTE 频段指标
@@ -119,6 +120,9 @@ public class IndicatorSummary {
     private BigDecimal durationCampratio;
     private BigDecimal terminalPenetration;
     private BigDecimal fallbackRatio;
+
+    private String country;
+    private String region;
 
     private LocalDateTime createdTime;
     private LocalDateTime updatedTime;

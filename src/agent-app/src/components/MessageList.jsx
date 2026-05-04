@@ -180,16 +180,6 @@ function MessageList({
           </div>
         )}
 
-        {/* Validation Status Indicator */}
-        {validationStatus && !isStreaming && (
-          <div className={`validation-status ${validationStatus.valid ? 'valid' : 'invalid'}`}>
-            <span className="validation-icon">
-              {validationStatus.valid ? '✓' : '⚠'}
-            </span>
-            <span className="validation-message">{validationStatus.message}</span>
-          </div>
-        )}
-
         {/* Follow-up Questions */}
         {followupQuestions && followupQuestions.length > 0 && !isStreaming && (
           <div className="message-item assistant">

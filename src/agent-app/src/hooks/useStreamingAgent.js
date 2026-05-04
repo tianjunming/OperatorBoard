@@ -85,6 +85,65 @@ export function useStreamingAgent({ onStreamStart, onStreamEnd, onConfirmation }
                   setStreamingChart(parsed.chart);
                 } else if (parsed.type === 'followup' && parsed.questions) {
                   setFollowupQuestions(parsed.questions);
+                } else if (parsed.type === 'structured' && parsed.data) {
+                  // Handle structured response with title, summary, table, chart
+                  const structured = parsed.data;
+                  const title = structured.title || '数据统计';
+
+                  // Build thinking chain
+                  fullContent += `<!-- thinking_start -->
+1. 分析用户查询：${title}
+2. 意图检测：站点数据查询
+3. 识别运营商：${structured.summary?.运营商 || '全部'}
+4. 数据类型：站点统计数据
+5. 调用NL2SQL服务获取数据
+6. 格式化返回结果
+<!-- thinking_end -->
+
+`;
+
+                  // Build summary section
+                  if (structured.summary && Object.keys(structured.summary).length > 0) {
+                    fullContent += ':::metrics\n';
+                    for (const [key, value] of Object.entries(structured.summary)) {
+                      fullContent += `- ${key}: ${value}\n`;
+                    }
+                    fullContent += ':::\n\n';
+                  }
+
+                  // Build toggle block with table and chart data
+                  if (structured.table_data && structured.table_data.length > 0) {
+                    const cols = structured.table_columns || Object.keys(structured.table_data[0]);
+                    const tableRows = structured.table_data.map(row =>
+                      cols.map(c => row[c] ?? '').join('|')
+                    ).join(';');
+
+                    // Build chart data for toggle block
+                    let chartDataStr = '';
+                    if (structured.chart_data && structured.chart_data.length > 0) {
+                      const chartKeys = structured.chart_keys || [];
+                      // First key is the label column (运营商), rest are numeric values
+                      const labelKey = chartKeys[0] || '运营商';
+                      const numericKeys = chartKeys.slice(1);
+                      const allKeys = [labelKey, ...numericKeys];
+
+                      chartDataStr = `\n[chart_keys::${allKeys.join(',')}]`;
+                      chartDataStr += `\n[chart_data::${structured.chart_data.map(d =>
+                        allKeys.map(k => d[k] ?? (d[k.replace(/.*站点|.*小区/, '')] || 0)).join(',')
+                      ).join(';')}]`;
+                    }
+
+                    fullContent += `[toggle]
+[title::${title}]
+[subtitle::数据月份: ${structured.summary?.数据月份 || '最新'}]
+[table_columns::${cols.join(',')}]
+[table_data::${tableRows}]${chartDataStr}
+[/toggle]
+
+`;
+                  }
+
+                  setStreamingContent(fullContent);
                 } else if (parsed.content) {
                   fullContent += parsed.content;
                   setStreamingContent(fullContent);

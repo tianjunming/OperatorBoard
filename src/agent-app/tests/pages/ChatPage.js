@@ -17,7 +17,8 @@ export class ChatPage {
       chatInput: page.locator('textarea[data-testid="chat-input"]'),
       sendButton: page.locator('button[data-testid="send-button"]'),
       messageList: page.locator('.message-list, .message-list-inner'),
-      lastAssistantMessage: page.locator('.message-item.assistant:last-child .message-bubble, .message-item.assistant:last-child .message-text'),
+      // Use first-child for data messages since followup questions are rendered as last-child
+      lastAssistantMessage: page.locator('.message-item.assistant:first-child .message-bubble'),
     };
   }
 

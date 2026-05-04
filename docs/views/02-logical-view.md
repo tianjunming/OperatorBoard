@@ -457,20 +457,41 @@ public class IndicatorQueryService {
 
 ## 7. 数据库表结构
 
-### 7.1 operator_info (运营商信息表)
+### 7.1 operator_info (运营商维度表)
 
 | 字段 | 类型 | 描述 |
 |------|------|------|
 | id | BIGINT PK | 主键 |
 | operator_name | VARCHAR(100) | 运营商名称 |
-| country | VARCHAR(50) | 国家名称 |
+| operator_code | VARCHAR(50) | 运营商代码 |
+| country | VARCHAR(50) | 国家 |
 | region | VARCHAR(100) | 地区 |
 | network_type | VARCHAR(50) | 网络类型 (4G/5G) |
 | data_month | VARCHAR(7) | 数据月份 (YYYY-MM) |
 | created_time | DATETIME | 创建时间 |
 | updated_time | DATETIME | 更新时间 |
 
-### 7.2 site_info (站点信息表)
+**唯一索引**: `uk_operator_name (operator_name)`
+
+### 7.2 band_info (频段维度表)
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| id | BIGINT PK | 主键 |
+| band_code | VARCHAR(20) | 频段代码 (如 LTE700M_FDD) |
+| band_name | VARCHAR(50) | 频段名称 (如 LTE 700M FDD) |
+| technology | VARCHAR(10) | 技术制式 LTE/NR |
+| frequency_mhz | INT | 中心频率 MHz |
+| duplex_mode | VARCHAR(10) | 双工模式 FDD/TDD |
+| band_group | VARCHAR(20) | 频段组 700M/800M等 |
+
+**唯一索引**: `uk_band_code (band_code)`
+
+**频段列表** (21个频段):
+- LTE: LTE700M_FDD, LTE800M_FDD, LTE900M_FDD, LTE1400M_FDD, LTE1800M_FDD, LTE2100M_FDD, LTE2300M_FDD, LTE2300M_TDD, LTE2600M_FDD, LTE2600M_TDD
+- NR: NR700M_FDD, NR800M_FDD, NR900M_FDD, NR1400M_FDD, NR1800M_FDD, NR2100M_FDD, NR2300M_FDD, NR2300M_TDD, NR2600M_FDD, NR2600M_TDD, NR3500M_TDD, NR4900M_TDD
+
+### 7.3 site_info (站点信息表 - 规范化事实表)
 
 规范化事实表，每行代表一个运营商在特定频段和月份的数据。
 
@@ -487,23 +508,7 @@ public class IndicatorQueryService {
 
 **唯一索引**: `uk_operator_band_month (operator_id, band_id, data_month)`
 
-### 7.3 band_info (频段维度表)
-
-| 字段 | 类型 | 描述 |
-|------|------|------|
-| id | BIGINT PK | 主键 |
-| band_code | VARCHAR(20) | 频段代码 (如 LTE700M_FDD) |
-| band_name | VARCHAR(50) | 频段名称 (如 LTE 700M FDD) |
-| technology | VARCHAR(10) | 技术制式 LTE/NR |
-| frequency_mhz | INT | 中心频率 MHz |
-| duplex_mode | VARCHAR(10) | 双工模式 FDD/TDD |
-| band_group | VARCHAR(20) | 频段组 700M/800M等 |
-
-**频段列表** (21个频段):
-- LTE: LTE700M_FDD, LTE800M_FDD, LTE900M_FDD, LTE1400M_FDD, LTE1800M_FDD, LTE2100M_FDD, LTE2300M_FDD, LTE2300M_TDD, LTE2600M_FDD, LTE2600M_TDD
-- NR: NR700M_FDD, NR800M_FDD, NR900M_FDD, NR1400M_FDD, NR1800M_FDD, NR2100M_FDD, NR2300M_FDD, NR2300M_TDD, NR2600M_FDD, NR2600M_TDD, NR3500M_TDD, NR4900M_TDD
-
-### 7.4 indicator_info (指标信息表)
+### 7.4 indicator_info (指标信息表 - 规范化事实表)
 
 规范化事实表，每行代表一个运营商在特定频段和月份的网络指标。
 
@@ -512,7 +517,7 @@ public class IndicatorQueryService {
 | id | BIGINT PK | 主键 |
 | operator_id | BIGINT FK | 外键关联 operator_info.id |
 | band_id | BIGINT FK | 外键关联 band_info.id |
-| band_name | VARCHAR(50) | 频段名称 (如 LTE 700M FDD) |
+| band_name | VARCHAR(50) | 频段名称 |
 | data_month | VARCHAR(7) | 数据月份 (YYYY-MM) |
 | technology | VARCHAR(10) | 技术制式 LTE/NR |
 | dl_prb | DECIMAL(10,5) | 下行PRB利用率 (%) |
@@ -525,16 +530,27 @@ public class IndicatorQueryService {
 | online_users | DECIMAL(10,2) | 在线用户数 |
 | nr_users | DECIMAL(10,2) | NR用户数 |
 | terminal_penetration_ratio | DECIMAL(10,4) | 终端渗透率 (%) |
-| **lte_avg_dl_rate** | DECIMAL(10,2) | LTE平均下行速率 (Mbps) |
-| **lte_avg_ul_rate** | DECIMAL(10,2) | LTE平均上行速率 (Mbps) |
-| **lte_avg_dl_prb** | DECIMAL(10,5) | LTE平均下行PRB利用率 (%) |
-| **lte_avg_ul_prb** | DECIMAL(10,5) | LTE平均上行PRB利用率 (%) |
-| **nr_avg_dl_rate** | DECIMAL(10,2) | NR平均下行速率 (Mbps) |
-| **nr_avg_ul_rate** | DECIMAL(10,2) | NR平均上行速率 (Mbps) |
-| **nr_avg_dl_prb** | DECIMAL(10,5) | NR平均下行PRB利用率 (%) |
-| **nr_avg_ul_prb** | DECIMAL(10,5) | NR平均上行PRB利用率 (%) |
-| **traffic_ratio** | DECIMAL(10,4) | 流量分流比 (NR流量/总流量) |
-| **duration_campratio** | DECIMAL(10,4) | 时长驻留比 (NR用户/总用户) |
-| **fallback_ratio** | DECIMAL(10,4) | 回流比 (LTE用户/总用户) |
 
 **唯一索引**: `uk_operator_band_month (operator_id, band_id, data_month)`
+
+**注**: 汇总指标(分流比/驻留比/回流比等)通过 SQL 聚合计算，不存储在表中。
+
+### 7.5 operator_summary (站点聚合表 - 宽表设计)
+
+宽表设计，每行代表一个运营商在特定月份的所有频段站点汇总。
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| id | BIGINT PK | 主键 |
+| operator_id | BIGINT | 运营商ID |
+| operator_name | VARCHAR(100) | 冗余存储运营商名称 |
+| data_month | VARCHAR(7) | 数据月份 |
+| technology | VARCHAR(10) | LTE/NR |
+| nr_physical_site_num | INT | NR物理站数 |
+| nr_physical_cell_num | INT | NR物理小区数 |
+| lte_physical_site_num | INT | LTE物理站数 |
+| lte_physical_cell_num | INT | LTE物理小区数 |
+| total_site_num | INT | 总站数 |
+| total_cell_num | INT | 总小区数 |
+
+**唯一索引**: `uk_operator_month (operator_id, data_month)`

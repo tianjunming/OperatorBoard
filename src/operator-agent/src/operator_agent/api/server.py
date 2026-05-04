@@ -848,6 +848,7 @@ def format_indicator_data_with_chart(indicators: list, operators: list) -> Dict[
 [summary::avgDlRate={avg_dl_rate};avgUlRate={avg_ul_rate};avgPrbDl={avg_prb_dl};bandCount={total_count}]
 [table_columns::{",".join(table_columns)}]
 [table_data::{table_data_str}]
+[chart_column::月份]
 [chart_keys::{",".join(chart_keys_list)}]
 [chart_data::{chart_data_str}]
 [/toggle]"""
@@ -1019,7 +1020,8 @@ def _transform_indicator_to_long(indicators: list, metric: str = "dl_rate") -> l
 
 def _build_standard_response(title: str, summary: dict, table_data: list,
                              chart_type: str, chart_keys: list, chart_data: list,
-                             table_columns: list, thinking: str = "",
+                             table_columns: list, chart_column: str = None,
+                             thinking: str = "",
                              show_summary_in_content: bool = True,
                              show_raw_content: bool = False) -> Dict[str, Any]:
     """
@@ -1040,8 +1042,14 @@ def _build_standard_response(title: str, summary: dict, table_data: list,
         table_md = ""
 
     # Build chart data string for frontend
-    chart_data_str = ";".join([",".join(str(v) for v in row.values()) for row in chart_data]) if chart_data else ""
-    chart_keys_str = ",".join(chart_keys) if chart_keys else ""
+    # Use chart_keys order explicitly to ensure consistent mapping between keys and values
+    chart_data_str = ""
+    if chart_data:
+        chart_data_str = ";".join([
+            ",".join(str(row.get(k, 0) or 0) for k in [chart_column] + chart_keys)
+            for row in chart_data
+        ])
+    chart_keys_str = ",".join([chart_column] + chart_keys) if chart_keys else ""
 
     # Build summary string
     summary_parts = [f"**{k}**: {v:,}" if isinstance(v, (int, float)) else f"**{k}**: {v}"
@@ -1056,6 +1064,7 @@ def _build_standard_response(title: str, summary: dict, table_data: list,
 [table_columns::{",".join(table_columns) if table_columns else ""}]
 [table_data::{";".join(["|".join(str(v) for v in row.values()) for row in table_data]) if table_data else ""}]
 [chart_type::{chart_type}]
+[chart_column::{chart_column or "name"}]
 [chart_keys::{chart_keys_str}]
 [chart_data::{chart_data_str}]
 [/toggle]"""
@@ -1178,6 +1187,7 @@ def format_operator_site_count(site_cells: list, operators: list, operator_name:
         chart_keys=["LTE站点", "NR站点", "总站点"],
         chart_data=chart_data,
         table_columns=table_columns,
+        chart_column="运营商",
         thinking=thinking,
         show_summary_in_content=False,
         followup_questions=followup_questions,
@@ -1274,6 +1284,7 @@ def format_operator_cell_count(site_cells: list, operators: list, operator_name:
         chart_keys=["LTE小区", "NR小区", "总小区"],
         chart_data=chart_data,
         table_columns=table_columns,
+        chart_column="运营商",
         thinking=thinking,
         show_summary_in_content=False,
         followup_questions=followup_questions,
@@ -1337,8 +1348,10 @@ def _format_indicator_metric(indicators: list, operators: list, metric: str,
             op_id = ind.get("operatorId")
             op_info = operator_map.get(op_id, {})
             op_name = op_info.get("name", "")
+            ind_op_name = ind.get("operatorName", "")
             # Check if operator name matches (both directions for partial match)
-            if operator_name not in op_name and op_name not in operator_name:
+            # Also compare with the operatorName directly from indicator data to handle encoding issues
+            if operator_name not in op_name and op_name not in operator_name and operator_name not in ind_op_name and ind_op_name not in operator_name:
                 continue
         filtered.append(ind)
 
@@ -1409,6 +1422,7 @@ def _format_indicator_metric(indicators: list, operators: list, metric: str,
         chart_keys=["LTE", "NR", "平均"],
         chart_data=chart_data,
         table_columns=table_columns,
+        chart_column="运营商",
         thinking=thinking,
         followup_questions=followup_questions,
     )
@@ -1493,6 +1507,7 @@ def format_traffic_ratio(indicators: list, operators: list, operator_name: str =
         chart_keys=["分流比", "时长驻留比", "流量驻留比", "终端渗透率"],
         chart_data=chart_data,
         table_columns=table_columns,
+        chart_column="运营商",
         thinking=thinking,
         followup_questions=followup_questions,
     )
@@ -1592,6 +1607,7 @@ def format_all_operators(operators: list, followup_questions: list = None) -> Di
         chart_keys=["区域", "国家", "省份"],
         chart_data=hierarchical_tree,
         table_columns=table_columns,
+        chart_column="国家",
         thinking=thinking,
         followup_questions=followup_questions,
     )
@@ -1678,6 +1694,7 @@ def format_all_operators_sites(site_cells: list, operators: list, followup_quest
         chart_keys=["LTE站点", "NR站点", "总站点"],
         chart_data=chart_data,
         table_columns=table_columns,
+        chart_column="运营商",
         thinking=thinking,
         show_summary_in_content=False,
         followup_questions=followup_questions,
@@ -1758,6 +1775,7 @@ def format_all_operators_physical_sites(summaries: list, operators: list, follow
         chart_keys=["LTE站点", "NR站点", "总站点"],
         chart_data=chart_data,
         table_columns=table_columns,
+        chart_column="运营商",
         thinking=thinking,
         show_summary_in_content=False,
         followup_questions=followup_questions,
@@ -1869,6 +1887,7 @@ def _format_all_operators_rate(indicators: list, operators: list, metric: str, m
         chart_keys=["LTE", "NR", "平均"],
         chart_data=chart_data,
         table_columns=table_columns,
+        chart_column="运营商",
         thinking=thinking,
         followup_questions=followup_questions,
     )
@@ -1981,6 +2000,7 @@ def _format_all_operators_prb(indicators: list, operators: list, metric: str, me
         chart_keys=["LTE", "NR", "平均"],
         chart_data=chart_data,
         table_columns=table_columns,
+        chart_column="运营商",
         thinking=thinking,
         followup_questions=followup_questions,
     )
@@ -2032,6 +2052,14 @@ def format_site_history(site_cells: list, operators: list, operator_name: str = 
     table_columns = ["月份", "运营商", "制式", "频段", f"{data_type_name}数"]
     table_data = []
     chart_data = []
+    physical_sites_data = []
+
+    # First, get operator name
+    target_op_name = operator_name
+    if target_op_name and len(op_month_groups) > 0:
+        first_key = next(iter(op_month_groups.keys()))
+        op_info = operator_map.get(first_key[0], {"name": f"运营商{first_key[0]}"})
+        target_op_name = op_info["name"]
 
     for (op_id, month), records in sorted(op_month_groups.items(), key=lambda x: x[0][1], reverse=True):
         op_info = operator_map.get(op_id, {"name": f"运营商{op_id}"})
@@ -2057,6 +2085,25 @@ def format_site_history(site_cells: list, operators: list, operator_name: str = 
             "合计": lte_total + nr_total,
         })
 
+        # Physical sites data (from operator_summary if available)
+        # Look for physical site fields in the original data
+        raw_data = filtered.find(lambda x: x.get("operatorId") == op_id and x.get("dataMonth") == month) if callable(getattr(filtered, 'find', None)) else None
+        if raw_data:
+            phys_lte = raw_data.get("lte_physical_site_num") or raw_data.get("ltePhysicalSiteNum") or 0
+            phys_nr = raw_data.get("nr_physical_site_num") or raw_data.get("nrPhysicalSiteNum") or 0
+        else:
+            phys_lte = lte_total
+            phys_nr = nr_total
+
+        physical_sites_data.append({
+            "月份": month,
+            "运营商": op_name,
+            "LTE物理站": phys_lte,
+            "NR物理站": phys_nr,
+            "LTE逻辑站": lte_total - phys_lte,
+            "NR逻辑站": nr_total - phys_nr,
+        })
+
     summary = {
         "运营商数": len(set(k[0] for k in op_month_groups.keys())),
         "月份数": len(months),
@@ -2065,16 +2112,34 @@ def format_site_history(site_cells: list, operators: list, operator_name: str = 
 
     thinking = _build_thinking_chain("", f"site_history - {data_type_name}历史查询", operator_name, "历史数据")
 
-    return _build_standard_response(
+    # Build multi-chart response: bar chart for LTE/NR comparison, second bar for physical sites
+    return _build_multipart_response(
         title=f"{operator_name or '所有运营商'} {data_type_name}历史数据",
         summary=summary,
-        table_data=table_data,
-        chart_type="bar",
-        chart_keys=["LTE", "NR", "合计"],
-        chart_data=chart_data,
-        table_columns=table_columns,
         thinking=thinking,
         followup_questions=followup_questions,
+        parts=[
+            {
+                "type": "data",
+                "title": f"{data_type_name}统计 (LTE vs NR)",
+                "table_columns": table_columns,
+                "table_data": table_data,
+                "chart_type": "bar",
+                "chart_column": "月份",
+                "chart_keys": ["LTE", "NR", "合计"],
+                "chart_data": chart_data,
+            },
+            {
+                "type": "data",
+                "title": "物理站点 vs 逻辑站点",
+                "table_columns": ["月份", "运营商", "LTE物理站", "NR物理站", "LTE逻辑站", "NR逻辑站"],
+                "table_data": physical_sites_data,
+                "chart_type": "bar",
+                "chart_column": "月份",
+                "chart_keys": ["LTE物理站", "NR物理站", "LTE逻辑站", "NR逻辑站"],
+                "chart_data": physical_sites_data,
+            }
+        ]
     )
 
 
@@ -2184,6 +2249,7 @@ def format_indicator_history(indicators: list, operators: list, metric: str, ope
         chart_keys=["LTE", "NR", "LTE平均", "NR平均"],
         chart_data=chart_data,
         table_columns=table_columns,
+        chart_column="月份",
         thinking=thinking,
         followup_questions=followup_questions,
     )
@@ -2314,6 +2380,7 @@ def _format_indicator_history(indicators: list, operators: list, metric: str,
         chart_keys=["LTE", "NR", "LTE平均", "NR平均"],
         chart_data=chart_data,
         table_columns=table_columns,
+        chart_column="月份",
         thinking=thinking,
         followup_questions=followup_questions,
     )
@@ -2397,6 +2464,7 @@ def format_traffic_ratio_history(indicators: list, operators: list, operator_nam
         chart_keys=["分流比", "时长驻留比", "流量驻留比", "终端渗透率"],
         chart_data=chart_data,
         table_columns=table_columns,
+        chart_column="月份",
         thinking=thinking,
         followup_questions=followup_questions,
     )
@@ -2631,21 +2699,136 @@ def _generate_followup_questions(user_input: str, intent: str, operator_name: st
 
 def _build_standard_response(title: str, summary: dict, table_data: list, chart_type: str,
                              chart_keys: list, chart_data: list, table_columns: list,
+                             chart_column: str = None,
                              thinking: str = "", show_summary_in_content: bool = True,
                              followup_questions: list = None) -> Dict[str, Any]:
     """
     Build a standard structured response with optional follow-up questions.
     """
+    # Ensure chart_column is set and build consistent chart data strings
+    effective_chart_column = chart_column or "name"
+    effective_chart_keys = [effective_chart_column] + chart_keys
+    chart_data_str = ";".join([
+        ",".join(str(row.get(k, 0) or 0) for k in effective_chart_keys)
+        for row in chart_data
+    ]) if chart_data else ""
+    chart_keys_str = ",".join(effective_chart_keys) if effective_chart_keys else ""
+
+    # Build toggle block with standardized format
+    toggle_block = f"""[toggle]
+[type::data]
+[title::{title}]
+[summary::{";".join([f"{k}={v}" for k, v in summary.items()])}]
+[table_columns::{",".join(table_columns) if table_columns else ""}]
+[table_data::{";".join(["|".join(str(v) for v in row.values()) for row in table_data]) if table_data else ""}]
+[chart_type::{chart_type}]
+[chart_column::{effective_chart_column}]
+[chart_keys::{chart_keys_str}]
+[chart_data::{chart_data_str}]
+[/toggle]"""
+
+    # Build content from thinking chain and toggle block
+    content = (thinking + "\n\n" + toggle_block) if thinking else toggle_block
+
     result = {
+        "content": content,
         "title": title,
         "summary": summary,
         "table_data": table_data,
         "chart_type": chart_type,
+        "chart_column": chart_column,
         "chart_keys": chart_keys,
         "chart_data": chart_data,
         "table_columns": table_columns,
         "thinking": thinking,
         "show_summary_in_content": show_summary_in_content,
+    }
+
+    if followup_questions:
+        result["followup_questions"] = followup_questions
+
+    return result
+
+
+def _build_multipart_response(title: str, summary: dict, thinking: str = "",
+                               followup_questions: list = None, parts: list = None) -> Dict[str, Any]:
+    """
+    Build a multi-part structured response with multiple toggle blocks (charts/tables).
+    Each part represents a separate data visualization.
+
+    Args:
+        title: Main title
+        summary: Summary info
+        thinking: Thinking chain content
+        followup_questions: Optional follow-up questions
+        parts: List of part dicts, each containing:
+            - type: "data"
+            - title: Part title
+            - table_columns: List of column names
+            - table_data: List of row dicts
+            - chart_type: "bar", "line", "pie", etc.
+            - chart_keys: List of chart key names
+            - chart_data: List of chart data rows
+    """
+    if not parts:
+        parts = []
+
+    toggle_blocks = []
+    for part in parts:
+        part_title = part.get("title", "")
+        part_table_columns = part.get("table_columns", [])
+        part_table_data = part.get("table_data", [])
+        part_chart_type = part.get("chart_type", "bar")
+        part_chart_column = part.get("chart_column", "name")
+        part_chart_keys = part.get("chart_keys", [])
+        part_chart_data = part.get("chart_data", [])
+
+        # Ensure consistent chart data strings
+        part_effective_chart_keys = [part_chart_column] + part_chart_keys
+        part_chart_data_str = ";".join([
+            ",".join(str(row.get(k, 0) or 0) for k in part_effective_chart_keys)
+            for row in part_chart_data
+        ]) if part_chart_data else ""
+        part_chart_keys_str = ",".join(part_effective_chart_keys) if part_effective_chart_keys else ""
+
+        toggle_block = f"""[toggle]
+[type::data]
+[title::{part_title}]
+[summary::]
+[table_columns::{",".join(part_table_columns) if part_table_columns else ""}]
+[table_data::{";".join(["|".join(str(v) for v in row.values()) for row in part_table_data]) if part_table_data else ""}]
+[chart_type::{part_chart_type}]
+[chart_column::{part_chart_column}]
+[chart_keys::{part_chart_keys_str}]
+[chart_data::{part_chart_data_str}]
+[/toggle]"""
+        toggle_blocks.append(toggle_block)
+
+    # Build content from thinking chain and toggle blocks
+    content = (thinking + "\n\n" + "\n\n".join(toggle_blocks)) if thinking else "\n\n".join(toggle_blocks)
+
+    # Merge all table data and chart data from parts
+    all_table_data = []
+    all_chart_data = []
+    all_chart_keys = []
+    all_table_columns = []
+
+    for part in parts:
+        all_table_data.extend(part.get("table_data", []))
+        all_chart_keys = part.get("chart_keys", [])
+        if all_chart_data is None:
+            all_chart_data = part.get("chart_data", [])
+        all_table_columns = part.get("table_columns", [])
+
+    result = {
+        "content": content,
+        "title": title,
+        "summary": summary,
+        "table_data": all_table_data,
+        "table_columns": all_table_columns,
+        "chart_type": "multi",  # Signal multi-chart response
+        "parts": parts,  # Preserve original parts for frontend rendering
+        "thinking": thinking,
     }
 
     if followup_questions:
@@ -2680,7 +2863,7 @@ def _detect_data_category(user_input: str) -> Tuple[str, bool]:
     # Check for history keywords FIRST - this takes precedence
     # Note: "所有" is removed because it means "all operators" not historical data
     # in the context of "所有运营商下行速率"
-    is_history = any(kw in text for kw in ['历史', '历年', '变化', '趋势']) and '运营商' not in user_input
+    is_history = any(kw in text for kw in ['历史', '历年', '变化', '趋势']) and not any(kw in user_input for kw in ['所有', '全部', '各运营商'])
 
     # Check for specific metric keywords - only set metric, keep is_history from above
     # Note: Check UL/DL PRB before general "负载" to avoid overlap
@@ -2845,18 +3028,29 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
             if data_category in ['sites', 'cells']:
                 # Site/Cell query
                 if is_history:
-                    # History query - functions 12, 13
+                    # History query - functions 12, 13, 14, 15
                     result = await get_site_cells_history(operator_name)
+                    if result.get("error"):
+                        return get_error_response(GET_SITE_CELLS_FAILED, locale, result["error"])
+
+                    site_cells = result if isinstance(result, list) else result.get("data", [])
+                    if not isinstance(site_cells, list):
+                        site_cells = [site_cells] if site_cells else []
+
+                    if data_category == 'sites':
+                        return format_site_history(site_cells, operators, operator_name, "sites", followup_questions)
+                    else:
+                        return format_site_history(site_cells, operators, operator_name, "cells", followup_questions)
                 else:
                     # Latest query - functions 1, 2, 10
                     result = await get_site_cells_data(operator_name)
 
-                if result.get("error"):
-                    return get_error_response(GET_SITE_CELLS_FAILED, locale, result["error"])
+                    if result.get("error"):
+                        return get_error_response(GET_SITE_CELLS_FAILED, locale, result["error"])
 
-                site_cells = result if isinstance(result, list) else result.get("data", [])
-                if not isinstance(site_cells, list):
-                    site_cells = [site_cells] if site_cells else []
+                    site_cells = result if isinstance(result, list) else result.get("data", [])
+                    if not isinstance(site_cells, list):
+                        site_cells = [site_cells] if site_cells else []
 
                 if data_category == 'sites':
                     if operator_name:

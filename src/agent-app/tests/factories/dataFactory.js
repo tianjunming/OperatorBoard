@@ -5,6 +5,52 @@
 export class DataFactory {
   constructor() {
     this.counter = Date.now();
+    this.cachedOperators = null;
+  }
+
+  /**
+   * Fetch operators from API
+   * @param {string} apiBase - API base URL
+   * @returns {Promise<Array>} List of operators
+   */
+  async fetchOperators(apiBase = 'http://localhost:8000/api') {
+    if (this.cachedOperators) {
+      return this.cachedOperators;
+    }
+    try {
+      const response = await fetch(`${apiBase}/operator/operators`);
+      const data = await response.json();
+      this.cachedOperators = Array.isArray(data) ? data : (data.data || []);
+      return this.cachedOperators;
+    } catch (e) {
+      console.warn('Failed to fetch operators:', e.message);
+      return [];
+    }
+  }
+
+  /**
+   * Get random operator from database
+   * @param {string} apiBase - API base URL
+   * @returns {Promise<Object|null>} Random operator
+   */
+  async getRandomOperator(apiBase = 'http://localhost:8000/api') {
+    const operators = await this.fetchOperators(apiBase);
+    if (operators.length === 0) return null;
+    const idx = Math.floor(Math.random() * operators.length);
+    return operators[idx];
+  }
+
+  /**
+   * Get multiple random operators
+   * @param {number} count - Number of operators
+   * @param {string} apiBase - API base URL
+   * @returns {Promise<Array>} List of random operators
+   */
+  async getRandomOperators(count = 3, apiBase = 'http://localhost:8000/api') {
+    const operators = await this.fetchOperators(apiBase);
+    if (operators.length === 0) return [];
+    const shuffled = [...operators].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, Math.min(count, operators.length));
   }
 
   /**
@@ -190,6 +236,21 @@ export class DataFactory {
   getRandomQuery(category = 'siteSummary', operatorName = null) {
     const query = this.generateQuery(category, operatorName || '北京联通');
     return query;
+  }
+
+  /**
+   * Generate a query with a random operator from the database
+   * @param {string} category - Query category
+   * @param {string} apiBase - API base URL
+   * @returns {Promise<{query: string, operator: Object}>} Query and operator info
+   */
+  async generateQueryWithRandomOperator(category = 'siteSummary', apiBase = 'http://localhost:8000/api') {
+    const operator = await this.getRandomOperator(apiBase);
+    if (!operator) {
+      return { query: this.getRandomQuery(category), operator: null };
+    }
+    const query = this.generateQuery(category, operator.operatorName || operator.operator_name || operator.name);
+    return { query, operator };
   }
 
   /**

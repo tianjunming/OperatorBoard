@@ -141,6 +141,7 @@ export default function OperatorDashboard() {
         operatorName: op.operatorName,
         country: op._raw?.country || '',
         region: op._raw?.region || '',
+        networkType: op._raw?.networkType || op._raw?.network_type || '',
       }));
       setOperators(ops);
       if (!selectedOperatorId && ops.length > 0) {

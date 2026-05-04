@@ -302,7 +302,22 @@ class OperatorAgent(BaseAgent):
         if not tool:
             return {"error": f"Service '{service_name}' not found"}
 
-        return await tool.call_endpoint(endpoint, method=method, **kwargs)
+        # URL-encode non-ASCII characters AND spaces in endpoint path (e.g., Chinese operator names)
+        # to prevent 404 errors from improperly encoded URLs
+        # Note: Spaces must be encoded because "China Unicom" would fail otherwise
+        from urllib.parse import quote
+        encoded_endpoint = endpoint
+        if not encoded_endpoint.isascii() or ' ' in encoded_endpoint:
+            # Split by '/' and encode each path segment that contains non-ASCII or spaces
+            segments = encoded_endpoint.split('/')
+            encoded_segments = []
+            for seg in segments:
+                if seg and (not seg.isascii() or ' ' in seg):
+                    seg = quote(seg, safe='')
+                encoded_segments.append(seg)
+            encoded_endpoint = '/'.join(encoded_segments)
+
+        return await tool.call_endpoint(encoded_endpoint, method=method, **kwargs)
 
     # ============ NL2SQL Service Methods ============
 

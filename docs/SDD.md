@@ -155,79 +155,103 @@
 
 ### 3.1 数据库Schema
 
-#### site_info 表 (站点信息)
+#### operator_info 表 (运营商维度表)
+```sql
+CREATE TABLE operator_info (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    operator_name VARCHAR(100) NOT NULL COMMENT '运营商名称',
+    operator_code VARCHAR(50) COMMENT '运营商代码',
+    country VARCHAR(50) COMMENT '国家',
+    region VARCHAR(100) COMMENT '地区',
+    network_type VARCHAR(50) COMMENT '网络类型 4G/5G',
+    data_month VARCHAR(7) COMMENT '数据月份 YYYY-MM',
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_operator_name (operator_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+#### band_info 表 (频段维度表)
+```sql
+CREATE TABLE band_info (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    band_code VARCHAR(20) NOT NULL COMMENT '频段代码 如 LTE700M_FDD',
+    band_name VARCHAR(50) COMMENT '频段名称 如 LTE 700M FDD',
+    technology VARCHAR(10) COMMENT '技术制式 LTE/NR',
+    frequency_mhz INT COMMENT '中心频率 MHz',
+    duplex_mode VARCHAR(10) COMMENT '双工模式 FDD/TDD',
+    band_group VARCHAR(20) COMMENT '频段组 700M/800M等',
+    UNIQUE KEY uk_band_code (band_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+#### site_info 表 (站点信息 - 规范化事实表)
+每行代表一个运营商在特定频段和月份的数据。
+
 ```sql
 CREATE TABLE site_info (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    site_name VARCHAR(100) NOT NULL COMMENT '站点名称',
-    operator_name VARCHAR(50) NOT NULL COMMENT '运营商名称',
-    city VARCHAR(50) COMMENT '城市',
-    county VARCHAR(50) COMMENT '区县',
-    longitude DECIMAL(10, 6) COMMENT '经度',
-    latitude DECIMAL(10, 6) COMMENT '纬度',
-    site_type VARCHAR(20) COMMENT '站点类型',
-    status VARCHAR(20) DEFAULT 'active' COMMENT '状态',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_operator (operator_name),
-    INDEX idx_status (status)
+    operator_id BIGINT NOT NULL COMMENT '外键关联 operator_info.id',
+    band_id BIGINT NOT NULL COMMENT '外键关联 band_info.id',
+    band_name VARCHAR(50) COMMENT '频段名称',
+    data_month VARCHAR(7) NOT NULL COMMENT '数据月份 YYYY-MM',
+    site_num INT COMMENT '站点数量',
+    cell_num INT COMMENT '小区数量',
+    technology VARCHAR(10) COMMENT '技术制式 LTE/NR',
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_operator_band_month (operator_id, band_id, data_month),
+    INDEX idx_operator_month (operator_id, data_month)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-#### cell_info 表 (小区信息)
-```sql
-CREATE TABLE cell_info (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    site_id BIGINT NOT NULL COMMENT '站点ID',
-    cell_name VARCHAR(100) NOT NULL COMMENT '小区名称',
-    operator_name VARCHAR(50) NOT NULL COMMENT '运营商名称',
-    network_type VARCHAR(10) NOT NULL COMMENT '网络类型: LTE/NR',
-    band VARCHAR(20) NOT NULL COMMENT '频段',
-    earfcn INT COMMENT 'LTE频点',
-    absolute_freq INT COMMENT 'NR绝对频点',
-    pci INT COMMENT '物理小区标识',
-    tac INT COMMENT '跟踪区域码',
-    longitude DECIMAL(10, 6) COMMENT '经度',
-    latitude DECIMAL(10, 6) COMMENT '纬度',
-    status VARCHAR(20) DEFAULT 'active' COMMENT '状态',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_site_id (site_id),
-    INDEX idx_operator_band (operator_name, band),
-    INDEX idx_network_type (network_type),
-    FOREIGN KEY (site_id) REFERENCES site_info(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
+#### indicator_info 表 (指标信息 - 规范化事实表)
+每行代表一个运营商在特定频段和月份的网络指标。
 
-#### indicator_info 表 (指标信息)
 ```sql
 CREATE TABLE indicator_info (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    cell_id BIGINT NOT NULL COMMENT '小区ID',
-    operator_name VARCHAR(50) NOT NULL COMMENT '运营商名称',
-    network_type VARCHAR(10) NOT NULL COMMENT '网络类型',
-    band VARCHAR(20) NOT NULL COMMENT '频段',
-    data_month VARCHAR(7) NOT NULL COMMENT '数据月份: YYYY-MM',
-    pdsch_throughput DECIMAL(10, 2) COMMENT 'PDSCH平均吞吐量(Mbps)',
-    pusch_throughput DECIMAL(10, 2) COMMENT 'PUSCH平均吞吐量(Mbps)',
-    avg_access_delay DECIMAL(10, 2) COMMENT '平均接入时延(ms)',
-    max_access_delay DECIMAL(10, 2) COMMENT '最大接入时延(ms)',
-    access_success_rate DECIMAL(5, 2) COMMENT '接入成功率(%)',
-    drop_rate DECIMAL(5, 2) COMMENT '掉线率(%)',
-    coverage_rate DECIMAL(5, 2) COMMENT '覆盖率(%)',
-    -- 汇总指标字段（2026-04新增）
-    traffic_ratio DECIMAL(5, 2) COMMENT '分流比(%)',
-    duration_camp_ratio DECIMAL(5, 2) COMMENT '时长驻留比(%)',
-    terminal_penetration DECIMAL(5, 2) COMMENT '终端渗透率(%)',
-    fallback_ratio DECIMAL(5, 2) COMMENT '回流比(%)',
-    dl_prb DECIMAL(5, 2) COMMENT '下行PRB利用率(%)',
-    ul_prb DECIMAL(5, 2) COMMENT '上行PRB利用率(%)',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_cell_month (cell_id, data_month),
-    INDEX idx_operator_month (operator_name, data_month),
-    INDEX idx_band_month (band, data_month),
-    FOREIGN KEY (cell_id) REFERENCES cell_info(id)
+    operator_id BIGINT NOT NULL COMMENT '外键关联 operator_info.id',
+    band_id BIGINT NOT NULL COMMENT '外键关联 band_info.id',
+    band_name VARCHAR(50) COMMENT '频段名称',
+    data_month VARCHAR(7) NOT NULL COMMENT '数据月份 YYYY-MM',
+    technology VARCHAR(10) COMMENT '技术制式 LTE/NR',
+    dl_prb DECIMAL(10,5) COMMENT '下行PRB利用率 (%)',
+    ul_prb DECIMAL(10,5) COMMENT '上行PRB利用率 (%)',
+    dl_rate DECIMAL(10,2) COMMENT '下行速率 (Mbps)',
+    ul_rate DECIMAL(10,2) COMMENT '上行速率 (Mbps)',
+    total_traffic DECIMAL(15,2) COMMENT '总流量 (MB)',
+    dl_traffic DECIMAL(15,2) COMMENT '下行流量 (MB)',
+    ul_traffic DECIMAL(15,2) COMMENT '上行流量 (MB)',
+    online_users DECIMAL(10,2) COMMENT '在线用户数',
+    nr_users DECIMAL(10,2) COMMENT 'NR用户数',
+    terminal_penetration_ratio DECIMAL(10,4) COMMENT '终端渗透率 (%)',
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_operator_band_month (operator_id, band_id, data_month),
+    INDEX idx_operator_month (operator_id, data_month)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**注**: 汇总指标(分流比/驻留比等)通过 SQL 聚合计算，不存储在表中。
+
+#### operator_summary 表 (站点聚合表 - 宽表设计)
+```sql
+CREATE TABLE operator_summary (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    operator_id BIGINT NOT NULL,
+    operator_name VARCHAR(100) COMMENT '冗余存储',
+    data_month VARCHAR(7) NOT NULL COMMENT '数据月份',
+    technology VARCHAR(10) COMMENT 'LTE/NR',
+    nr_physical_site_num INT COMMENT 'NR物理站数',
+    nr_physical_cell_num INT COMMENT 'NR物理小区数',
+    lte_physical_site_num INT COMMENT 'LTE物理站数',
+    lte_physical_cell_num INT COMMENT 'LTE物理小区数',
+    total_site_num INT COMMENT '总站数',
+    total_cell_num INT COMMENT '总小区数',
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_operator_month (operator_id, data_month)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
@@ -1238,6 +1262,7 @@ nl2sql:
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.6 | 2026-05-04 | 重构 Mapper XML 使用规范化 site_info/indicator_info 表 + PIVOT 聚合查询；简化 AuditLog 服务；E2E 测试报告更新；新增 OperatorSummary V4/V5 migration；Permission cache 缓存优化 |
 | 1.5 | 2026-05-01 | 技术博客Word文档深度优化，新增11个可复用Skill |
 | 1.4 | 2026-04-20 | 新增E2E测试套件、数据库一致性验证 |
 | 1.3 | 2026-04-19 | 新增运营商站点/指标最新历史API端点、times端点、all operators端点；新增UserManagement前端组件、global.css全局样式 |

@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 public class SiteSummary {
     private Long id;
     private Long operatorId;
+    private String operatorName;
     private String dataMonth;
 
     // LTE 频段站点小区数
@@ -59,6 +60,10 @@ public class SiteSummary {
     private Integer nrTotalCell;
     private Integer totalSite;
     private Integer totalCell;
+
+    private String country;
+    private String region;
+    private String networkType;
 
     private LocalDateTime createdTime;
     private LocalDateTime updatedTime;

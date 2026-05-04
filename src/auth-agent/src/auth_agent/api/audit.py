@@ -2,22 +2,10 @@
 Audit Log Service
 
 Records security-sensitive operations for compliance and monitoring.
+
+Note: This service uses raw SQL for audit log operations as the table
+is created via migration. The AuditLog class is not used as ORM model.
 """
-
-import json
-from datetime import datetime
-from typing import Optional
-
-from sqlalchemy.orm import Session
-
-from .schemas import Base
-
-
-class AuditLog(Base):
-    """Audit log table definition (for table creation only)."""
-    __tablename__ = "auth_audit_log"
-
-    id = None  # Will be set by actual table
 
 
 # Singleton audit service

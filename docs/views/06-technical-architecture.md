@@ -410,28 +410,31 @@ private boolean isSqlSafe(String sql) {
 | IndicatorInfo | 指标事实表 | id, operator_id, band_id, band_name, data_month, technology, dl_prb, ul_prb, dl_rate, ul_rate, traffic, users |
 | OperatorTotalSite | 站点聚合表 | id, operator_id, data_month, technology, nr/lte_physical_site_num, nr/lte_physical_cell_num, total_site_num, total_cell_num |
 
-### 6.2 指标体系 (宽表设计)
+### 6.2 指标体系 (宽表设计 - 汇总指标通过 SQL 聚合计算)
 
 采用宽表设计，每行代表 1 个运营商 × 1 个月的数据，列按频段展开。
 
 **LTE 频段 (7个)**: 700M, 800M, 900M, 1400M, 1800M, 2100M, 2600M
 **NR 频段 (10个)**: 700M, 800M, 900M, 1400M, 1800M, 2100M, 2600M, 3500M, 4900M, 2300M
 
+**指标类型**:
+
 | 指标类型 | 字段模式 | 单位 | 说明 |
 |----------|----------|------|------|
-| LTE速率 | lte{band}DlRate, lte{band}UlRate | Mbps | LTE 各频段上下行速率 |
-| LTE资源 | lte{band}DlPrb, lte{band}UlPrb | % | LTE 各频段 PRB 利用率 |
-| NR速率 | nr{band}DlRate, nr{band}UlRate | Mbps | NR 各频段上下行速率 |
-| NR资源 | nr{band}DlPrb, nr{band}UlPrb | % | NR 各频段 PRB 利用率 |
-| LTE汇总 | lteAvgDlRate, lteAvgPrb | % | LTE 全网平均速率/PRB |
-| NR汇总 | nrAvgDlRate, nrAvgPrb | % | NR 全网平均速率/PRB |
-| 分流指标 | splitRatio, dwellRatio | % | 分流比, 驻留比 |
-| 终端指标 | terminalPenetration, durationDwellRatio | % | 终端渗透率, 时长驻留比 |
-| 回流指标 | fallbackRatio | % | 回流比 (原 return_ratio) |
+| 基础指标 | dl_rate, ul_rate | Mbps | 各频段上下行速率 |
+| 资源指标 | dl_prb, ul_prb | % | 各频段 PRB 利用率 |
+| 流量指标 | total_traffic, dl_traffic, ul_traffic | MB | 流量统计 |
+| 用户指标 | online_users, nr_users | count | 用户统计 |
+| 终端指标 | terminal_penetration_ratio | % | 终端渗透率 |
+
+**汇总指标通过 SQL 聚合计算**:
+- `traffic_ratio`: 分流比 = NR流量 / 总流量
+- `duration_campratio`: 时长驻留比 = NR用户 / 总用户
+- `fallback_ratio`: 回流比 = LTE用户 / 总用户
 
 **变更说明**:
-- 采用宽表设计，每个频段独立列，避免行扩展
-- 每行 = 1 运营商 × 1 月份
+- 规范化事实表设计，基础指标按频段存储
+- 汇总指标通过 SQL 聚合计算，不重复存储
 - 支持多频段对比分析
 
 ## 7. 部署架构
@@ -524,26 +527,27 @@ private boolean isSqlSafe(String sql) {
 
 | 端点 | 方法 | 参数 | 描述 |
 |------|------|------|------|
-| /api/v1/nl2sql/operators | GET | country, operatorName | 运营商列表 |
-| /api/v1/nl2sql/operators/{id} | GET | - | 运营商详情 |
-| /api/v1/nl2sql/site-summary | GET | operatorId, operatorName, dataMonth | 站点汇总 |
-| /api/v1/nl2sql/operators/{operatorName}/sites/latest | GET | - | 运营商最新站点 |
-| /api/v1/nl2sql/operators/{operatorName}/sites/history | GET | - | 运营商站点历史 |
-| /api/v1/nl2sql/operators/all/sites/latest | GET | - | 所有运营商最新站点 |
-| /api/v1/nl2sql/operators/{operatorName}/indicators/latest | GET | - | 运营商最新指标 |
-| /api/v1/nl2sql/operators/{operatorName}/indicators/history | GET | - | 运营商指标历史 |
-| /api/v1/nl2sql/operators/all/indicators/latest | GET | - | 所有运营商最新指标 |
-| /api/v1/nl2sql/times | GET | - | 可用时间点列表 |
+| /api/v1/query/operators | GET | country, operatorName | 运营商列表 |
+| /api/v1/query/operators/{id} | GET | - | 运营商详情 |
+| /api/v1/query/site-cells | GET | band, operatorId | 站点小区汇总 |
+| /api/v1/query/summary/physical-sites | GET | operatorId, dataMonth | 物理站数统计 |
+| /api/v1/query/operators/{operatorName}/sites/latest | GET | - | 运营商最新站点 |
+| /api/v1/query/operators/{operatorName}/sites/history | GET | - | 运营商站点历史 |
+| /api/v1/query/operators/all/sites/latest | GET | - | 所有运营商最新站点 |
+| /api/v1/query/operators/{operatorName}/indicators/latest | GET | - | 运营商最新指标 |
+| /api/v1/query/operators/{operatorName}/indicators/history | GET | - | 运营商指标历史 |
+| /api/v1/query/operators/all/indicators/latest | GET | - | 所有运营商最新指标 |
+| /api/v1/query/times | GET | - | 可用时间点列表 |
 
 ### 8.3 Indicator Query API (CQRS Query Side)
 
 | 端点 | 方法 | 参数 | 描述 |
 |------|------|------|------|
-| /api/v1/nl2sql/indicators | GET | operatorId, operatorName, dataMonth | 指标列表 |
-| /api/v1/nl2sql/indicators/latest | GET | operatorId, operatorName | 最新指标 |
-| /api/v1/nl2sql/indicators/trend | GET | operatorId, operatorName | 指标趋势 |
-| /api/v1/nl2sql/indicators/band | GET | operatorId, operatorName, band, networkType | 按频段指标 |
-| /api/v1/nl2sql/indicators/metrics | GET | operatorId, operatorName, dataMonth | 运营商汇总指标 |
+| /api/v1/query/indicators | GET | operatorId, operatorName, dataMonth | 指标列表 |
+| /api/v1/query/indicators/latest | GET | operatorId, operatorName | 最新指标 |
+| /api/v1/query/indicators/trend | GET | operatorId, operatorName | 指标趋势 |
+| /api/v1/query/indicators/band | GET | operatorId, operatorName, band, networkType | 按频段指标 |
+| /api/v1/query/indicators/metrics | GET | operatorId, operatorName, dataMonth | 运营商汇总指标 |
 
 ### 8.4 Auth Agent API (Port 8084)
 
@@ -557,6 +561,8 @@ private boolean isSqlSafe(String sql) {
 | /auth/approvals/pending | GET | 待审批用户列表（需superuser） |
 | /auth/approvals/approve/{user_id} | POST | 批准用户（需superuser） |
 | /auth/approvals/reject/{user_id} | POST | 拒绝用户（需superuser） |
+| /auth/data-scopes | GET | 数据范围权限 |
+| /auth/audit-logs | GET | 审计日志 |
 | /users | GET/POST | 用户管理 |
 | /users/{id} | GET/PUT/DELETE | 用户CRUD |
 | /roles | GET/POST | 角色管理 |
@@ -659,9 +665,11 @@ public class SqlCoderProvider implements LlmProvider { ... }
 
 NL2SQL 采用 SQLCoder 自托管方案，平衡了准确率、成本和隐私要求。
 
-数据模型采用宽表设计，每行代表 1 个运营商 × 1 个月的数据，列按 LTE/NR 频段展开:
-- **LTE**: 7 个频段 (700M-2600M)
-- **NR**: 10 个频段 (700M-4900M, 2300M)
-- **汇总指标**: 分流比、驻留比、终端渗透率、时长驻留比、回流比
+数据模型采用规范化事实表设计 + 宽表聚合:
+- **规范化事实表**: `site_info` 和 `indicator_info` 每行 = 1 运营商 × 1 频段 × 1 月份
+- **宽表聚合**: `operator_summary` 存储按月份汇总的站点数据
+- **汇总指标**: 通过 SQL 聚合计算(分流比/驻留比/回流比等)，不重复存储
 
 SQL Builder 模式将 SQL 构建逻辑从 Service 层分离，便于维护和优化。
+
+Mapper XML 使用 PIVOT 聚合查询从规范化表生成宽表格式响应。
