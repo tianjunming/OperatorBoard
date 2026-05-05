@@ -3,6 +3,9 @@
 ## Overview
 This document describes the end-to-end test suite for OperatorBoard, covering 18 core functions with database consistency validation.
 
+**文档版本**: 1.6
+**更新日期**: 2026-05-05
+
 ## Test Environment
 
 ### Prerequisites
@@ -58,6 +61,14 @@ APP_URL=http://localhost:3000
 |------|-------------|
 | site count | UI count matches database |
 | operator list | UI shows all database operators |
+| traffic metrics | Traffic ratio displayed as percentage (value × 100) |
+
+### 5. Traffic Metrics Tests
+| Test | Description |
+|------|-------------|
+| F7: 运营商小区分流/指标 | Query operator traffic metrics (分流比, 时长驻留比, 流量驻留比, 终端渗透率) |
+| F20: 运营商历史小区分流指标 | Query historical traffic metrics |
+| percentage display | Metrics values are multiplied by 100 before display (e.g., 0.5 → 50%) |
 
 ### 5. Theme Tests
 | Test | Description |

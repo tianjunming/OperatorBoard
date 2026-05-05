@@ -2,10 +2,11 @@
  * 20 Core Functions E2E Test Suite
  * Tests all 20 query functions with database consistency validation
  *
- * Updated: 2026-05-04
+ * Updated: 2026-05-05
  * Based on latest operator-agent fixes for:
  * 1. chart_column parameter - fixes X-axis data key mapping
  * 2. Global operator aliases (Austria TMA/Magenta, etc.)
+ * 3. Traffic metrics ×100 display (分流比/驻留比/终端渗透率)
  */
 import { test, expect } from '@playwright/test';
 import { ChatPage } from '../pages/ChatPage.js';

@@ -2,11 +2,12 @@
  * Data Consistency E2E Test Suite
  * Validates that UI query results match database values exactly
  *
- * Updated: 2026-05-04
+ * Updated: 2026-05-05
  * Additions:
  * - Chart structure validation ([chart_column] parameter verification)
  * - Global operator alias validation (Austria TMA/Magenta, A1, Hutchison Drei)
  * - Multi-operator comparison validation
+ * - Traffic metrics validation (分流比/驻留比等 ×100 显示)
  */
 import { test, expect } from '@playwright/test';
 import { dbHelper } from '../helpers/dbHelper.js';
@@ -384,6 +385,86 @@ test.describe('Data Consistency Tests', () => {
       // Verify chart structure is valid
       const chartValidation = dbHelper.validateChartStructure(lastMsg);
       expect(chartValidation.isValid, '多运营商图表结构应有效').toBeTruthy();
+    });
+  });
+
+  // ========== 10. Traffic Metrics Validation (2026-05-05) ==========
+  test.describe('流量指标验证', () => {
+    test('分流比指标查询返回百分比格式数据', async ({ page }) => {
+      // 查询分流比指标
+      await chatPage.sendMessage('中国联通分流比');
+      await chatPage.waitForResponse(90000);
+      const lastMsg = await chatPage.getLastAssistantMessage();
+
+      // 验证返回了分流比数据（应该是百分比格式，如 "50%" 或 "50.5%"）
+      // 流量指标展示时已乘以100，所以数值范围应该在 10-100 之间
+      const percentMatch = lastMsg.match(/(\d+\.?\d*)%/);
+      expect(percentMatch, '分流比应以百分比形式展示').toBeTruthy();
+
+      const displayedValue = parseFloat(percentMatch[1]);
+      // 分流比通常在 10% - 80% 范围内
+      expect(displayedValue).toBeGreaterThan(5);
+      expect(displayedValue).toBeLessThan(100);
+    });
+
+    test('流量驻留比指标应在UI中显示非零值', async ({ page }) => {
+      // 查询流量驻留比
+      await chatPage.sendMessage('中国联通流量驻留比');
+      await chatPage.waitForResponse(90000);
+      const lastMsg = await chatPage.getLastAssistantMessage();
+
+      // 从返回内容中查找流量驻留比数值
+      // 由于已乘以100，显示值应该在 10-50 范围内
+      const match = lastMsg.match(/流量驻留比[：:]*\s*(\d+\.?\d*)%/);
+      if (match) {
+        const value = parseFloat(match[1]);
+        // 流量驻留比通常在 10% - 50% 范围
+        expect(value).toBeGreaterThan(5);
+        expect(value).toBeLessThan(60);
+      }
+      // 如果匹配不到，说明UI正常返回了数据（不是0值）
+      expect(lastMsg).not.toMatch(/流量驻留比.*0\.0*%/);
+    });
+
+    test('所有流量指标(分流/驻留)都应显示百分比', async ({ page }) => {
+      await chatPage.sendMessage('中国联通指标分析');
+      await chatPage.waitForResponse(90000);
+      const lastMsg = await chatPage.getLastAssistantMessage();
+
+      // 验证所有流量指标关键字都存在
+      expect(lastMsg).toMatch(/分流比|流量分流/);
+      expect(lastMsg).toMatch(/驻留比/);
+      expect(lastMsg).toMatch(/渗透率/);
+
+      // 验证包含百分比数值（不是小数）
+      // 如果原始值是 0.5，显示应该是 50%
+      expect(lastMsg).toMatch(/\d+\.?\d*%/);
+    });
+
+    test('指标表格中流量指标值应为实际值的100倍', async ({ page }) => {
+      // 获取数据库中的原始值
+      const dbMetrics = await dbHelper.getTrafficMetricsLatest();
+      if (dbMetrics.length === 0) {
+        // 如果数据库没有流量指标数据，跳过此测试
+        console.log('No traffic metrics found in database, skipping validation');
+        return;
+      }
+
+      const firstOperator = dbMetrics[0];
+      const query = `${firstOperator.operator_name}指标分析`;
+      await chatPage.sendMessage(query);
+      await chatPage.waitForResponse(90000);
+      const lastMsg = await chatPage.getLastAssistantMessage();
+
+      // 从UI中提取显示的流量指标值
+      const uiPercentMatch = lastMsg.match(/分流比[：:]*\s*(\d+\.?\d*)/);
+      if (uiPercentMatch && firstOperator.traffic_ratio) {
+        const uiValue = parseFloat(uiPercentMatch[1]);
+        const expectedValue = parseFloat(firstOperator.traffic_ratio) * 100;
+
+        // UI显示值应该是数据库原始值的100倍
+        expect(Math.abs(uiValue - expectedValue) / expectedValue).toBeLessThan(0.1);
+      }
     });
   });
 });

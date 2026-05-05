@@ -46,14 +46,14 @@ function sendJSON(res, statusCode, data) {
 }
 
 function sendSSE(res, data) {
-  res.write(`data: ${JSON.stringify(data)}\n`);
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
 function sendSSEText(res, text) {
   res.write(`data: ${text}\n`);
 }
 
-async function proxyToAgentStream(agentInput, onChunk, onChart) {
+async function proxyToAgentStream(agentInput, onChunk, onChart, onFollowup) {
   const response = await fetch(`${OPERATOR_AGENT_URL}/api/agent/stream`, {
     method: 'POST',
     headers: getAgentHeaders(),
@@ -89,12 +89,58 @@ async function proxyToAgentStream(agentInput, onChunk, onChart) {
               onChunk?.(parsed.content);
             } else if (parsed.type === 'chart' && parsed.chart) {
               onChart?.(parsed.chart);
+            } else if (parsed.type === 'followup' && parsed.questions) {
+              onFollowup?.(parsed.questions);
+            } else if (parsed.type === 'structured' && parsed.data) {
+              // Forward structured data as content chunk (contains table/chart data)
+              const structured = parsed.data;
+              // Build content similar to how operator-agent sends it
+              let content = '';
+              if (structured.title) {
+                content += `# ${structured.title}\n\n`;
+              }
+              if (structured.summary && Object.keys(structured.summary).length > 0) {
+                content += ':::metrics\n';
+                for (const [key, value] of Object.entries(structured.summary)) {
+                  content += `- ${key}: ${value}\n`;
+                }
+                content += ':::\n\n';
+              }
+              if (structured.table_data && structured.table_data.length > 0) {
+                const cols = structured.table_columns || Object.keys(structured.table_data[0]);
+                const rows = structured.table_data.map(row =>
+                  cols.map(c => row[c] ?? '').join('|')
+                ).join(';');
+
+                // Build chart_data using chart_keys order (not Object.values which may have wrong order)
+                let chartDataStr = '';
+                if (structured.chart_data && structured.chart_data.length > 0) {
+                  const chartKeys = structured.chart_keys || [];
+                  const labelKey = chartKeys[0] || '运营商';
+                  const numericKeys = chartKeys.slice(1);
+                  const allKeys = [labelKey, ...numericKeys];
+
+                  chartDataStr = `\n[chart_keys::${allKeys.join(',')}]`;
+                  chartDataStr += `\n[chart_data::${structured.chart_data.map(d =>
+                    allKeys.map(k => d[k] ?? 0).join(',')
+                  ).join(';')}]`;
+                }
+
+                content += `[toggle]
+[type::data]
+[title::${structured.title || '数据统计'}]
+[table_columns::${cols.join(',')}]
+[table_data::${rows}]${chartDataStr}
+[/toggle]\n\n`;
+              }
+              if (content) {
+                onChunk?.(content);
+              }
             } else if (parsed.type === 'error') {
               throw new Error(parsed.content);
             }
           } catch (e) {
             // Ignore JSON parse errors (expected with streaming partial data)
-            // Re-throw other errors
             if (!(e instanceof SyntaxError)) {
               throw e;
             }
@@ -135,18 +181,21 @@ const server = http.createServer(async (req, res) => {
       await proxyToAgentStream(
         { input: userInput, stream: true },
         (chunk) => {
-          res.write(`data: ${JSON.stringify({ content: chunk })}\n`);
+          res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
         },
         (chart) => {
-          res.write(`data: ${JSON.stringify({ type: 'chart', chart })}\n`);
+          res.write(`data: ${JSON.stringify({ type: 'chart', chart })}\n\n`);
+        },
+        (questions) => {
+          res.write(`data: ${JSON.stringify({ type: 'followup', questions })}\n\n`);
         }
       );
 
-      res.write('data: [DONE]\n');
+      res.write('data: [DONE]\n\n');
     } catch (error) {
       console.error('Agent proxy error:', error);
-      res.write(`data: ${JSON.stringify({ content: `Error: ${error.message}` })}\n`);
-      res.write('data: [DONE]\n');
+      res.write(`data: ${JSON.stringify({ content: `Error: ${error.message}` })}\n\n`);
+      res.write('data: [DONE]\n\n');
     }
 
     res.end();
