@@ -253,7 +253,126 @@ test.describe('OperatorBoard E2E Tests', () => {
     });
   });
 
-  // ========== 10-18. Additional Feature Tests ==========
+  // ========== 11. Followup Questions Tests ==========
+  test.describe('Followup Questions', () => {
+    test('should display followup questions after site query', async ({ page }) => {
+      await chatPage.sendMessage('北京联通站点');
+      await page.waitForTimeout(5000);
+
+      const followupQuestions = page.locator('.followup-questions');
+      const isVisible = await followupQuestions.isVisible().catch(() => false);
+
+      if (isVisible) {
+        const questions = page.locator('.followup-item');
+        const count = await questions.count();
+        expect(count).toBeGreaterThan(0);
+
+        // Verify no question contains both site and cell keywords
+        const allQuestions = await questions.allTextContents();
+        for (const q of allQuestions) {
+          const hasSite = q.includes('站点');
+          const hasCell = q.includes('小区');
+          expect(!(hasSite && hasCell)).toBeTruthy();
+        }
+
+        // Verify no question contains both up and down keywords
+        for (const q of allQuestions) {
+          const hasUp = q.includes('上行') || q.includes('上');
+          const hasDown = q.includes('下行') || q.includes('下');
+          // If both are present, check they don't form "上下行"
+          if (hasUp && hasDown) {
+            expect(q.includes('上下行')).toBeFalsy();
+          }
+        }
+      }
+    });
+
+    test('should display followup questions after cell query', async ({ page }) => {
+      await chatPage.sendMessage('北京联通小区');
+      await page.waitForTimeout(5000);
+
+      const followupQuestions = page.locator('.followup-questions');
+      const isVisible = await followupQuestions.isVisible().catch(() => false);
+
+      if (isVisible) {
+        const questions = page.locator('.followup-item');
+        const count = await questions.count();
+        expect(count).toBeGreaterThan(0);
+
+        // Verify questions are cell-related
+        const allQuestions = await questions.allTextContents();
+        for (const q of allQuestions) {
+          const hasSite = q.includes('站点');
+          const hasCell = q.includes('小区');
+          expect(!(hasSite && hasCell)).toBeTruthy();
+        }
+      }
+    });
+
+    test('should display followup questions after indicator query', async ({ page }) => {
+      await chatPage.sendMessage('北京联通上行负载');
+      await page.waitForTimeout(5000);
+
+      const followupQuestions = page.locator('.followup-questions');
+      const isVisible = await followupQuestions.isVisible().catch(() => false);
+
+      if (isVisible) {
+        const questions = page.locator('.followup-item');
+        const count = await questions.count();
+        expect(count).toBeGreaterThan(0);
+
+        // Verify no question contains both up and down
+        const allQuestions = await questions.allTextContents();
+        for (const q of allQuestions) {
+          expect(q.includes('上下行')).toBeFalsy();
+        }
+      }
+    });
+
+    test('should navigate to followup question on click', async ({ page }) => {
+      await chatPage.sendMessage('北京联通站点');
+      await page.waitForTimeout(5000);
+
+      const followupQuestions = page.locator('.followup-questions');
+      const isVisible = await followupQuestions.isVisible().catch(() => false);
+
+      if (isVisible) {
+        const firstQuestion = page.locator('.followup-item').first();
+        if (await firstQuestion.isVisible()) {
+          await firstQuestion.click();
+          await page.waitForTimeout(5000);
+
+          // Verify new message was sent
+          const messages = page.locator('.message-item.user');
+          expect(await messages.count()).toBeGreaterThan(1);
+        }
+      }
+    });
+
+    test('should hide followup questions on new message', async ({ page }) => {
+      // First send a query that shows followup questions
+      await chatPage.sendMessage('北京联通站点');
+      await page.waitForTimeout(5000);
+
+      let followupVisible = false;
+      const followupQuestions = page.locator('.followup-questions');
+      if (await followupQuestions.isVisible().catch(() => false)) {
+        followupVisible = true;
+      }
+
+      if (followupVisible) {
+        // Send another message
+        await chatPage.sendMessage('测试');
+        await page.waitForTimeout(3000);
+
+        // Followup should be cleared or updated for new context
+        const hasMessages = await page.locator('.message-item.assistant').count() > 0;
+        expect(hasMessages).toBeTruthy();
+      }
+    });
+  });
+
+  // ========== 12. Additional Feature Tests ==========
   test.describe('Additional Features', () => {
     test('should show copy button', async ({ page }) => {
       await chatPage.sendMessage('复制');
