@@ -17,6 +17,7 @@ export function useStreamingAgent({ onStreamStart, onStreamEnd, onConfirmation }
   const [followupQuestions, setFollowupQuestions] = useState([]);
   const abortControllerRef = useRef(null);
   const pendingMessageRef = useRef(null);
+  const saveMessageRef = useRef(null);
 
   const abort = useCallback(() => {
     if (abortControllerRef.current) {
@@ -27,6 +28,9 @@ export function useStreamingAgent({ onStreamStart, onStreamEnd, onConfirmation }
 
   const sendMessage = useCallback(async (text, saveMessage) => {
     if (!text?.trim()) return;
+
+    // Save saveMessage to ref to ensure it's available in async operations
+    saveMessageRef.current = saveMessage;
 
     abort();
 
@@ -121,10 +125,10 @@ export function useStreamingAgent({ onStreamStart, onStreamEnd, onConfirmation }
                     // Build chart data for toggle block
                     let chartDataStr = '';
                     if (structured.chart_data && structured.chart_data.length > 0) {
+                      // Use chart_column as the label key, chart_keys contains only numeric keys
                       const chartKeys = structured.chart_keys || [];
-                      // First key is the label column (运营商), rest are numeric values
-                      const labelKey = chartKeys[0] || '运营商';
-                      const numericKeys = chartKeys.slice(1);
+                      const labelKey = structured.chart_column || chartKeys[0] || '运营商';
+                      const numericKeys = chartKeys;
                       const allKeys = [labelKey, ...numericKeys];
 
                       chartDataStr = `\n[chart_keys::${allKeys.join(',')}]`;
@@ -156,12 +160,19 @@ export function useStreamingAgent({ onStreamStart, onStreamEnd, onConfirmation }
         }
       }
 
-      if (fullContent && saveMessage) {
-        await saveMessage('assistant', fullContent, { intent: 'chat', chart: chartData });
+      // 确保助手消息总是被保存，即使是空内容
+      if (saveMessageRef.current) {
+        const finalContent = fullContent || '（无内容返回）';
+        await saveMessageRef.current('assistant', finalContent, { intent: 'chat', chart: chartData });
       }
 
     } catch (err) {
       if (err.name === 'AbortError') return;
+      // 确保错误也被保存
+      if (saveMessageRef.current) {
+        const errorContent = `Error: ${err.message}`;
+        await saveMessageRef.current('assistant', errorContent, { intent: 'chat', is_error: true }).catch(() => {});
+      }
       throw err;
     } finally {
       setIsStreaming(false);
