@@ -1,7 +1,7 @@
 # OperatorBoard 软件设计文档
 
-**文档版本**: 1.5
-**编制日期**: 2026-05-01
+**文档版本**: 1.7
+**编制日期**: 2026-05-05
 **参考标准**: IEEE 1012 | ISO/IEC/IEEE 42010
 
 ---
@@ -1262,6 +1262,7 @@ nl2sql:
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.7 | 2026-05-05 | operator_summary表添加traffic_campratio字段；IndicatorSummary实体添加映射；流量指标(分流比/驻留比等)乘以100展示；operator-agent流量指标乘以100修复 |
 | 1.6 | 2026-05-04 | 重构 Mapper XML 使用规范化 site_info/indicator_info 表 + PIVOT 聚合查询；简化 AuditLog 服务；E2E 测试报告更新；新增 OperatorSummary V4/V5 migration；Permission cache 缓存优化 |
 | 1.5 | 2026-05-01 | 技术博客Word文档深度优化，新增11个可复用Skill |
 | 1.4 | 2026-04-20 | 新增E2E测试套件、数据库一致性验证 |

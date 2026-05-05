@@ -1,6 +1,6 @@
 # OperatorBoard 代码设计文档
 
-**文档版本**: 1.5
+**文档版本**: 1.6
 **编制日期**: 2026-05-01
 **参考标准**: Google Style Guide | SOLID Principles
 
@@ -899,6 +899,7 @@ const examples = {
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.6 | 2026-05-05 | operator_summary表添加traffic_campratio字段；IndicatorSummary实体添加映射；流量指标(分流比/驻留比等)乘以100展示 |
 | 1.5 | 2026-05-01 | 技术博客Word文档深度优化，新增11个可复用Skill |
 | 1.4 | 2026-04-20 | 新增E2E测试套件、数据库一致性验证 |
 | 1.3 | 2026-04-19 | 新增global.css全局样式、UserManagement组件增强、App.jsx集成AuthRegister和PendingApprovals |

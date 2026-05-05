@@ -1,6 +1,6 @@
 # OperatorBoard 软件测试文档
 
-**文档版本**: 1.5
+**文档版本**: 1.6
 **编制日期**: 2026-05-01
 **参考标准**: IEEE 829 | ISO/IEC 29119
 
@@ -412,6 +412,7 @@ npm run test:all
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.6 | 2026-05-05 | operator_summary表添加traffic_campratio字段；流量指标乘以100展示；新增V6、V7 migration脚本 |
 | 1.5 | 2026-05-01 | 技术博客Word文档深度优化，新增11个可复用Skill |
 | 1.4 | 2026-04-20 | 新增E2E测试套件、数据库一致性验证 |
 | 1.3 | 2026-04-19 | 新增real-e2e.spec.js完整E2E测试、new-features.spec.js新功能测试、test_all_queries.spec.js全量查询测试 |
