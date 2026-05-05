@@ -90,6 +90,7 @@
         <result property="nrAvgDlPrb" column="nr_avg_dl_prb"/>
         <result property="nrAvgUlPrb" column="nr_avg_ul_prb"/>
         <result property="trafficRatio" column="traffic_ratio"/>
+        <result property="trafficCampratio" column="traffic_campratio"/>
         <result property="durationCampratio" column="duration_campratio"/>
         <result property="terminalPenetration" column="terminal_penetration"/>
         <result property="fallbackRatio" column="fallback_ratio"/>
@@ -214,6 +215,9 @@
             (SELECT os.traffic_ratio FROM operator_summary os
              WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
              LIMIT 1) as traffic_ratio,
+            (SELECT os.traffic_campratio FROM operator_summary os
+             WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
+             LIMIT 1) as traffic_campratio,
             (SELECT os.duration_campratio FROM operator_summary os
              WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
              LIMIT 1) as duration_campratio,
@@ -346,6 +350,9 @@
             (SELECT os.traffic_ratio FROM operator_summary os
              WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
              LIMIT 1) as traffic_ratio,
+            (SELECT os.traffic_campratio FROM operator_summary os
+             WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
+             LIMIT 1) as traffic_campratio,
             (SELECT os.duration_campratio FROM operator_summary os
              WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
              LIMIT 1) as duration_campratio,
@@ -478,6 +485,9 @@
             (SELECT os.traffic_ratio FROM operator_summary os
              WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
              LIMIT 1) as traffic_ratio,
+            (SELECT os.traffic_campratio FROM operator_summary os
+             WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
+             LIMIT 1) as traffic_campratio,
             (SELECT os.duration_campratio FROM operator_summary os
              WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
              LIMIT 1) as duration_campratio,
@@ -608,6 +618,9 @@
             (SELECT os.traffic_ratio FROM operator_summary os
              WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
              LIMIT 1) as traffic_ratio,
+            (SELECT os.traffic_campratio FROM operator_summary os
+             WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
+             LIMIT 1) as traffic_campratio,
             (SELECT os.duration_campratio FROM operator_summary os
              WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
              LIMIT 1) as duration_campratio,
@@ -738,6 +751,9 @@
             (SELECT os.traffic_ratio FROM operator_summary os
              WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
              LIMIT 1) as traffic_ratio,
+            (SELECT os.traffic_campratio FROM operator_summary os
+             WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
+             LIMIT 1) as traffic_campratio,
             (SELECT os.duration_campratio FROM operator_summary os
              WHERE os.operator_id = i.operator_id AND os.data_month = i.data_month AND os.technology = 'LTE'
              LIMIT 1) as duration_campratio,

@@ -241,7 +241,29 @@ function parseSqlBlock(match) {
  */
 function parseToggleBlock(match) {
   try {
-    const content = match[1];
+    // Determine content based on input type
+    // When called from toggle block path: match is a string (full matched string)
+    // When called from regex match path: match is an array with captured group at index 1
+    let content;
+    if (typeof match === 'string') {
+      // Toggle block path - match is the full string, remove [toggle] and [/toggle] tags
+      const toggleStart = '[toggle]';
+      const toggleEnd = '[/toggle]';
+      const startIdx = match.indexOf(toggleStart);
+      const endIdx = match.lastIndexOf(toggleEnd);
+      if (startIdx !== -1 && endIdx !== -1) {
+        content = match.slice(startIdx + toggleStart.length, endIdx).trim();
+      } else {
+        content = match;
+      }
+    } else if (Array.isArray(match) && match[1] !== undefined) {
+      // Regex match path - captured group is at index 1
+      content = match[1];
+    } else {
+      console.error('parseToggleBlock: unexpected input type', typeof match);
+      return { title: '数据', subtitle: '', summary: {}, table: { columns: [], data: [] }, chart: { type: 'bar', data: [], keys: [] } };
+    }
+
     if (typeof content !== 'string') {
       console.error('parseToggleBlock: content is not a string', typeof content, content);
       return { title: '数据', subtitle: '', summary: {}, table: { columns: [], data: [] }, chart: { type: 'bar', data: [], keys: [] } };
@@ -294,7 +316,15 @@ function parseToggleBlock(match) {
           data.summary = {};
           pairs.forEach(pair => {
             const [k, v] = pair.split('=');
-            if (k && v) data.summary[k.trim()] = parseFloat(v) || 0;
+            if (k && v) {
+              const numVal = parseFloat(v) || 0;
+              data.summary[k.trim()] = numVal;
+              // Add English aliases for common Chinese keys
+              if (k.includes('总站点')) data.summary.totalSite = numVal;
+              else if (k.includes('总小区')) data.summary.totalCell = numVal;
+              else if (k.includes('运营商数')) data.summary.operatorCount = numVal;
+              else if (k.includes('频段数')) data.summary.bandCount = numVal;
+            }
           });
         } else {
           data[key] = value;

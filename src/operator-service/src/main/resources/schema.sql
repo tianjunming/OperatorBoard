@@ -172,6 +172,7 @@ CREATE TABLE operator_summary (
 
     -- 分流/驻留指标
     traffic_ratio DECIMAL(10,4) COMMENT '流量分流比',
+    traffic_campratio DECIMAL(10,4) COMMENT '流量驻留比',
     duration_campratio DECIMAL(10,4) COMMENT '时长驻留比',
     fallback_ratio DECIMAL(10,4) COMMENT '回流比',
 

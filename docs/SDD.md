@@ -1,6 +1,6 @@
 # OperatorBoard 软件设计文档
 
-**文档版本**: 1.7
+**文档版本**: 1.8
 **编制日期**: 2026-05-05
 **参考标准**: IEEE 1012 | ISO/IEC/IEEE 42010
 
@@ -159,17 +159,21 @@
 ```sql
 CREATE TABLE operator_info (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    operator_name VARCHAR(100) NOT NULL COMMENT '运营商名称',
-    operator_code VARCHAR(50) COMMENT '运营商代码',
-    country VARCHAR(50) COMMENT '国家',
-    region VARCHAR(100) COMMENT '地区',
-    network_type VARCHAR(50) COMMENT '网络类型 4G/5G',
-    data_month VARCHAR(7) COMMENT '数据月份 YYYY-MM',
-    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_operator_name (operator_name)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    operator_code VARCHAR(50) UNIQUE NOT NULL COMMENT '运营商代码',
+    operator_name VARCHAR(255) NOT NULL COMMENT '运营商名称',
+    alias_name VARCHAR(255) COMMENT '别名',
+    country VARCHAR(100) NOT NULL COMMENT '国家',
+    region VARCHAR(50) NOT NULL COMMENT '区域',
+    network_type VARCHAR(20) COMMENT '网络类型 4G/5G',
+    status TINYINT DEFAULT 1 COMMENT '状态 1-激活 0-停用',
+    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_country (country),
+    INDEX idx_region (region),
+    INDEX idx_network_type (network_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 ```
+**注**: 该表不存储 data_month 字段，数据月份存储在 site_info/indicator_info 等事实表中。
 
 #### band_info 表 (频段维度表)
 ```sql
@@ -213,46 +217,81 @@ CREATE TABLE indicator_info (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     operator_id BIGINT NOT NULL COMMENT '外键关联 operator_info.id',
     band_id BIGINT NOT NULL COMMENT '外键关联 band_info.id',
-    band_name VARCHAR(50) COMMENT '频段名称',
+    band_name VARCHAR(50) NOT NULL COMMENT '频段名称 如 LTE 700M FDD',
     data_month VARCHAR(7) NOT NULL COMMENT '数据月份 YYYY-MM',
-    technology VARCHAR(10) COMMENT '技术制式 LTE/NR',
-    dl_prb DECIMAL(10,5) COMMENT '下行PRB利用率 (%)',
-    ul_prb DECIMAL(10,5) COMMENT '上行PRB利用率 (%)',
-    dl_rate DECIMAL(10,2) COMMENT '下行速率 (Mbps)',
-    ul_rate DECIMAL(10,2) COMMENT '上行速率 (Mbps)',
-    total_traffic DECIMAL(15,2) COMMENT '总流量 (MB)',
-    dl_traffic DECIMAL(15,2) COMMENT '下行流量 (MB)',
-    ul_traffic DECIMAL(15,2) COMMENT '上行流量 (MB)',
-    online_users DECIMAL(10,2) COMMENT '在线用户数',
-    nr_users DECIMAL(10,2) COMMENT 'NR用户数',
-    terminal_penetration_ratio DECIMAL(10,4) COMMENT '终端渗透率 (%)',
+    technology VARCHAR(10) NOT NULL COMMENT '技术制式 LTE/NR',
+
+    -- PRB指标
+    dl_prb DECIMAL(10,5) COMMENT '下行PRB利用率',
+    ul_prb DECIMAL(10,5) COMMENT '上行PRB利用率',
+
+    -- 吞吐量指标
+    dl_rate DECIMAL(10,2) COMMENT '下行速率 Mbps',
+    ul_rate DECIMAL(10,2) COMMENT '上行速率 Mbps',
+
+    -- 流量指标
+    total_traffic DECIMAL(15,2) COMMENT '总流量 MB',
+    dl_traffic DECIMAL(15,2) COMMENT '下行流量 MB',
+    ul_traffic DECIMAL(15,2) COMMENT '上行流量 MB',
+
+    -- 终端指标 (可选)
+    terminal_penetration_ratio DECIMAL(10,4) COMMENT '终端渗透率',
+
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_operator_band_month (operator_id, band_id, data_month),
     INDEX idx_operator_month (operator_id, data_month)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
+**注**: 汇总指标(分流比/驻留比/回流比等)存储在 operator_summary 表中，不在此表中。
 
-**注**: 汇总指标(分流比/驻留比等)通过 SQL 聚合计算，不存储在表中。
-
-#### operator_summary 表 (站点聚合表 - 宽表设计)
+#### operator_summary 表 (运营商汇总表 - 宽表设计)
 ```sql
 CREATE TABLE operator_summary (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    operator_id BIGINT NOT NULL,
-    operator_name VARCHAR(100) COMMENT '冗余存储',
-    data_month VARCHAR(7) NOT NULL COMMENT '数据月份',
-    technology VARCHAR(10) COMMENT 'LTE/NR',
-    nr_physical_site_num INT COMMENT 'NR物理站数',
-    nr_physical_cell_num INT COMMENT 'NR物理小区数',
-    lte_physical_site_num INT COMMENT 'LTE物理站数',
-    lte_physical_cell_num INT COMMENT 'LTE物理小区数',
-    total_site_num INT COMMENT '总站数',
-    total_cell_num INT COMMENT '总小区数',
-    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_operator_month (operator_id, data_month)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    operator_id BIGINT NOT NULL COMMENT '运营商ID',
+    data_month VARCHAR(7) NOT NULL COMMENT '数据月份 YYYY-MM',
+    technology VARCHAR(10) NOT NULL COMMENT '技术制式 LTE/NR/ALL',
+
+    -- LTE和NR小区数（汇总）
+    nr_physical_cell_num INT DEFAULT 0 COMMENT 'NR物理小区数',
+    lte_physical_cell_num INT DEFAULT 0 COMMENT 'LTE物理小区数',
+
+    -- LTE和NR物理站点（确定值，非汇总）
+    lte_physical_site_num INT DEFAULT 0 COMMENT 'LTE物理站点数',
+    nr_physical_site_num INT DEFAULT 0 COMMENT 'NR物理站点数',
+
+    -- 总计
+    total_site_num INT DEFAULT 0 COMMENT '总站点数',
+    total_cell_num INT DEFAULT 0 COMMENT '总小区数',
+
+    -- 用户指标
+    online_users DECIMAL(10,2) COMMENT '在线用户数',
+    nr_users DECIMAL(10,2) COMMENT 'NR用户数',
+
+    -- 终端指标
+    terminal_penetration_ratio DECIMAL(10,4) COMMENT '终端渗透率',
+
+    -- 非汇总指标 (按技术类型 LTE/NR 获取实际值)
+    lte_avg_dl_rate DECIMAL(10,2) COMMENT 'LTE平均下行速率 Mbps',
+    lte_avg_ul_rate DECIMAL(10,2) COMMENT 'LTE平均上行速率 Mbps',
+    lte_avg_dl_prb DECIMAL(10,5) COMMENT 'LTE平均下行PRB利用率',
+    lte_avg_ul_prb DECIMAL(10,5) COMMENT 'LTE平均上行PRB利用率',
+    nr_avg_dl_rate DECIMAL(10,2) COMMENT 'NR平均下行速率 Mbps',
+    nr_avg_ul_rate DECIMAL(10,2) COMMENT 'NR平均上行速率 Mbps',
+    nr_avg_dl_prb DECIMAL(10,5) COMMENT 'NR平均下行PRB利用率',
+    nr_avg_ul_prb DECIMAL(10,5) COMMENT 'NR平均上行PRB利用率',
+
+    -- 分流/驻留指标
+    traffic_ratio DECIMAL(10,4) COMMENT '流量分流比',
+    traffic_campratio DECIMAL(10,4) COMMENT '流量驻留比',
+    duration_campratio DECIMAL(10,4) COMMENT '时长驻留比',
+    fallback_ratio DECIMAL(10,4) COMMENT '回流比',
+
+    FOREIGN KEY (operator_id) REFERENCES operator_info(id),
+    UNIQUE KEY uk_op_month_tech (operator_id, data_month, technology),
+    INDEX idx_month (data_month)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 ```
 
 #### indicator_summary 视图 (指标汇总)
@@ -667,6 +706,81 @@ data: {"type": "done", "request_id": "req_001"}
 获取所有运营商最新指标
 
 **响应**: 所有运营商指标列表
+
+##### GET /api/v1/nl2sql/times
+获取可用时间点列表
+
+**响应**:
+```json
+["2026-03", "2026-02", "2026-01", ...]
+```
+
+##### GET /api/v1/nl2sql/operators/all/site-summary/latest
+获取所有运营商最新站点汇总
+
+**响应**: 所有运营商站点汇总列表
+
+##### GET /api/v1/nl2sql/operators/{operatorName}/site-summary/latest
+获取指定运营商最新站点汇总
+
+**响应**:
+```json
+{
+  "operatorId": 174,
+  "operatorName": "中国联通",
+  "dataMonth": "2026-03",
+  "nrPhysicalSiteNum": 100,
+  "ltePhysicalSiteNum": 200,
+  "totalSiteNum": 300,
+  "nrPhysicalCellNum": 500,
+  "ltePhysicalCellNum": 800,
+  "totalCellNum": 1300
+}
+```
+
+##### GET /api/v1/nl2sql/operators/{operatorName}/site-summary/history
+获取指定运营商站点汇总历史
+
+**响应**: 站点汇总历史列表
+
+##### GET /api/v1/nl2sql/operators/all/indicator-summary/latest
+获取所有运营商最新指标汇总
+
+##### GET /api/v1/nl2sql/operators/{operatorName}/indicator-summary/latest
+获取指定运营商最新指标汇总
+
+##### GET /api/v1/nl2sql/operators/{operatorName}/indicator-summary/history
+获取指定运营商指标汇总历史
+
+##### GET /api/v1/nl2sql/operators/all/indicators/ul-prb
+获取所有运营商上行PRB利用率
+
+##### GET /api/v1/nl2sql/operators/all/indicators/dl-prb
+获取所有运营商下行PRB利用率
+
+##### GET /api/v1/nl2sql/operators/all/indicators/ul-rate
+获取所有运营商上行速率
+
+##### GET /api/v1/nl2sql/operators/all/indicators/dl-rate
+获取所有运营商下行速率
+
+##### GET /api/v1/nl2sql/operators/all/indicators/traffic-metrics
+获取所有运营商流量指标
+
+##### GET /api/v1/nl2sql/operators/all/operator-summary/latest
+获取所有运营商最新运营商汇总
+
+##### GET /api/v1/nl2sql/operators/all/operator-summary/latest/by-technology
+按技术类型获取所有运营商最新运营商汇总
+
+##### GET /api/v1/nl2sql/operators/{operatorName}/operator-summary/latest
+获取指定运营商最新运营商汇总
+
+##### GET /api/v1/nl2sql/operators/{operatorName}/operator-summary/history
+获取指定运营商运营商汇总历史
+
+##### GET /api/v1/nl2sql/operators/all/operator-summary/latest/{technology}
+按技术类型获取所有运营商最新运营商汇总 (technology: LTE/NR/ALL)
 
 ##### GET /api/v1/nl2sql/indicators
 获取指标列表
@@ -1181,6 +1295,38 @@ public class OperatorMetricsResponse {
 
 ---
 
+## 6.5 运营商指标对比查询
+
+当用户查询涉及多个运营商的指标对比时（如"移动联通电信速率对比"），系统支持在同一图表中展示多个运营商的指标数据。
+
+**功能特性**:
+- 按国家/地区分组显示
+- 支持同指标多运营商柱状图对比
+- 显示各运营商具体数值
+
+**API端点**: `/api/v1/nl2sql/operators/all/indicators/latest`
+
+**响应处理**:
+```python
+# operator-agent/api/server.py
+def format_indicator_comparison(indicators: list, operators: list, ...):
+    # 按国家过滤
+    # 显示同一国家下所有运营商的指标对比
+    # 返回多系列柱状图数据
+```
+
+**流量指标乘以100展示**:
+运营商指标中的分流比、驻留比、终端渗透率等指标存储为小数（如0.7618），前端展示时乘以100（显示为76.18%）。
+
+```python
+traffic_ratio = (ind.get("trafficRatio") or 0) * 100
+duration_ratio = (ind.get("durationCampratio") or 0) * 100
+traffic_camp_ratio = (ind.get("trafficCampratio") or 0) * 100
+terminal_pen = (ind.get("terminalPenetration") or 0) * 100
+```
+
+---
+
 ## 7. 配置管理
 
 ### 7.1 Python 配置
@@ -1262,6 +1408,7 @@ nl2sql:
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.8 | 2026-05-05 | 完善API端点文档(+16个端点)；修正operator_info/indicator_info/operator_summary表Schema；补充times/site-summary/indicator-summary/operator-summary等系列端点 |
 | 1.7 | 2026-05-05 | operator_summary表添加traffic_campratio字段；IndicatorSummary实体添加映射；流量指标(分流比/驻留比等)乘以100展示；operator-agent流量指标乘以100修复 |
 | 1.6 | 2026-05-04 | 重构 Mapper XML 使用规范化 site_info/indicator_info 表 + PIVOT 聚合查询；简化 AuditLog 服务；E2E 测试报告更新；新增 OperatorSummary V4/V5 migration；Permission cache 缓存优化 |
 | 1.5 | 2026-05-01 | 技术博客Word文档深度优化，新增11个可复用Skill |

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { apiFetch } from '../api/client';
 
 const ChatContext = createContext(null);
@@ -9,25 +9,44 @@ export function ChatProvider({ children }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Guard ref to prevent race condition between createSession and saveMessage
+  const isCreatingSessionRef = useRef(false);
 
   // Create a new session
   const createSession = useCallback(async (title = '新对话') => {
+    // Prevent concurrent session creation using ref
+    if (isCreatingSessionRef.current) {
+      console.log('[ChatContext] Session creation already in progress, waiting...');
+      // Wait for existing creation to complete
+      while (isCreatingSessionRef.current) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      console.log('[ChatContext] Wait complete, returning currentSession:', currentSession?.id);
+      return currentSession;
+    }
+
+    isCreatingSessionRef.current = true;
     setLoading(true);
+    console.log('[ChatContext] Creating new session...');
+    let session;
     try {
-      const session = await apiFetch('/chat/sessions', {
+      session = await apiFetch('/chat/sessions', {
         method: 'POST',
         body: JSON.stringify({ title }),
       });
-      setSessions((prev) => [session, ...prev]);
+      console.log('[ChatContext] Session created successfully:', session.id);
+      // Update state after session is created, not before
+      setSessions(prev => [session, ...prev]);
       setCurrentSession(session);
-      setMessages([]);
       return session;
     } catch (error) {
+      console.error('[ChatContext] Failed to create session:', error);
       throw error;
     } finally {
       setLoading(false);
+      isCreatingSessionRef.current = false;
     }
-  }, []);
+  }, [currentSession]);
 
   // Load all sessions for current user
   const loadSessions = useCallback(async () => {
@@ -155,47 +174,119 @@ export function ChatProvider({ children }) {
   }, [sessions, updateSessionTags]);
 
   // Save a message to the current session
+  // 使用乐观更新确保消息立即显示，同时在后台保存到服务器
   const saveMessage = useCallback(async (role, content, metadata = {}) => {
+    // 防御性检查：确保 content 是有效字符串
+    const validContent = typeof content === 'string' ? content : String(content || '');
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    console.log(`[ChatContext] saveMessage called: role=${role}, tempId=${tempId}, content=${validContent.substring(0, 50)}...`);
+
+    // 乐观更新：立即创建临时消息对象并显示
+    const optimisticMessage = {
+      id: tempId,
+      role,
+      content: validContent,
+      created_at: new Date().toISOString(),
+      complete: true,
+      metadata: { ...metadata, temp: true },
+    };
+
+    // 立即更新 UI
+    setMessages(prev => {
+      console.log(`[ChatContext] setMessages (add optimistic): prev.length=${prev.length}, adding role=${role}`);
+      return [...prev, optimisticMessage];
+    });
+
     let session = currentSession;
 
     if (!session) {
+      console.log(`[ChatContext] No currentSession, creating new session...`);
       try {
         session = await createSession();
+        console.log(`[ChatContext] Session created: ${session?.id}`);
       } catch (createErr) {
         // Try to load existing sessions as fallback
         const existingSessions = await loadSessions();
         if (existingSessions && existingSessions.length > 0) {
           session = existingSessions[0];
           setCurrentSession(session);
+          console.log(`[ChatContext] Using existing session: ${session.id}`);
         } else {
+          // 会话创建失败，标记临时消息为错误
+          console.log(`[ChatContext] Failed to create/load session, marking message as error`);
+          setMessages(prev => prev.map(m =>
+            m.id === tempId
+              ? { ...m, content: `⚠️ ${validContent}\n\n[保存失败: 无法创建会话]`, metadata: { ...m.metadata, is_error: true, temp: false } }
+              : m
+          ));
           throw new Error('无法创建或加载会话，请刷新页面后重试。');
         }
       }
     }
 
-    const message = await apiFetch('/chat/messages', {
-      method: 'POST',
-      body: JSON.stringify({
-        session_id: session.id,
-        role,
-        content,
-        complete: true,
-        is_error: false,
-        metadata,
-      }),
-    });
+    try {
+      const apiMessage = await apiFetch('/chat/messages', {
+        method: 'POST',
+        body: JSON.stringify({
+          session_id: session.id,
+          role,
+          content: validContent,
+          complete: true,
+          is_error: false,
+          metadata,
+        }),
+      });
 
-    // Update context messages state
-    setMessages((prev) => [...prev, message]);
+      console.log(`[ChatContext] API returned: role=${role}, apiMessage.id=${apiMessage?.id}, tempId=${tempId}`);
 
-    // Update session title if this is the first user message
-    if (role === 'user' && messages.length === 0 && session.title === '新对话') {
-      const newTitle = content.substring(0, 50) + (content.length > 50 ? '...' : '');
-      await updateSessionTitle(session.id, newTitle);
+      // 验证 API 返回
+      if (!apiMessage || typeof apiMessage !== 'object') {
+        throw new Error('Invalid message response from server');
+      }
+      if (!apiMessage.id) {
+        throw new Error('Message missing ID from server');
+      }
+
+      // 用服务器返回的真实消息替换临时消息
+      setMessages(prev => {
+        console.log(`[ChatContext] setMessages (replace temp): prev.length=${prev.length}, looking for tempId=${tempId}`);
+        const tempExists = prev.some(m => m.id === tempId);
+        if (tempExists) {
+          const newMessages = prev.map(m =>
+            m.id === tempId ? { ...apiMessage, metadata: { ...apiMessage.metadata, temp: false } } : m
+          );
+          console.log(`[ChatContext] Replaced temp message, new.length=${newMessages.length}`);
+          return newMessages;
+        }
+        // 如果临时消息不在了，直接追加
+        console.log(`[ChatContext] Temp message not found (may have been replaced), appending new message, prev.length=${prev.length}`);
+        return [...prev, { ...apiMessage, metadata: { ...apiMessage.metadata, temp: false } }];
+      });
+
+      // Update session title if this is the first user message
+      if (role === 'user' && messages.length === 0 && session.title === '新对话') {
+        const newTitle = validContent.substring(0, 50) + (validContent.length > 50 ? '...' : '');
+        console.log(`[ChatContext] Updating session title to: ${newTitle}`);
+        try {
+          await updateSessionTitle(session.id, newTitle);
+        } catch (titleErr) {
+          console.warn('Failed to update session title:', titleErr);
+        }
+      }
+
+      return apiMessage;
+    } catch (err) {
+      // API 调用失败，标记临时消息为错误但不删除
+      console.log(`[ChatContext] API error for role=${role}: ${err.message}`);
+      setMessages(prev => prev.map(m =>
+        m.id === tempId
+          ? { ...m, content: `⚠️ ${validContent}\n\n[保存失败: ${err.message}]`, metadata: { ...m.metadata, is_error: true, temp: false } }
+          : m
+      ));
+      throw err;
     }
-
-    return message;
-  }, [currentSession, messages, createSession, updateSessionTitle, loadSessions]);
+  }, [currentSession, createSession, updateSessionTitle, loadSessions]);
 
   // Clear current session (start new conversation)
   const clearCurrentSession = useCallback(() => {

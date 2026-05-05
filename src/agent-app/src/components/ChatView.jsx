@@ -34,11 +34,29 @@ function ChatView() {
     // Clear followup questions when starting new message
     clearFollowupQuestions();
 
+    let userMessageId = null;
     if (!isResend) {
-      await saveMessage('user', text, { intent: 'chat' });
+      try {
+        const savedMsg = await saveMessage('user', text, { intent: 'chat' });
+        userMessageId = savedMsg?.id;
+      } catch (err) {
+        console.error('Failed to save user message:', err);
+        // 继续尝试发送，即使用户消息保存失败
+      }
     }
 
-    await sendMessage(text, saveMessage);
+    try {
+      await sendMessage(text, saveMessage);
+    } catch (error) {
+      // 保存错误消息
+      const errorMessage = error.message || '抱歉，服务暂时不可用，请稍后重试。';
+      try {
+        await saveMessage('assistant', `⚠️ ${errorMessage}`, { intent: 'chat', is_error: true });
+      } catch (saveErr) {
+        console.error('Failed to save error message:', saveErr);
+      }
+      console.error('Agent error:', error);
+    }
   }, [saveMessage, sendMessage, clearFollowupQuestions]);
 
   // Handle resend

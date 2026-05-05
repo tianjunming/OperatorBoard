@@ -239,6 +239,12 @@ public class OperatorQueryController {
      */
     @GetMapping("/operators/{operatorName}/site-summary/latest")
     public ResponseEntity<?> getOperatorSiteSummaryLatest(@PathVariable String operatorName) {
+        // URL-decode the operator name since Spring doesn't auto-decode path variables
+        try {
+            operatorName = java.net.URLDecoder.decode(operatorName, "UTF-8");
+        } catch (java.io.UnsupportedEncodingException e) {
+            // Use as-is if decoding fails
+        }
         List<OperatorInfo> operators = operatorQueryService.findByOperatorName(operatorName);
         if (operators.isEmpty()) {
             return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
@@ -256,6 +262,12 @@ public class OperatorQueryController {
      */
     @GetMapping("/operators/{operatorName}/site-summary/history")
     public ResponseEntity<?> getOperatorSiteSummaryHistory(@PathVariable String operatorName) {
+        // URL-decode the operator name since Spring doesn't auto-decode path variables
+        try {
+            operatorName = java.net.URLDecoder.decode(operatorName, "UTF-8");
+        } catch (java.io.UnsupportedEncodingException e) {
+            // Use as-is if decoding fails
+        }
         List<OperatorInfo> operators = operatorQueryService.findByOperatorName(operatorName);
         if (operators.isEmpty()) {
             return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
@@ -281,6 +293,12 @@ public class OperatorQueryController {
      */
     @GetMapping("/operators/{operatorName}/indicator-summary/latest")
     public ResponseEntity<?> getOperatorIndicatorSummaryLatest(@PathVariable String operatorName) {
+        // URL-decode the operator name since Spring doesn't auto-decode path variables
+        try {
+            operatorName = java.net.URLDecoder.decode(operatorName, "UTF-8");
+        } catch (java.io.UnsupportedEncodingException e) {
+            // Use as-is if decoding fails
+        }
         List<OperatorInfo> operators = operatorQueryService.findByOperatorName(operatorName);
         if (operators.isEmpty()) {
             return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
@@ -298,6 +316,12 @@ public class OperatorQueryController {
      */
     @GetMapping("/operators/{operatorName}/indicator-summary/history")
     public ResponseEntity<?> getOperatorIndicatorSummaryHistory(@PathVariable String operatorName) {
+        // URL-decode the operator name since Spring doesn't auto-decode path variables
+        try {
+            operatorName = java.net.URLDecoder.decode(operatorName, "UTF-8");
+        } catch (java.io.UnsupportedEncodingException e) {
+            // Use as-is if decoding fails
+        }
         List<OperatorInfo> operators = operatorQueryService.findByOperatorName(operatorName);
         if (operators.isEmpty()) {
             return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
@@ -380,6 +404,12 @@ public class OperatorQueryController {
      */
     @GetMapping("/operators/{operatorName}/operator-summary/latest")
     public ResponseEntity<?> getOperatorSummaryLatest(@PathVariable String operatorName) {
+        // URL-decode the operator name since Spring doesn't auto-decode path variables
+        try {
+            operatorName = java.net.URLDecoder.decode(operatorName, "UTF-8");
+        } catch (java.io.UnsupportedEncodingException e) {
+            // Use as-is if decoding fails
+        }
         List<OperatorInfo> operators = operatorQueryService.findByOperatorName(operatorName);
         if (operators.isEmpty()) {
             return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
@@ -397,6 +427,12 @@ public class OperatorQueryController {
      */
     @GetMapping("/operators/{operatorName}/operator-summary/history")
     public ResponseEntity<?> getOperatorSummaryHistory(@PathVariable String operatorName) {
+        // URL-decode the operator name since Spring doesn't auto-decode path variables
+        try {
+            operatorName = java.net.URLDecoder.decode(operatorName, "UTF-8");
+        } catch (java.io.UnsupportedEncodingException e) {
+            // Use as-is if decoding fails
+        }
         List<OperatorInfo> operators = operatorQueryService.findByOperatorName(operatorName);
         if (operators.isEmpty()) {
             return ResponseEntity.status(404).body(createOperatorNotFoundResponse(operatorName));
