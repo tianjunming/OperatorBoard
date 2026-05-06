@@ -1,0 +1,192 @@
+功能编号,功能描述,数据来源,API端点,data_category,is_history,intent,formatter函数,实现状态,路由逻辑,数据字段,问题/改进建议
+
+=== 核心路由逻辑 ===
+
+意图检测(intent):
+- site_data: '站点' in query or 'site' in query_lower
+- indicator_data: '指标' in query or '小区' in query or '负载' in query or '速率' in query
+- operator_list: '运营商' in query and '所有' in query
+- nl2sql: 其他通用查询
+
+数据分类(data_category):
+- sites: '站点' in query
+- cells: '小区' in query
+- ul_prb: '上行负载' in query or 'ulprb' in query
+- dl_prb: '下行负载' in query or 'dlprb' in query
+- ul_rate: '上行速率' in query or 'ulrate' in query
+- dl_rate: '下行速率' in query or 'dlrate' in query
+- traffic_ratio: '分流' in query or '驻留' in query
+
+历史标识(is_history):
+- True: ('历史' or '历年' or '变化' or '趋势' in query) and '运营商' not in query
+- False: 其他情况
+
+=== 功能实现详情 ===
+
+1.中国联通有多少站点,site_cells(SiteCellSummary),/operators/{op}/sites/latest,sites,false,site_data,format_operator_site_count,已实现,
+intent=site_data, data_category=sites, operator_name!=None
+数据字段: lte700MSite, lte800MSite, ... (各频段站点数)
+问题: 无
+
+2.中国联通有多少小区,site_cells(SiteCellSummary),/operators/{op}/sites/latest,cells,false,site_data,format_operator_cell_count,已实现,
+intent=site_data, data_category=cells, operator_name!=None
+数据字段: lte700MCell, lte800MCell, ... (各频段小区数)
+问题: 无
+
+3.中国联通小区上行负载,indicator_summary,/operators/{op}/indicator-summary/latest,ul_prb,false,indicator_data,format_ul_prb,已实现,
+intent=indicator_data, data_category=ul_prb, is_history=False
+数据字段: lte700MUlPrb, lte800MUlPrb, ... (各频段ULPRB)
+问题: 无
+
+4.中国联通小区下行负载,indicator_summary,/operators/{op}/indicator-summary/latest,dl_prb,false,indicator_data,format_dl_prb,已实现,
+intent=indicator_data, data_category=dl_prb, is_history=False
+数据字段: lte700MDlPrb, lte800MDlPrb, ... (各频段DLPRB)
+问题: 无
+
+5.中国联通小区上行速率,indicator_summary,/operators/{op}/indicator-summary/latest,ul_rate,false,indicator_data,format_ul_rate,已实现,
+intent=indicator_data, data_category=ul_rate, is_history=False
+数据字段: lte700MUlRate, lte800MUlRate, ... (各频段ULUserRate)
+问题: 无
+
+6.中国联通小区下行速率,indicator_summary,/operators/{op}/indicator-summary/latest,dl_rate,false,indicator_data,format_dl_rate,已实现,
+intent=indicator_data, data_category=dl_rate, is_history=False
+数据字段: lte700MDlRate, lte800MDlRate, ... (各频段DLUserRate)
+问题: 无
+
+7.中国联通小区分流/指标,indicator_summary,/operators/{op}/indicator-summary/latest,traffic_ratio,false,indicator_data,format_traffic_ratio,已实现,
+intent=indicator_data, data_category=traffic_ratio, is_history=False
+数据字段: trafficRatio, durationCampratio, flowDurationRatio
+问题: 无
+
+9.查看所有运营商,OperatorInfo,/operators,无,false,operator_list,format_all_operators,已实现+改进,
+intent=operator_list
+新增hierarchical_tree字段支持层级分类: {region: {country: {province: [operators]}}}
+chart_type改为"tree"
+问题: 前端需支持tree类型图表渲染
+
+10.查看所有运营商站点,operator_summary,/operators/all/operator-summary/latest,无,false,site_data,format_all_operators_physical_sites,已实现,
+intent=site_data, data_category=sites, operator_name=None
+数据字段: ltePhysicalSiteNum, nrPhysicalSiteNum, totalSiteNum
+问题: 无
+
+11a.查看所有运营商下行速率,operator_summary,/operators/all/operator-summary/latest,dl_rate,false,indicator_data,format_all_operators_dl_rate,已实现,
+intent=indicator_data, data_category=dl_rate, is_history=False, operator_name=None
+数据字段: lteAvgDlRate, nrAvgDlRate
+问题: 无
+
+11b.查看所有运营商上行速率,operator_summary,/operators/all/operator-summary/latest,ul_rate,false,indicator_data,format_all_operators_ul_rate,已实现,
+intent=indicator_data, data_category=ul_rate, is_history=False, operator_name=None
+数据字段: lteAvgUlRate, nrAvgUlRate
+问题: 无
+
+12a.查看所有运营商下行负载,operator_summary,/operators/all/operator-summary/latest,dl_prb,false,indicator_data,format_all_operators_dl_prb,已实现,
+intent=indicator_data, data_category=dl_prb, is_history=False, operator_name=None
+数据字段: lteAvgDlPrb, nrAvgDlPrb
+问题: 无
+
+12b.查看所有运营商上行负载,operator_summary,/operators/all/operator-summary/latest,ul_prb,false,indicator_data,format_all_operators_ul_prb,已实现,
+intent=indicator_data, data_category=ul_prb, is_history=False, operator_name=None
+数据字段: lteAvgUlPrb, nrAvgUlPrb
+问题: 无
+
+14.中国联通历史站点,site_cells(SiteCellSummary),/operators/{op}/site-summary/history,sites,true,site_data,format_site_history,已实现,
+intent=site_data, data_category=sites, is_history=True
+数据字段: lte700MSite等各频段站点数
+chart_type=bar
+问题: API端点可能需要确认
+
+15.中国联通历史小区,site_cells(SiteCellSummary),/operators/{op}/site-summary/history,cells,true,site_data,format_site_history,已实现,
+intent=site_data, data_category=cells, is_history=True
+数据字段: lte700MCell等各频段小区数
+chart_type=bar
+问题: API端点可能需要确认
+
+16.中国联通历史上行负载,indicator_summary,/operators/{op}/indicator-summary/history,ul_prb,true,indicator_data,format_ul_prb_history,已实现+改进,
+intent=indicator_data, data_category=ul_prb, is_history=True
+数据字段: lte700MUlPrb(频段), lteAvgUlPrb(平均值)
+chart_keys=["LTE","NR","LTE平均","NR平均"]
+问题: 无
+
+17.中国联通历史下行负载,indicator_summary,/operators/{op}/indicator-summary/history,dl_prb,true,indicator_data,format_dl_prb_history,已实现+改进,
+intent=indicator_data, data_category=dl_prb, is_history=True
+数据字段: lte700MDlPrb(频段), lteAvgDlPrb(平均值)
+chart_keys=["LTE","NR","LTE平均","NR平均"]
+问题: 无
+
+18.中国联通历史上行速率,indicator_summary,/operators/{op}/indicator-summary/history,ul_rate,true,indicator_data,format_ul_rate_history,已实现+改进,
+intent=indicator_data, data_category=ul_rate, is_history=True
+数据字段: lte700MUlRate(频段), lteAvgUlRate(平均值)
+chart_keys=["LTE","NR","LTE平均","NR平均"]
+问题: 无
+
+19.中国联通历史下行速率,indicator_summary,/operators/{op}/indicator-summary/history,dl_rate,true,indicator_data,format_dl_rate_history,已实现+改进,
+intent=indicator_data, data_category=dl_rate, is_history=True
+数据字段: lte700MDlRate(频段), lteAvgDlRate(平均值)
+chart_keys=["LTE","NR","LTE平均","NR平均"]
+问题: 无
+
+20.中国联通历史分流/指标,indicator_summary,/operators/{op}/indicator-summary/history,traffic_ratio,true,indicator_data,format_traffic_ratio_history,已实现,
+intent=indicator_data, data_category=traffic_ratio, is_history=True
+数据字段: trafficRatio, durationCampratio, flowDurationRatio
+chart_keys=["分流比","时长驻留比","流量驻留比","终端渗透率"]
+问题: 无
+
+=== 数据实体字段对照 ===
+
+实体:OperatorSummary (operator_summary表)
+字段:
+  - ltePhysicalSiteNum, nrPhysicalSiteNum (物理站点数)
+  - ltePhysicalCellNum, nrPhysicalCellNum (物理小区数)
+  - lteAvgDlRate, lteAvgUlRate, lteAvgDlPrb, lteAvgUlPrb (LTE平均值)
+  - nrAvgDlRate, nrAvgUlRate, nrAvgDlPrb, nrAvgUlPrb (NR平均值)
+  - trafficRatio, durationCampratio, flowDurationRatio (分流指标)
+  - onlineUsers, nrUsers (用户数)
+  - terminalPenetrationRatio (终端渗透率)
+用途: 功能10, 11, 12的全量运营商查询
+
+实体:IndicatorSummary (indicator_summary表)
+字段:
+  - lte700MDlRate, lte700MUlRate, lte700MDlPrb, lte700MUlPrb (LTE 700M各指标)
+  - lteAvgDlRate, lteAvgUlRate, lteAvgDlPrb, lteAvgUlPrb (LTE平均值)
+  - nrAvgDlRate, nrAvgUlRate, nrAvgDlPrb, nrAvgUlPrb (NR平均值)
+用途: 功能3-7, 11, 12的单运营商最新数据, 功能16-20历史数据
+
+实体:SiteCellSummary (site_cells表)
+字段:
+  - lte700MSite, lte700MCell (LTE 700M站点/小区数)
+  - lte800MSite, lte800MCell, ... (其他频段)
+  - nr700MSite, nr700MCell, ... (NR频段)
+用途: 功能1, 2, 14, 15
+
+=== 路由决策树 ===
+
+1. intent == "operator_list" → format_all_operators (功能9)
+2. intent in ["site_data", "latest_data", "indicator_data"]:
+   2.1 data_category in ['sites', 'cells']:
+       2.1.1 is_history == True → get_site_cells_history → format_site_history (功能14,15)
+       2.1.2 is_history == False:
+           - data_category == 'sites':
+             - operator_name != None → format_operator_site_count (功能1)
+             - operator_name == None → format_all_operators_physical_sites (功能10)
+           - data_category == 'cells':
+             - operator_name != None → format_operator_cell_count (功能2)
+             - operator_name == None → format_operator_cell_count (功能2变体)
+   2.2 data_category == 'unknown' and intent == "indicator_data" → format_traffic_ratio (功能7变体)
+   2.3 data_category in ['ul_prb', 'dl_prb', 'ul_rate', 'dl_rate', 'traffic_ratio']:
+       2.3.1 is_history == True → get_indicators_history → format_*_history (功能16-20)
+       2.3.2 is_history == False:
+           - operator_name == None and data_category in ['dl_rate', 'ul_rate'] → format_all_operators_*_rate (功能11)
+           - operator_name == None and data_category in ['dl_prb', 'ul_prb'] → format_all_operators_*_prb (功能12)
+           - operator_name != None → format_* (功能3-7)
+
+=== 实现状态总结 ===
+
+已实现功能: 1-7, 9(改进), 10, 11, 12, 14-20
+需前端配合: 9(tree类型图表), 16-20(柱状图含4个数据列)
+
+=== 待改进项 ===
+
+1. 前端需支持chart_type="tree"的层级分类图表渲染
+2. 前端需支持chart_keys=["LTE","NR","LTE平均","NR平均"]的柱状图(4列数据)
+3. 功能14,15的历史API端点需确认能返回site_summary数据
+4. 功能16-20历史查询时,同时获取indicator_info(频段明细)和operator_summary(avg汇总)的实现已确认
