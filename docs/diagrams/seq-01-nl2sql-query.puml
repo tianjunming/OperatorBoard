@@ -1,0 +1,100 @@
+@startuml NL2SQL-Query-Flow
+!theme plain
+
+title NL2SQL 查询时序图 - NL2SQL Query Sequence
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam sequenceStyle arrow
+skinparam actorStyle awesome
+skinparam noteBackgroundColor #FFF9C4
+skinparam noteBorderColor #F57F17
+
+' === Participants ===
+actor User as "用户"
+participant Dashboard as "Dashboard\n(React)"
+participant APIServer as "API Proxy\n(Node.js)"
+participant OperatorAgent as "OperatorAgent\n(Python)"
+participant NL2SQLCtrl as "Nl2SqlController\n(Java)"
+participant SqlCoderSvc as "SqlCoderService\n(Java)"
+participant SqlExecSvc as "SqlExecutorService\n(Java)"
+participant MySQL as "MySQL\nDatabase"
+participant SQLCoder as "SQLCoder\n(LLM)"
+
+' === Auto-number ===
+autonumber 1.1
+
+' === Main Flow ===
+User -> Dashboard : 输入自然语言查询
+activate User
+activate Dashboard
+
+Dashboard -> APIServer : POST /api/nl2sql/query
+activate APIServer
+
+APIServer -> OperatorAgent : HTTP POST
+activate OperatorAgent
+
+OperatorAgent -> OperatorAgent : Intent Detection\n(LLM)
+note right
+  **意图识别**
+  判断为 nl2sql 意图
+end note
+
+OperatorAgent -> OperatorAgent : 构造 NL2SQL 请求
+OperatorAgent -> NL2SQLCtrl : POST /api/v1/nl2sql/query
+activate NL2SQLCtrl
+
+NL2SQLCtrl -> SqlCoderSvc : generateSql(nl2sqlRequest)
+activate SqlCoderSvc
+
+SqlCoderSvc -> SQLCoder : POST /v1/completions
+note right
+  **LLM 调用**
+  生成 SQL 语句
+end note
+activate SQLCoder
+SQLCoder --> SqlCoderSvc : Generated SQL
+deactivate SQLCoder
+
+SqlCoderSvc --> NL2SQLCtrl : SQL 语句
+deactivate SqlCoderSvc
+
+NL2SQLCtrl -> SqlExecSvc : executeQuery(sql, maxResults)
+activate SqlExecSvc
+
+SqlExecSvc -> MySQL : SELECT query
+note right
+  **JDBC 执行**
+  参数化查询防注入
+end note
+activate MySQL
+MySQL --> SqlExecSvc : ResultSet
+deactivate MySQL
+
+SqlExecSvc --> NL2SQLCtrl : 查询结果
+deactivate SqlExecSvc
+
+NL2SQLCtrl --> OperatorAgent : JSON Response
+deactivate NL2SQLCtrl
+
+OperatorAgent -> OperatorAgent : 处理响应\n生成自然语言回答
+OperatorAgent --> APIServer : Agent Response
+deactivate OperatorAgent
+
+APIServer --> Dashboard : HTTP Response
+deactivate APIServer
+
+Dashboard -> Dashboard : 渲染结果\n展示图表/表格
+Dashboard -> User : 显示查询结果
+deactivate Dashboard
+deactivate User
+
+' === Error Handling ===
+note over User, SQLCoder #FFEBEE
+  **错误处理路径**
+  如果任何步骤失败，将返回错误信息给用户
+end note
+
+@enduml

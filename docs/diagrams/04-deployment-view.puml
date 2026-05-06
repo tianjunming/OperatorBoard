@@ -3,24 +3,37 @@
 
 title 部署视图 - Deployment View
 
-skinparam backgroundColor #FEFEFE
-skinparam node {
-    BackgroundColor #LightBlue
-    BorderColor #DarkBlue
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam nodesep 40
+skinparam ranksep 60
+
+' === Color Constants ===
+!define USER_COLOR #4472C4
+!define GATEWAY_COLOR #5B9BD5
+!define AGENT_COLOR #70AD47
+!define JAVA_COLOR #ED7D31
+!define DATABASE_COLOR #FFC000
+!define INFRA_COLOR #7030A0
+!define PROTOCOL_COLOR #808080
+
+' === C4-Style Nodes ===
+node "🖥️ End Users" <<person>> #USER_COLOR {
 }
 
-skinparam database {
-    BackgroundColor #LightYellow
-    BorderColor #DarkOrange
+node "🌐 API Gateway\n/ Load Balancer" <<container>> #GATEWAY_COLOR {
 }
 
-node "End Users\n(REST Clients)" as Users {
+node "⚙️ OperatorAgent Instance 1\n(Python/AIO)" <<container>> #AGENT_COLOR {
+    package "Capabilities" {
+        [Tools\nHTTP/DB/Vector]
+        [Skills\nData/RAG]
+        [MCP Client\nJSON-RPC 2.0]
+    }
 }
 
-node "API Gateway\n/ Load Balancer" as Gateway {
-}
-
-node "OperatorAgent\nInstance N\n(Python/AIO)" as AgentN {
+node "⚙️ OperatorAgent Instance 2\n(Python/AIO)" <<container>> #AGENT_COLOR {
     package "Capabilities" {
         [Tools]
         [Skills]
@@ -28,29 +41,90 @@ node "OperatorAgent\nInstance N\n(Python/AIO)" as AgentN {
     }
 }
 
-node "Java Microservices\n(MVC+CQRS)" as JavaServices {
+node "⚙️ OperatorAgent Instance N\n(Python/AIO)" <<container>> #AGENT_COLOR {
+    package "Capabilities" {
+        [Tools]
+        [Skills]
+        [MCP Client]
+    }
+}
+
+node "☕ Java Microservices\n(MVC+CQRS)" <<container>> #JAVA_COLOR {
     database "MySQL\noperator_db" as MySQL {
-        [operator_info]
-        [site_info]
-        [indicator_info]
+        artifact [operator_info]
+        artifact [site_info]
+        artifact [indicator_info]
+        artifact [band_info]
+        artifact [operator_summary]
     }
 
-    [NL2SQL Service]
-    [SQLCoder LLM]
+    [NL2SQL Service\nSpring Boot] as NL2SQLSvc
+    [SQLCoder LLM\nREST Client] as SQLCoder
 }
 
-node "Infrastructure" as Infra {
+node "🔧 Infrastructure" <<container>> #INFRA_COLOR {
     [Agent Registry\n(MCP Hub)]
     [Vector Store\n(Chroma)]
-    [Message Queue]
+    [Message Queue\n(Async)]
 }
 
-Users --> Gateway : HTTPS
-Gateway --> AgentN : HTTP
-AgentN --> JavaServices : HTTP
-AgentN --> Infra : MCP/HTTP
+' === Communication Messages ===
+User -[#blue,dashed]-> Gateway : **HTTPS**
+note on link #blue
+  Browser/System
+  REST API calls
+end note
 
-JavaServices --> MySQL : JDBC
-JavaServices --> SQLCoder : REST
+Gateway -[#green]-> Agent1 : **HTTP/REST**
+Gateway -[#green]-> Agent2 : **HTTP/REST**
+Gateway -[#green,thickness=2]-> AgentN : **HTTP/REST**
+
+Agent1 -[#orange]-> JavaSvc : **HTTP** : API calls
+Agent2 -[#orange]-> JavaSvc : **HTTP**
+AgentN -[#orange,thickness=2]-> JavaSvc : **HTTP**
+
+AgentN -[#purple]-> Infra : **MCP/HTTP**
+note right on link #purple
+  JSON-RPC 2.0
+  Agent Discovery
+end note
+
+JavaSvc -[#008000]-> MySQL : **JDBC**
+note left on link #008000
+  Connection Pool
+  HikariCP (10 max)
+end note
+
+JavaSvc -[#808080, dashed]-> SQLCoder : **REST** : /v1/completions
+
+' === Deployment Units ===
+note top of AgentN
+  **Deployment Unit**
+  Python 3.11+
+  FastAPI + httpx
+  asyncio event loop
+end note
+
+note top of JavaSvc
+  **Spring Boot 3.2**
+  Tomcat/Netty threads
+  MyBatis ORM
+end note
+
+note bottom of MySQL
+  **MySQL 8.0**
+  InnoDB engine
+  JSON support
+end note
+
+' === Protocol Legend ===
+legend right
+|= Protocol |= Technology |
+| HTTPS | TLS 1.3 |
+| HTTP/REST | JSON |
+| JDBC | MySQL Protocol |
+| MCP | JSON-RPC 2.0 |
+| REST | OpenAI-compatible |
+endlegend
 
 @enduml

@@ -1,0 +1,98 @@
+@startuml MCP-Communication-Flow
+!theme plain
+
+title MCP 通信时序图 - MCP Communication Sequence
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam sequenceStyle arrow
+skinparam actorStyle awesome
+skinparam noteBackgroundColor #E0F7FA
+skinparam noteBorderColor #006064
+
+' === Participants ===
+participant OperatorAgent as "OperatorAgent\n(Python)"
+participant MCPClient as "MCPClient"
+participant AgentRegistry as "Agent Registry\n(MCP Hub)"
+participant MCPTransport as "MCPTransport\nFactory"
+participant OtherAgent as "OtherAgent\n(Target)"
+
+' === Auto-number ===
+autonumber 1.1
+
+' === Main Flow ===
+group Agent 注册流程
+    OperatorAgent -> OperatorAgent : 启动 Agent
+    OperatorAgent -> MCPClient : 创建 MCPClient
+    activate MCPClient
+
+    MCPClient -> AgentRegistry : POST /agents/register
+    note right
+      **注册请求:**
+      ```json
+      {
+        "agent_id": "operator-agent",
+        "capabilities": ["nl2sql", "query"],
+        "endpoint": "http://localhost:8080"
+      }
+      ```
+    end note
+    activate AgentRegistry
+    AgentRegistry -> AgentRegistry : 保存 Agent 信息
+    AgentRegistry --> MCPClient : 200 OK\n注册成功
+    deactivate AgentRegistry
+end group
+
+group 服务发现流程
+    OperatorAgent -> MCPClient : discover_agent(capability)
+    MCPClient -> AgentRegistry : GET /agents?capability=nl2sql
+    activate AgentRegistry
+    AgentRegistry --> MCPClient : [Agent列表]
+    deactivate AgentRegistry
+    MCPClient --> OperatorAgent : Agent 信息
+end group
+
+group 跨 Agent 调用流程
+    OperatorAgent -> MCPClient : send_request(method, params)
+    MCPClient -> MCPClient : 构造 JSON-RPC 2.0 请求
+    note right
+      **JSON-RPC 请求:**
+      ```json
+      {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+          "name": "get_data",
+          "arguments": {}
+        }
+      }
+      ```
+    end note
+
+    MCPClient -> MCPTransport : create_transport(type)
+    activate MCPTransport
+    MCPTransport --> MCPClient : Transport 实例
+
+    MCPClient -> OtherAgent : 发送请求\n(HTTP/WS/Stdio)
+    activate OtherAgent
+
+    OtherAgent -> OtherAgent : 处理请求
+    OtherAgent --> MCPClient : JSON-RPC Response
+    deactivate OtherAgent
+
+    MCPClient --> OperatorAgent : 调用结果
+    deactivate MCPTransport
+    deactivate MCPClient
+end group
+
+' === Connection Management ===
+note over MCPClient #E8F5E9
+  **连接管理:**
+  - HTTP: 短连接，请求-响应
+  - WebSocket: 长连接，双向通信
+  - Stdio: 子进程通信
+end note
+
+@enduml

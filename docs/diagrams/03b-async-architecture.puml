@@ -1,0 +1,224 @@
+@startuml 03b-async-architecture
+!theme plain
+
+title 异步架构图 - Asynchronous Architecture
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam packageStyle rectangle
+skinparam nodesep 25
+skinparam ranksep 40
+
+' === Color Constants ===
+!define EVENTLOOP_COLOR #4472C4
+!define COROUTINE_COLOR #70AD47
+!define ASYNCIO_COLOR #5B9BD5
+!define TOOL_COLOR #ED7D31
+!define SKILL_COLOR #7030A0
+!define MCP_COLOR #FFC000
+!define ERROR_COLOR #C00000
+
+' === Main Event Loop ===
+rectangle "Event Loop (asyncio)" <<Async Runtime>> #EVENTLOOP_COLOR {
+
+    rectangle "Main Task" <<Task>> #LightBlue {
+
+        ' === Coroutines ===
+        rectangle "Coroutine: Tool Execution" <<Coroutine>> #COROUTINE_COLOR {
+            [HTTP Requests\n(httpx)]
+            [File I/O\n(aiofiles)]
+        }
+
+        rectangle "Coroutine: Skill Execution" <<Coroutine>> #SKILL_COLOR {
+            [Data Processing\n(Pandas)]
+            [Aggregation\nLogic]
+        }
+
+        rectangle "Coroutine: RAG Retrieval" <<Coroutine>> #ASYNCIO_COLOR {
+            [Vector Search\n(Chroma)]
+            [Document Load\n(Loaders)]
+        }
+
+        rectangle "Coroutine: MCP Client" <<Coroutine>> #MCP_COLOR {
+            [JSON-RPC 2.0\nMessage]
+            [Transport\n(HTTP/WS/Stdio)]
+        }
+    }
+
+    ' === Async I/O Operations ===
+    rectangle "Async I/O Operations" #LightGray {
+        database "HTTP Client\n(httpx AsyncClient)" as HTTPClient
+        database "Database\n(MySQL Connector)" as DBClient
+        database "Vector Store\n(ChromaDB)" as VectorDB
+        database "File System\naiofiles" as FileSystem
+    }
+}
+
+' === Concurrency Control ===
+rectangle "Concurrency Control" <<Utilities>> #LightYellow {
+    [Semaphore\n(asyncio.Semaphore)\nMax: 10 concurrent] as Semaphore
+    [Gather\n(asyncio.gather)\nParallel execution] as Gather
+    [Wait For\n(asyncio.wait_for)\nTimeout: 60s default] as WaitFor
+}
+
+' === Error Handling ===
+rectangle "Error Handling & Retry" <<Error Management>> #ERROR_COLOR {
+    [Exception Handler\nTry/Catch/Finally]
+    [Retry Logic\nExponential backoff]
+    [Circuit Breaker\nFailure threshold]
+    [Timeout Manager\nRequest deadlines]
+}
+
+' === Flow: Tool Invocation ===
+package "Tool Invocation Flow" <<Flow>> #LightGreen {
+    start
+    :ToolManager.invoke_tool();
+    :Acquire semaphore permit;
+    :Execute async HTTP request;
+    :httpx.AsyncClient.request();
+    note right
+      **Non-blocking I/O**
+      Event loop continues
+    end note
+    :Release semaphore permit;
+    :Return ToolResult;
+    stop
+}
+
+' === Flow: Skill Chain Execution ===
+package "Skill Chain Execution" <<Flow>> #LightBlue {
+    start
+    :SkillExecutor.execute_chain();
+    :For each skill in chain;
+
+    while (skill.enabled?) is (yes)
+        :Execute skill.execute();
+        :Check result.success;
+        if (success?) then (yes)
+            :Append to results;
+        else (no)
+            :Break chain;
+            note right
+              **Short-circuit evaluation**
+              Stop on first failure
+            end note
+        endif
+    endwhile (no more skills)
+
+    :Return SkillResult[];
+    stop
+}
+
+' === Flow: MCP Client Request ===
+package "MCP Client Request Flow" <<Flow>> #LightYellow {
+    start
+    :AgentMCPClient.send_request();
+
+    :Serialize JSON-RPC 2.0 request;
+    :MCPTransportFactory.create();
+
+    fork
+        :HTTP Transport\nPOST /mcp;
+    fork again
+        :WebSocket Transport\nws://.../mcp;
+    fork again
+        :Stdio Transport\nstdin/stdout;
+    end fork
+
+    :Send request;
+    :Await response with timeout;
+
+    if (timeout?) then (yes)
+        :Retry with backoff;
+        note right
+          **Retry Policy:**
+          3 attempts
+          1s, 2s, 4s delay
+        end note
+    else (no)
+        :Parse JSON-RPC response;
+        :Return result to Agent;
+    endif
+
+    stop
+}
+
+' === NL2SQL Command Flow ===
+package "NL2SQL Command Flow (CQRS)" <<Flow>> #LightCoral {
+    start
+    :User Request\n(Natural Language);
+
+    :Nl2SqlController.post()\nPOST /api/v1/nl2sql/query;
+
+    :Nl2SqlCommandService\n.generateSql();
+
+    :SqlCoderService\n.callLLM();
+    note right
+      **LLM Call:**
+      Text -> SQL
+      via /v1/completions
+    end note
+
+    :isSqlSafe()\nSQL Validation;
+
+    if (safe?) then (yes)
+        :SqlExecutorService\n.executeQuery();
+        :Return Results;
+    else (no)
+        :Return Error\nE3001;
+    endif
+
+    stop
+}
+
+' === Data Query Flow (CQRS Query Side) ===
+package "Data Query Flow (CQRS)" <<Flow>> #LightSeaGreen {
+    start
+    :Parallel Query Request;
+
+    fork
+        :OperatorQueryController\nGET /api/v1/query/operators;
+        -> OperatorQueryService;
+        -> OperatorRepository;
+        -> MySQL operator_info;
+    fork again
+        :IndicatorQueryController\nGET /api/v1/query/indicators/latest;
+        -> IndicatorQueryService;
+        -> IndicatorRepository;
+        -> MySQL indicator_info;
+    end fork
+
+    :asyncio.gather()\nCollect all results;
+
+    :Return Query Result[];
+    stop
+}
+
+' === Connections ===
+Main Task --> Tool Invocation : async/await
+Main Task --> Skill Chain : async/await
+Main Task --> RAG Retrieval : async/await
+Main Task --> MCP Client : async/await
+
+Semaphore --> HTTPClient : limit
+Gather --> DBClient : parallel
+WaitFor --> VectorDB : timeout
+
+Tool Invocation ..> Error Handling : try/catch
+Skill Chain ..> Error Handling : try/catch
+MCP Client Request ..> Error Handling : retry
+
+' === Legend ===
+legend right
+|= Component |= Description |
+| Event Loop | asyncio event loop driver |
+| Coroutine | awaitable execution unit |
+| Semaphore | Concurrency limit control |
+| Gather | Parallel task collection |
+| Wait For | Timeout wrapper |
+| Error Handling | Exception management |
+| Retry Logic | Exponential backoff retry |
+endlegend
+
+@enduml

@@ -1,0 +1,116 @@
+@startuml data-flow-nl2sql
+!theme plain
+
+title 数据流图 - NL2SQL 查询数据流
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam packageStyle rectangle
+skinparam nodesep 30
+skinparam ranksep 60
+
+' === Color Constants ===
+!define INPUT_COLOR #E3F2FD
+!define PROCESS_COLOR #C8E6C9
+!define OUTPUT_COLOR #FFE0B2
+!define STORAGE_COLOR #F3E5F5
+!define EXTERNAL_COLOR #E0F7FA
+
+' === External Entities ===
+rectangle "用户" <<External>> #INPUT_COLOR {
+}
+
+rectangle "SQLCoder LLM\n(NL2SQL 模型)" <<External>> #INPUT_COLOR {
+}
+
+' === Process Nodes ===
+rectangle "1. Dashboard 组件" <<Process>> #PROCESS_COLOR {
+}
+
+rectangle "2. API Proxy" <<Process>> #PROCESS_COLOR {
+}
+
+rectangle "3. Operator Agent" <<Process>> #PROCESS_COLOR {
+    rectangle "3.1 Intent Detection" as ID
+    rectangle "3.2 Response Generator" as RG
+}
+
+rectangle "4. Nl2SqlController" <<Process>> #PROCESS_COLOR {
+}
+
+rectangle "5. SqlCoderService" <<Process>> #PROCESS_COLOR {
+}
+
+rectangle "6. SqlExecutorService" <<Process>> #PROCESS_COLOR {
+}
+
+' === Data Stores ===
+database "7. MySQL Database" <<DataStore>> #STORAGE_COLOR {
+    artifact [operator_info]
+    artifact [site_info]
+    artifact [indicator_info]
+}
+
+' === Data Flows ===
+' Input flows
+用户 -[#blue,dashed]-> 1 : 自然语言查询\n"北京联通有多少站点？"
+
+' Dashboard flows
+1 -[#green]-> 2 : HTTP POST\n/api/nl2sql/query
+
+' API Proxy flows
+2 -[#green]-> 3 : 转发请求
+
+' Agent flows
+3 -> ID : 输入文本
+ID -[#orange]-> 3 : 意图: nl2sql
+3 -> 4 : NL2SQLRequest
+
+' Controller flows
+4 -> 5 : 自然语言查询
+
+' LLM flows
+5 -[#red,dashed]-> SQLCoder LLM : prompt + schema
+SQLCoder LLM -[#red,dashed]-> 5 : 生成的 SQL
+
+' Executor flows
+5 -> 6 : SQL 语句
+6 -> 7 : SELECT query
+7 -[#purple]-> 6 : ResultSet
+6 -> 4 : 查询结果
+
+' Response flows
+4 -> 3 : JSON 结果
+3 -> RG : 原始数据
+RG -[#blue]-> 3 : 自然语言回答
+3 -> 2 : Agent Response
+2 -> 1 : HTTP Response
+1 -[#blue,dashed]-> 用户 : 可视化结果
+
+' === Data Transformation Labels ===
+note top of ID
+  **Data Transformation:**
+  Text -> Intent + Parameters
+end note
+
+note top of RG
+  **Data Transformation:**
+  Structured Data -> Natural Language
+end note
+
+note bottom of SQLCoder LLM
+  **Data Transformation:**
+  Text Prompt -> SQL Query
+end note
+
+' === Legend ===
+legend right
+|= Symbol |= Meaning |
+| → | Data flow direction |
+| -- | Dashed = External entity |
+| Rectangle | Process/Data transform |
+| Cylinder | Data store |
+endlegend
+
+@enduml

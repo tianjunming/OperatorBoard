@@ -8,48 +8,13 @@
 
 ![Deployment View](../diagrams/04-deployment-view.png)
 
+**Monitoring Architecture Diagram:** [04b-monitoring.puml](../diagrams/04b-monitoring.puml)
+
+![Monitoring Architecture](../diagrams/04b-monitoring.png)
+
 ## 2. 系统拓扑
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        End Users                                 │
-│                    (REST Clients)                                │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │ HTTPS
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    API Gateway / Load Balancer                   │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │
-        ┌──────────────────┼──────────────────┐
-        │                  │                  │
-        ▼                  ▼                  ▼
-┌───────────────┐  ┌───────────────┐  ┌───────────────┐
-│ OperatorAgent │  │ OperatorAgent │  │ OperatorAgent │
-│   Instance 1  │  │   Instance 2  │  │   Instance N  │
-│  (Python/AIO) │  │  (Python/AIO) │  │  (Python/AIO) │
-└───────┬───────┘  └───────┬───────┘  └───────┬───────┘
-        │                  │                  │
-        └──────────────────┼──────────────────┘
-                           │
-     ┌─────────────────────┼─────────────────────┐
-     │                     │                     │
-     ▼                     ▼                     ▼
-┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-│ Java Micros │      │ Java Micros │      │ Java Micros │
-│  Service A  │      │  Service B  │      │  Service C  │
-│  (Spring)   │      │  (Spring)   │      │  (Spring)   │
-│  MVC+CQRS   │      │  MVC+CQRS   │      │  MVC+CQRS   │
-└─────────────┘      └─────────────┘      └─────────────┘
-
-     ┌─────────────────────────────────────────────────┐
-     │                                                 │
-     ▼                     ▼                          ▼
-┌─────────────┐      ┌─────────────┐           ┌─────────────┐
-│Agent Registry│      │Vector Store │           │   Message   │
-│  (MCP Hub)  │      │  (Chroma)   │           │    Queue    │
-└─────────────┘      └─────────────┘           └─────────────┘
-```
+请参考 [04-deployment-view.puml](../diagrams/04-deployment-view.puml) 查看详细的部署拓扑图。
 
 ## 3. 部署配置
 
@@ -219,44 +184,11 @@ spec:
 
 ### 4.1 向量存储部署
 
-```
-┌─────────────────────────────────────────────────────┐
-│              ChromaDB Cluster                       │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
-│  │  Primary    │  │  Replica 1  │  │  Replica 2  │ │
-│  │  (Writer)   │──│  (Reader)   │  │  (Reader)   │ │
-│  └─────────────┘  └─────────────┘  └─────────────┘ │
-│         │                                             │
-└─────────┼─────────────────────────────────────────────┘
-          │
-          ▼
-    ┌───────────┐
-    │ S3 / NFS  │
-    │ (持久化)   │
-    └───────────┘
-```
+请参考 [04b-monitoring.puml](../diagrams/04b-monitoring.puml) 中的 Vector Store Deployment 图。
 
 ### 4.2 MCP 服务器部署
 
-```
-┌──────────────────────────────────────────────────────┐
-│              MCP Server Infrastructure                │
-│                                                      │
-│  ┌──────────────────────────────────────────────┐   │
-│  │         Agent Registry (MCP Hub)              │   │
-│  │  - Agent Discovery                            │   │
-│  │  - Capability Catalog                         │   │
-│  │  - Request Routing                            │   │
-│  └──────────────────────────────────────────────┘   │
-│                    │                                 │
-│    ┌───────────────┼───────────────┐                │
-│    ▼               ▼               ▼                │
-│ ┌──────┐        ┌──────┐       ┌──────┐            │
-│ │Agent │        │Agent │       │Agent │            │
-│ │  A   │        │  B   │       │  C   │            │
-│ └──────┘        └──────┘       └──────┘            │
-└──────────────────────────────────────────────────────┘
-```
+请参考 [04b-monitoring.puml](../diagrams/04b-monitoring.puml) 中的 MCP Server Infrastructure 图。
 
 ## 5. 网络配置
 
@@ -393,18 +325,7 @@ data:
 
 ### 7.2 日志收集
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Operator   │────>│    Fluentd  │────>│Elasticsearch│
-│   Agent     │     │   (Logs)    │     │  + Kibana   │
-└─────────────┘     └─────────────┘     └─────────────┘
-        │
-        ▼
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  NL2SQL     │────>│    Fluentd  │────>│Elasticsearch│
-│  Service    │     │   (Logs)    │     │  + Kibana   │
-└─────────────┘     └─────────────┘     └─────────────┘
-```
+请参考 [04b-monitoring.puml](../diagrams/04b-monitoring.puml) 中的 Logging & Observability 图。
 
 ## 8. 灾难恢复
 

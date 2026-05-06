@@ -8,6 +8,10 @@
 
 ![Development View](../diagrams/05-development-view.png)
 
+**Dependency Diagram:** [05b-dependencies.puml](../diagrams/05b-dependencies.puml)
+
+![Dependencies](../diagrams/05b-dependencies.png)
+
 ## 2. 代码组织
 
 ### 2.1 仓库结构
@@ -364,25 +368,12 @@ dependencies = [
 
 ### 3.4 依赖关系图
 
-```
-operator-agent
-    │
-    └── agent-framework
-            │
-            ├── langchain-core
-            ├── pydantic
-            ├── pyyaml
-            ├── chromadb
-            └── httpx
+请参考 [05b-dependencies.puml](../diagrams/05b-dependencies.puml) 查看详细的模块依赖关系图。
 
-operator-service (Java)
-    │
-    ├── Spring Boot
-    │     ├── spring-boot-starter-web
-    │     └── spring-boot-starter-validation
-    ├── MyBatis
-    └── MySQL Connector
-```
+**核心依赖规则:**
+- `agent-framework/core` 无任何其他框架模块依赖
+- 所有其他框架模块依赖 `core`
+- 业务 Agent 依赖 `agent-framework`，而非反过来
 
 ## 4. 开发环境
 

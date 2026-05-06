@@ -3,125 +3,231 @@
 
 title 开发视图 - Development View
 
-skinparam backgroundColor #FEFEFE
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
 skinparam packageStyle rectangle
+skinparam nodesep 20
+skinparam ranksep 40
 
-package "src/agent-framework" as af {
-    package "core" {
-        [agent.py]
-        [types.py]
-        [exceptions.py]
+' === Color Constants ===
+!define FRAMEWORK_COLOR #4472C4
+!define AGENT_COLOR #70AD47
+!define SERVICE_COLOR #ED7D31
+!define FRONTEND_COLOR #7030A0
+!define UTILS_COLOR #808080
+
+' === Package Versions ===
+!define FRAMEWORK_VERSION v0.3.0
+!define AGENT_VERSION v0.2.0
+!define SERVICE_VERSION v1.7.0
+!define APP_VERSION v1.0.0
+
+' === Agent Framework Package ===
+package "agent-framework (Python)" <<Library>> #FRAMEWORK_COLOR {
+    package "core" as af_core {
+        [agent.py\nBaseAgent v1.0]
+        [types.py\nCore Types]
+        [exceptions.py\nException Hierarchy]
     }
-    package "tools" {
-        [base.py]
-        [registry.py]
-        [manager.py]
+
+    package "tools" as af_tools {
+        [base.py\nBaseTool._run()]
+        [registry.py\nToolRegistry]
+        [manager.py\nToolManager]
     }
-    package "skills" {
-        [base.py]
-        [registry.py]
-        [executor.py]
+
+    package "skills" as af_skills {
+        [base.py\nBaseSkill]
+        [registry.py\nSkillRegistry]
+        [executor.py\nSkillExecutor]
     }
-    package "mcp" {
-        [protocol.py]
-        [client.py]
-        [server.py]
-        package "transport" {
-            [http.py]
-            [websocket.py]
+
+    package "mcp" as af_mcp {
+        [protocol.py\nMCPProtocol]
+        [client.py\nMCPClient]
+        [server.py\nMCPServer]
+        package "transport" as af_transport {
+            [http.py\nHTTPTransport]
+            [websocket.py\nWebSocket]
         }
     }
-    package "rag" {
-        [embeddings.py]
-        [vectorstore.py]
-        [retriever.py]
+
+    package "rag" as af_rag {
+        [embeddings.py\nEmbeddingsManager]
+        [vectorstore.py\nVectorStoreManager]
+        [retriever.py\nRAGRetriever]
+        package "loaders" as af_loaders {
+            [directory_loader.py\nDirectoryLoader]
+            [database_loader.py\nDatabaseLoader]
+            [hybrid_loader.py\nHybridLoader]
+        }
     }
-    package "config" {
-        [schema.py]
-        [loader.py]
+
+    package "api" as af_api {
+        [base.py\nBaseAgentServer]
+        [errors.py\nErrorCode/AgentAPIError]
+        [response.py\nget_error_response()]
+    }
+
+    package "config" as af_config {
+        [schema.py\nPydantic Models]
+        [loader.py\nConfigLoader]
+    }
+
+    package "llm" as af_llm {
+        [client.py\nLLMClient]
+        [config.py\nLLMConfig]
+    }
+
+    package "utils" as af_utils {
+        [async_utils.py\nasyncio helpers]
     }
 }
 
-package "src/operator-agent" as oa {
-    [operator_agent.py]
-    package "api" {
-        [server.py]
+' === Operator Agent Package ===
+package "operator-agent (Python)" <<Application>> #AGENT_COLOR {
+    [operator_agent.py\nOperatorAgent]
+    [operator_config.py\nConfig Loader]
+    [api/\nserver.py\nFastAPI Server] as oa_api
+
+    package "capabilities/tools" as oa_tools {
+        [java_service_tool.py\nJavaMicroserviceTool]
+        [http_tool.py\nHTTPServiceTool]
     }
-    package "capabilities" {
-        package "tools" {
-            [java_service_tool.py]
-            [http_tool.py]
-        }
-        package "skills" {
-            [operator_data_skill.py]
-            [data_aggregator_skill.py]
-            [report_generator_skill.py]
-        }
-        package "mcp" {
-            [agent_mcp_client.py]
-            [system_data_source.py]
-        }
+
+    package "capabilities/skills" as oa_skills {
+        [operator_data_skill.py\nOperatorDataSkill]
+        [data_aggregator_skill.py\nDataAggregator]
+        [report_generator_skill.py\nReportGenerator]
     }
-    [operator_config.py]
+
+    package "capabilities/rag" as oa_rag {
+        [telecom_vectorstore.py\nTelecomRAG]
+        [telecom_retriever.py\nTelecomRetriever]
+    }
+
+    package "capabilities/mcp" as oa_mcp {
+        [agent_mcp_client.py\nAgentMCPClient]
+        [system_data_source.py\nSystemDataSource]
+    }
 }
 
-package "src/operator-service" as os {
-    package "controller" {
+' === Operator Service Package ===
+package "operator-service (Java Spring Boot)" <<Application>> #SERVICE_COLOR {
+    package "controller" as os_ctrl {
         [Nl2SqlController.java]
-        package "query" {
+        package "query" as os_ctrl_query {
             [OperatorQueryController.java]
             [IndicatorQueryController.java]
         }
     }
-    package "service" {
-        package "command" {
+
+    package "service" as os_svc {
+        package "command" as os_svc_cmd {
             [Nl2SqlCommandService.java]
+            [SqlCoderService.java]
+            [SqlExecutorService.java]
         }
-        package "query" {
+        package "query" as os_svc_query {
             [OperatorQueryService.java]
             [IndicatorQueryService.java]
         }
     }
-    package "repository" {
+
+    package "repository" as os_repo {
         [OperatorRepository.java]
         [IndicatorRepository.java]
     }
-    package "entity" {
+
+    package "entity" as os_entity {
         [OperatorInfo.java]
         [SiteCellSummary.java]
         [IndicatorInfo.java]
+        [BandInfo.java]
     }
-    package "config" {
+
+    package "config" as os_config {
         [SecurityConfig.java]
         [SchemaCache.java]
         [SqlCoderConfig.java]
     }
+
+    package "mapper" as os_mapper {
+        [OperatorMapper.xml]
+        [IndicatorMapper.xml]
+    }
 }
 
-package "src/agent-app" as app {
-    [App.jsx]
-    [ErrorBoundary.jsx]
-    package "components" {
+' === Frontend Package ===
+package "agent-app (React)" <<Application>> #FRONTEND_COLOR {
+    [App.jsx\nMain Component]
+    [ErrorBoundary.jsx\nError Handling]
+    [main.jsx\nEntry Point]
+
+    package "components" as app_comp {
         [ChatContainer.jsx]
+        [ChatInput.jsx]
+        [ChatMessage.jsx]
+        [FollowupQuestions.jsx]
         [OperatorDashboard.jsx]
+        [DashboardCharts.jsx]
     }
-    package "hooks" {
+
+    package "hooks" as app_hooks {
         [useAgentStream.js]
         [useOperatorData.js]
     }
-    package "styles" {
-        [index.css]
+
+    package "styles" as app_styles {
+        [index.css\nGlobal Styles]
         [Dashboard.css]
+        [ChatContainer.css]
+    }
+
+    package "server" as app_server {
+        [index.js\nAPI Proxy]
     }
 }
 
-' Dependencies
-oa --> af
-os --> af : none
-app --> af : none
+' === Dependencies (dashed for "uses") ===
+oa_api ..> af_api : <<uses>>
+oa_tools ..> af_tools : <<uses>>
+oa_skills ..> af_skills : <<uses>>
+oa_rag ..> af_rag : <<uses>>
+oa_mcp ..> af_mcp : <<uses>>
 
-note "operator-agent depends on\nagent-framework" as N1
-note "operator-service is\nindependent Python module" as N2
-note "agent-app uses\nagent-framework types" as N3
+os_ctrl ..> os_svc : <<uses>>
+os_svc_cmd ..> os_repo : <<uses>>
+os_svc_query ..> os_repo : <<uses>>
+os_repo ..> os_entity : <<uses>>
+
+app_comp ..> app_hooks : <<uses>>
+app_server ..> app_comp : <<uses>>
+
+' === Module Versions Legend ===
+note top of af_core
+  **agent-framework 0.3.0**
+  Core framework modules
+end note
+
+note bottom of os_ctrl
+  **operator-service 1.7.0**
+  Java 17, Spring Boot 3.2
+  MyBatis 3.0
+end note
+
+legend right
+|= Module |= Technology |= Version |
+| agent-framework | Python 3.11+ | v0.3.0 |
+| operator-agent | Python 3.11+ | v0.2.0 |
+| operator-service | Java 17 | v1.7.0 |
+| agent-app | React 18, Vite | v1.0.0 |
+
+|= Arrow |= Meaning |
+| --> | Direct dependency |
+| ..> | Uses/imports |
+| -[dashed]-> | Optional dependency |
+endlegend
 
 @enduml

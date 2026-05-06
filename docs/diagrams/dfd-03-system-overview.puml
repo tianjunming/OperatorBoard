@@ -1,0 +1,183 @@
+@startuml data-flow-system-overview
+!theme plain
+
+title 数据流图 - 系统整体数据流
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam packageStyle rectangle
+skinparam nodesep 20
+skinparam ranksep 50
+
+' === Color Constants ===
+!define FRONTEND_COLOR #E3F2FD
+!define PROXY_COLOR #BBDEFB
+!define AGENT_COLOR #C8E6C9
+!define SERVICE_COLOR #FFE0B2
+!define DATABASE_COLOR #F3E5F5
+!define EXTERNAL_COLOR #E0F7FA
+!define LLM_COLOR #FFCDD2
+
+' === Layer 1: Frontend ===
+package "表现层 (Presentation Layer)" #FRONTEND_COLOR {
+    rectangle "用户浏览器\n(Browser)" <<External>> as Browser
+
+    rectangle "Dashboard\n(React)" <<Component>> {
+        rectangle "OperatorDashboard\n数据看板组件"
+        rectangle "ChatContainer\n对话容器组件"
+        rectangle "Charts\nRecharts 可视化"
+    }
+}
+
+' === Layer 2: API Proxy ===
+package "接口层 (API Proxy Layer)" #PROXY_COLOR {
+    rectangle "API Proxy\n(Node.js)" <<Component>> {
+        rectangle "Query Routes\n/api/query/*"
+        rectangle "NL2SQL Routes\n/api/nl2sql/*"
+    }
+}
+
+' === Layer 3: Agent ===
+package "业务逻辑层 (Business Logic Layer)" #AGENT_COLOR {
+    rectangle "OperatorAgent\n(Python)" <<Agent>> {
+        rectangle "Intent Detection\n意图识别 (LLM)"
+        rectangle "Tool Router\n工具路由"
+        rectangle "Response Generator\n响应生成"
+
+        rectangle "JavaServiceTool\nJava 服务调用"
+        rectangle "NL2SQLEndpoint\nNL2SQL 端点"
+        rectangle "MCPClient\n跨 Agent 调用"
+    }
+}
+
+' === Layer 4: Service ===
+package "服务层 (Service Layer)" #SERVICE_COLOR {
+    rectangle "operator-nl2sql-service\n(Java Spring Boot)" <<Microservice>> {
+
+        package "Controller Layer" {
+            rectangle "Nl2SqlController\n(Command)"
+            rectangle "OperatorQuery\nController (Query)"
+            rectangle "IndicatorQuery\nController (Query)"
+        }
+
+        package "Service Layer (CQRS)" {
+            rectangle "Nl2SqlCommand\nService (Command)"
+            rectangle "OperatorQuery\nService (Query)"
+            rectangle "IndicatorQuery\nService (Query)"
+            rectangle "SqlCoder\nService (LLM)"
+        }
+
+        package "Repository Layer" {
+            rectangle "Operator\nRepository"
+            rectangle "Indicator\nRepository"
+        }
+    }
+}
+
+' === Layer 5: Data ===
+package "数据层 (Data Layer)" #DATABASE_COLOR {
+    database "MySQL Database\noperator_db" <<Database>> {
+        artifact [operator_info]
+        artifact [site_info]
+        artifact [indicator_info]
+        artifact [band_info]
+        artifact [operator_summary]
+    }
+
+    database "ChromaDB\n(Vector Store)" <<VectorDB>> {
+        artifact [Telecom Docs\nEmbedding]
+        artifact [Protocol Docs\nEmbedding]
+    }
+
+    rectangle "Agent Registry\n(MCP Hub)" <<Registry>> {
+        [Agent Discovery]
+        [Capability Catalog]
+    }
+}
+
+' === Layer 6: External ===
+package "外部服务 (External Services)" #EXTERNAL_COLOR {
+    rectangle "SQLCoder LLM\n(NL2SQL Model)" <<LLM>> as SQLCoderLLM
+    rectangle "Intent Detection LLM\n(MiniMax M2-her)" <<LLM>> as IntentLLM
+}
+
+' === Data Flow Lines ===
+' Frontend to Proxy
+Browser --> Dashboard : 用户操作
+Dashboard --> "API Proxy" : HTTP Request
+
+' Proxy to Agent
+"Query Routes" --> "OperatorAgent" : /api/query/*
+"NL2SQL Routes" --> "OperatorAgent" : /api/nl2sql/*
+
+' Agent Processing
+"OperatorAgent" --> "Intent Detection" : 输入文本
+"Intent Detection" --> "IntentLLM" : prompt
+"IntentLLM" --> "Intent Detection" : intent: nl2sql/query
+
+"OperatorAgent" --> "Tool Router" : 路由决策
+"Tool Router" --> "JavaServiceTool" : tool_call
+"Tool Router" --> "NL2SQLEndpoint" : nl2sql_call
+"Tool Router" --> "MCPClient" : mcp_call
+
+' Tool Execution
+"JavaServiceTool" --> "operator-nl2sql-service" : HTTP/REST
+"MCPClient" --> "Agent Registry" : JSON-RPC
+
+' NL2SQL Flow
+"NL2SQLEndpoint" --> "Nl2SqlController" : POST /nl2sql/query
+"Nl2SqlController" --> "Nl2SqlCommand Service" : NL2SQL 请求
+"Nl2SqlCommand Service" --> "SqlCoder Service" : 生成 SQL
+"SqlCoder Service" --> "SQLCoderLLM" : prompt + schema
+"SQLCoderLLM" --> "SqlCoder Service" : Generated SQL
+"SqlCoder Service" --> "SqlExecutor Service" : 执行 SQL
+
+' Query Flow
+"OperatorQuery Controller" --> "OperatorQuery Service" : Query 请求
+"OperatorQuery Service" --> "Operator Repository" : 读取数据
+"OperatorQuery Controller" --> "IndicatorQuery Controller" : 并行查询
+"IndicatorQuery Controller" --> "IndicatorQuery Service" : Query 请求
+"IndicatorQuery Service" --> "Indicator Repository" : 读取数据
+
+' Repository to DB
+"Operator Repository" --> "MySQL Database" : SELECT
+"Indicator Repository" --> "MySQL Database" : SELECT
+"SqlExecutor Service" --> "MySQL Database" : INSERT/UPDATE/DELETE
+
+' Vector Store
+"OperatorAgent" --> "ChromaDB" : Vector Search
+"ChromaDB" --> "OperatorAgent" : Similar Documents
+
+' Response Flow
+"MySQL Database" --> "OperatorQuery Service" : Results
+"MySQL Database" --> "IndicatorQuery Service" : Results
+"operator-nl2sql-service" --> "OperatorAgent" : JSON Result
+
+"OperatorAgent" --> "Response Generator" : 构造响应
+"Response Generator" --> "API Proxy" : Agent Response
+
+"API Proxy" --> Dashboard : HTTP Response
+Dashboard --> Browser : UI Update
+
+' === Flow Numbers ===
+note as N1
+  **数据流方向:**
+  1. 用户输入 -> 前端 -> 代理 -> Agent
+  2. Agent 路由到对应服务
+  3. 服务层处理 (Command/Query)
+  4. 数据层持久化/读取
+  5. 响应逐级返回
+end note
+
+legend right
+|= Layer |= Component |= Technology |
+| Presentation | Dashboard | React + Recharts |
+| API Proxy | Routes | Node.js |
+| Business Logic | OperatorAgent | Python + asyncio |
+| Service | Controllers/Services | Java Spring Boot |
+| Data | Repositories/Databases | MySQL, ChromaDB |
+| External | LLMs | SQLCoder, MiniMax |
+endlegend
+
+@enduml

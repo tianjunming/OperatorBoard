@@ -1,0 +1,120 @@
+@startuml data-flow-cqrs
+!theme plain
+
+title 数据流图 - CQRS 查询数据流
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam packageStyle rectangle
+skinparam nodesep 25
+skinparam ranksep 50
+
+' === Color Constants ===
+!define INPUT_COLOR #E3F2FD
+!define COMMAND_COLOR #FFCDD2
+!define QUERY_COLOR #C8E6C9
+!define STORAGE_COLOR #F3E5F5
+
+' === External Entities ===
+rectangle "用户" <<External>> #INPUT_COLOR {
+}
+
+' === Process Nodes ===
+rectangle "1. Dashboard" <<Process>> #QUERY_COLOR {
+}
+
+rectangle "2. API Proxy" <<Process>> #QUERY_COLOR {
+}
+
+rectangle "3. OperatorAgent" <<Process>> #QUERY_COLOR {
+}
+
+' === Command Side (Write) ===
+rectangle "4. Nl2SqlController" <<CQRS Command>> #COMMAND_COLOR {
+}
+
+rectangle "5. SqlCoderService" <<CQRS Command>> #COMMAND_COLOR {
+}
+
+rectangle "6. SqlExecutorService" <<CQRS Command>> #COMMAND_COLOR {
+}
+
+' === Query Side (Read) ===
+rectangle "7. OperatorQuery\nController" <<CQRS Query>> #QUERY_COLOR {
+}
+
+rectangle "8. OperatorQuery\nService" <<CQRS Query>> #QUERY_COLOR {
+}
+
+rectangle "9. IndicatorQuery\nController" <<CQRS Query>> #QUERY_COLOR {
+}
+
+rectangle "10. IndicatorQuery\nService" <<CQRS Query>> #QUERY_COLOR {
+}
+
+' === Data Stores ===
+database "11. MySQL\noperator_db" <<DataStore>> #STORAGE_COLOR {
+    artifact [operator_info\n写/读]
+    artifact [site_info\n读]
+    artifact [indicator_info\n读]
+    artifact [operator_summary\n读]
+}
+
+rectangle "SQLCoder LLM" <<External>> #INPUT_COLOR {
+}
+
+' === Command Side Flows (NL2SQL) ===
+4 -> 5 : 自然语言查询
+5 -[#red,dashed]-> SQLCoder LLM : 生成 SQL
+SQLCoder LLM -[#red,dashed]-> 5 : SQL 语句
+5 -> 6 : SQL 语句
+6 -> 11 : INSERT/UPDATE/DELETE
+6 <-- 11 : Result
+
+' === Query Side Flows (Read) ===
+7 -> 8 : 查询请求
+8 -> 11 : SELECT operator_info\nSELECT site_info
+11 ---> 8 : Operator 数据
+11 ---> 10 : Indicator 数据
+8 --> 7 : Operator 结果
+10 --> 9 : Indicator 结果
+
+' === Response Flow ===
+7 --> 3 : 查询结果
+9 --> 3 : 查询结果
+3 --> 2 : 汇总结果
+2 --> 1 : HTTP Response
+1 --> 用户 : 可视化展示
+
+' === Input Flow ===
+用户 -[#blue,dashed]-> 1 : 读取请求\n"查看北京联通数据"
+
+' === CQRS Label ===
+note top of 4
+  **CQRS Command Side**
+  处理写操作和 NL2SQL 命令
+  调用 SQLCoder 生成 SQL
+end note
+
+note top of 7
+  **CQRS Query Side**
+  处理读操作
+  优化查询性能
+end note
+
+' === Data Flow Labels ===
+note bottom of 11
+  **Data Flow:**
+  - Command: Write -> Execute -> Validate -> Store
+  - Query: Read -> Query -> Aggregate -> Return
+end note
+
+legend right
+|= Path |= Type |= 说明 |
+| Red dashed | LLM Call | SQLCoder 生成 SQL |
+| Green | Query Flow | 读操作流程 |
+| Blue dashed | User Input | 外部输入 |
+endlegend
+
+@enduml

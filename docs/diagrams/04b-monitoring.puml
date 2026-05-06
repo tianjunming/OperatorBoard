@@ -1,0 +1,208 @@
+@startuml 04b-monitoring
+!theme plain
+
+title 监控架构图 - Monitoring Architecture
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam packageStyle rectangle
+skinparam nodesep 30
+skinparam ranksep 50
+
+' === Color Constants ===
+!define AGENT_COLOR #4472C4
+!define SERVICE_COLOR #70AD47
+!define DB_COLOR #ED7D31
+!define MONITOR_COLOR #7030A0
+!define LOG_COLOR #FFC000
+!define VECTOR_COLOR #5B9BD5
+
+' === Application Layer ===
+package "Application Layer" <<Layer>> {
+    node "Operator Agent\n(Python)" <<Component>> #AGENT_COLOR {
+        [Tools\nHTTP/DB/Vector]
+        [Skills\nData/RAG]
+        [MCP Client]
+    }
+
+    node "NL2SQL Service\n(Java Spring Boot)" <<Component>> #SERVICE_COLOR {
+        [Nl2SqlController]
+        [OperatorQueryController]
+        [IndicatorQueryController]
+        [SqlCoderService]
+    }
+
+    node "MySQL Database\noperator_db" <<Database>> #DB_COLOR {
+        artifact [operator_info]
+        artifact [site_info]
+        artifact [indicator_info]
+        artifact [operator_summary]
+    }
+}
+
+' === Vector Store Deployment ===
+package "Vector Store Deployment (ChromaDB)" <<Infrastructure>> #LightBlue {
+    node "ChromaDB Cluster" <<Container>> #VECTOR_COLOR {
+        node "Primary\n(Writer)" as PrimaryVS {
+            [Write API\n/collections/{name}]
+            [Embeddings\nStorage]
+        }
+
+        node "Replica 1\n(Reader)" as Replica1VS {
+            [Read API\n/query]
+            [Cache\nLRU]
+        }
+
+        node "Replica 2\n(Reader)" as Replica2VS {
+            [Read API\n/query]
+            [Cache\nLRU]
+        }
+
+        PrimaryVS <- Replica1VS : replicate
+        PrimaryVS <- Replica2VS : replicate
+    }
+
+    artifact "Persistence\n(S3/NFS)" as VectorPersistence
+    PrimaryVS --> VectorPersistence : persist
+}
+
+' === MCP Server Infrastructure ===
+package "MCP Server Infrastructure" <<Infrastructure>> #LightGreen {
+    node "Agent Registry\n(MCP Hub)" <<Container>> #MONITOR_COLOR {
+        [Agent Discovery\n/agents]
+        [Capability Catalog\n/capabilities]
+        [Request Routing\n/route]
+    }
+
+    node "MCP Server A" <<Server>> {
+        [Tools\nHTTP Transport]
+        [Skills]
+    }
+
+    node "MCP Server B" <<Server>> {
+        [Tools\nWebSocket Transport]
+        [Skills]
+    }
+
+    node "MCP Server C" <<Server>> {
+        [Tools\nStdio Transport]
+        [Skills]
+    }
+
+    AgentRegistry --> "MCP Server A" : JSON-RPC
+    AgentRegistry --> "MCP Server B" : JSON-RPC
+    AgentRegistry --> "MCP Server C" : JSON-RPC
+}
+
+' === Logging Architecture ===
+package "Logging & Observability" <<Infrastructure>> #LightYellow {
+    node "Operator Agent\nLogs" <<Log Source>> #AGENT_COLOR {
+        [application.log\nINFO/ERROR]
+        [access.log\nHTTP requests]
+        [mcp.log\nJSON-RPC messages]
+    }
+
+    node "NL2SQL Service\nLogs" <<Log Source>> #SERVICE_COLOR {
+        [application.log\nSpring Boot]
+        [sql.log\nExecuted SQL]
+        [performance.log\nTiming]
+    }
+
+    node "Fluentd\n(Log Collector)" <<Collector>> {
+        [tail input\nLog files]
+        [forward input\nTCP/UDP]
+        [filter parsing\nJSON/Grok]
+    }
+
+    node "Elasticsearch\n+ Kibana" <<Storage/UI>> {
+        [Logs Index\n/logs-YYYY.MM.DD]
+        [Metrics Index\n/metrics-YYYY.MM.DD]
+        [Dashboards]
+    }
+}
+
+' === Monitoring Stack ===
+package "Prometheus + Grafana" <<Monitoring>> #LightCoral {
+    node "Prometheus\n(Metrics)" <<Container>> {
+        [nl2sql_requests_total\nCounter]
+        [nl2sql_query_duration_seconds\nHistogram]
+        [operator_query_requests_total\nCounter]
+        [indicator_query_requests_total\nCounter]
+        [agent_active_tasks\nGauge]
+        [mcp_connection_status\nGauge]
+    }
+
+    node "Grafana\n(Dashboards)" <<Container>> {
+        [System Overview]
+        [NL2SQL Performance]
+        [Agent Activity]
+        [MCP Health]
+    }
+
+    Prometheus --> Grafana : metrics
+}
+
+' === Connections ===
+"Operator Agent" --> "Fluentd" : application.log
+"NL2SQL Service" --> "Fluentd" : application.log
+
+"Fluentd" --> "Elasticsearch + Kibana" : structured logs
+
+"Operator Agent" --> "Prometheus" : /metrics
+"NL2SQL Service" --> "Prometheus" : /actuator/prometheus
+
+"Prometheus" --> "Grafana" : query
+
+"Operator Agent" --> PrimaryVS : /collections
+PrimaryVS --> VectorPersistence : persist
+
+' === Agent Registry Connections ===
+"Operator Agent" --> AgentRegistry : register
+"Operator Agent" --> AgentRegistry : discover
+AgentRegistry --> "MCP Server A" : route request
+AgentRegistry --> "MCP Server B" : route request
+AgentRegistry --> "MCP Server C" : route request
+
+' === Log Collection Flow ===
+note as LogFlow
+  **Log Collection Flow:**
+  1. Application writes to log files
+  2. Fluentd tails and parses logs
+  3. Fluentd forwards to Elasticsearch
+  4. Kibana visualizes log data
+  5. Prometheus scrapes metrics
+  6. Grafana dashboards display
+end note
+
+' === Vector Store Note ===
+note as VectorNote
+  **ChromaDB Cluster:**
+  - Primary handles writes
+  - Replicas handle reads
+  - S3/NFS for persistence
+  - LRU cache per replica
+end note
+
+' === MCP Infrastructure Note ===
+note as MCPNote
+  **MCP Server Infrastructure:**
+  - Central Agent Registry
+  - Multi-transport support
+  - Agent Discovery protocol
+  - Capability Catalog
+end note
+
+' === Legend ===
+legend right
+|= Component |= Technology |
+| Log Collector | Fluentd |
+| Log Storage | Elasticsearch |
+| Log UI | Kibana |
+| Metrics | Prometheus |
+| Dashboards | Grafana |
+| Vector Store | ChromaDB |
+| Service Mesh | MCP Hub |
+endlegend
+
+@enduml

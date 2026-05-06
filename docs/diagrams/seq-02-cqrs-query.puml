@@ -1,0 +1,113 @@
+@startuml CQRS-Query-Flow
+!theme plain
+
+title CQRS 查询时序图 - CQRS Query Sequence
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam sequenceStyle arrow
+skinparam actorStyle awesome
+skinparam noteBackgroundColor #E3F2FD
+skinparam noteBorderColor #1565C0
+
+' === Participants ===
+actor User as "用户"
+participant Dashboard as "Dashboard\n(React)"
+participant APIServer as "API Proxy\n(Node.js)"
+participant OperatorAgent as "OperatorAgent\n(Python)"
+participant OpQueryCtrl as "OperatorQuery\nController"
+participant OpQuerySvc as "OperatorQuery\nService"
+participant OpRepo as "Operator\nRepository"
+participant MySQL as "MySQL\nDatabase"
+
+' === Participants for Parallel Query ===
+participant IndQueryCtrl as "IndicatorQuery\nController"
+participant IndQuerySvc as "IndicatorQuery\nService"
+participant IndRepo as "Indicator\nRepository"
+
+' === Auto-number ===
+autonumber 1.1
+
+' === Main Flow ===
+User -> Dashboard : 1. 选择运营商\n查看数据看板
+activate User
+activate Dashboard
+
+Dashboard -> APIServer : 2. GET /api/query/operators
+Dashboard -> APIServer : 3. GET /api/query/site-cells
+Dashboard -> APIServer : 4. GET /api/query/indicators/latest
+activate APIServer
+
+' === Parallel Query Execution ===
+par
+    APIServer -> OpQueryCtrl : 5a. GET /operators
+    activate OpQueryCtrl
+    OpQueryCtrl -> OpQuerySvc : 6a. findOperators()
+    activate OpQuerySvc
+    OpQuerySvc -> OpRepo : 7a. SELECT operator_info
+    activate OpRepo
+    OpRepo -> MySQL : 8a. JDBC Query
+    MySQL --> OpRepo : 9a. Operator List
+    OpRepo --> OpQuerySvc : 10a. Operator List
+    deactivate OpRepo
+    OpQuerySvc --> OpQueryCtrl : 11a. Operator List
+    deactivate OpQuerySvc
+    OpQueryCtrl --> APIServer : 12a. Query Result
+    deactivate OpQueryCtrl
+also
+    APIServer -> OpQueryCtrl : 5b. GET /site-cells
+    activate OpQueryCtrl #LightGreen
+    OpQueryCtrl -> OpQuerySvc : 6b. findSiteCellSummary()
+    activate OpQuerySvc
+    OpQuerySvc -> OpRepo : 7b. SELECT site_info
+    activate OpRepo
+    OpRepo -> MySQL : 8b. JDBC Query
+    MySQL --> OpRepo : 9b. Site Summary
+    OpRepo --> OpQuerySvc : 10b. Site Summary
+    deactivate OpRepo
+    OpQuerySvc --> OpQueryCtrl : 11b. Site Summary
+    deactivate OpQuerySvc
+    OpQueryCtrl --> APIServer : 12b. Query Result
+    deactivate OpQueryCtrl
+also
+    APIServer -> IndQueryCtrl : 5c. GET /indicators/latest
+    activate IndQueryCtrl #LightBlue
+    IndQueryCtrl -> IndQuerySvc : 6c. findLatestIndicators()
+    activate IndQuerySvc
+    IndQuerySvc -> IndRepo : 7c. SELECT indicator_info\nWHERE MAX(created_time)
+    activate IndRepo
+    IndRepo -> MySQL : 8c. JDBC Query
+    MySQL --> IndRepo : 9c. Latest Indicators
+    IndRepo --> IndQuerySvc : 10c. Latest Indicators
+    deactivate IndRepo
+    IndQuerySvc --> IndQueryCtrl : 11c. Latest Indicators
+    deactivate IndQuerySvc
+    IndQueryCtrl --> APIServer : 12c. Query Result
+    deactivate IndQueryCtrl
+end par
+
+APIServer --> Dashboard : 13. 汇总查询结果
+deactivate APIServer
+
+Dashboard -> Dashboard : 14. 渲染看板\n图表 + 表格
+Dashboard -> User : 15. 展示数据看板
+deactivate Dashboard
+deactivate User
+
+' === Notes ===
+note over User, MySQL #E8F5E9
+  **CQRS Query Side 特点:**
+  - 直接从 Repository 读取数据
+  - 无需 LLM 调用
+  - 优化读取性能
+  - 水平扩展查询服务
+end note
+
+note over Dashboard
+  **并行查询:**
+  三个查询并行执行
+  asyncio.gather() 收集结果
+end note
+
+@enduml

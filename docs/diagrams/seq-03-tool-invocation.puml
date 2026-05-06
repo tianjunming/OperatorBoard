@@ -1,0 +1,82 @@
+@startuml Tool-Invocation-Flow
+!theme plain
+
+title 工具调用时序图 - Tool Invocation Sequence
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam sequenceStyle arrow
+skinparam actorStyle awesome
+skinparam noteBackgroundColor #F3E5F5
+skinparam noteBorderColor #7B1FA2
+
+' === Participants ===
+participant OperatorAgent as "OperatorAgent\n(Python)"
+participant ToolManager as "ToolManager"
+participant ToolRegistry as "ToolRegistry\n(Singleton)"
+participant JavaServiceTool as "JavaMicroserviceTool"
+participant HTTPClient as "httpx\nAsyncClient"
+participant JavaService as "Java Service\n(Spring Boot)"
+participant MySQL as "MySQL\nDatabase"
+
+' === Auto-number ===
+autonumber 1.1
+
+' === Main Flow ===
+group 工具调用流程
+    OperatorAgent -> OperatorAgent : 执行任务\n需要获取数据
+    OperatorAgent -> ToolManager : invoke_tool(tool_name, input)
+    activate ToolManager
+
+    ToolManager -> ToolRegistry : get_tool(tool_name)
+    activate ToolRegistry
+    ToolRegistry --> ToolManager : Tool instance
+    deactivate ToolRegistry
+
+    ToolManager -> JavaServiceTool : tool.run(input)
+    activate JavaServiceTool
+
+    JavaServiceTool -> JavaServiceTool : 构造请求参数
+    JavaServiceTool -> HTTPClient : async client.post(url, json)
+    activate HTTPClient
+
+    HTTPClient -> JavaService : HTTP POST /api/v1/query/operators
+    activate JavaService
+
+    JavaService -> JavaService : 处理请求\n参数验证
+    JavaService -> MySQL : JDBC Query
+    activate MySQL
+    MySQL --> JavaService : ResultSet
+    deactivate MySQL
+
+    JavaService --> HTTPClient : JSON Response
+    deactivate JavaService
+
+    HTTPClient --> JavaServiceTool : HTTP Response
+    deactivate HTTPClient
+
+    JavaServiceTool -> JavaServiceTool : 解析响应\n构造 ToolResult
+    JavaServiceTool --> ToolManager : ToolResult
+    deactivate JavaServiceTool
+
+    ToolManager --> OperatorAgent : ToolResult
+    deactivate ToolManager
+end group
+
+' === Error Handling ===
+note over JavaServiceTool #FFF3E0
+  **错误处理:**
+  - 连接超时: 重试 3 次
+  - 服务不可用: 返回错误信息
+  - 参数错误: 返回验证错误
+end note
+
+' === Semaphore Control ===
+note over ToolManager #E8F5E9
+  **并发控制:**
+  Semaphore(10) 限制并发数
+  防止资源耗尽
+end note
+
+@enduml

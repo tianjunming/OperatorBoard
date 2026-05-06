@@ -45,6 +45,23 @@
 | 开发视图 | [05-development-view.puml](../diagrams/05-development-view.puml) | 代码组织、模块依赖 |
 | MCP传输层 | [06-mcp-transport.puml](../diagrams/06-mcp-transport.puml) | HTTP/WebSocket/Stdio 传输架构 |
 
+### 时序图 (Sequence Diagrams)
+
+| 流程 | 文件 | 说明 |
+|------|------|------|
+| NL2SQL 查询流程 | [seq-01-nl2sql-query.puml](../diagrams/seq-01-nl2sql-query.puml) | 自然语言查询完整时序 |
+| CQRS 查询流程 | [seq-02-cqrs-query.puml](../diagrams/seq-02-cqrs-query.puml) | 并行数据查询时序 |
+| 工具调用流程 | [seq-03-tool-invocation.puml](../diagrams/seq-03-tool-invocation.puml) | ToolManager 工具调用时序 |
+| MCP 通信流程 | [seq-04-mcp-communication.puml](../diagrams/seq-04-mcp-communication.puml) | Agent 注册与调用时序 |
+
+### 数据流图 (Data Flow Diagrams)
+
+| 流程 | 文件 | 说明 |
+|------|------|------|
+| NL2SQL 数据流 | [dfd-01-nl2sql-query.puml](../diagrams/dfd-01-nl2sql-query.puml) | NL2SQL 数据转换流 |
+| CQRS 数据流 | [dfd-02-cqrs-query.puml](../diagrams/dfd-02-cqrs-query.puml) | CQRS Command/Query 数据流 |
+| 系统整体数据流 | [dfd-03-system-overview.puml](../diagrams/dfd-03-system-overview.puml) | 六层架构数据流 |
+
 **渲染工具:** 可使用 [PlantUML Online Editor](https://www.plantuml.com/online/) 或本地 PlantUML 渲染器生成图片。
 
 ---

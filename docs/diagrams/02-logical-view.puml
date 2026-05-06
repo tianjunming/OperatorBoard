@@ -3,85 +3,126 @@
 
 title 逻辑视图 - Logical View
 
-skinparam backgroundColor #FEFEFE
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
 skinparam packageStyle rectangle
 
-package "agent-app (React Frontend)" {
-    [OperatorDashboard]
-    [ChatContainer]
-    [Recharts Charts]
+' === Color Constants ===
+!define FRONTEND_COLOR #4472C4
+!define BACKEND_COLOR #70AD47
+!define SERVICE_COLOR #ED7D31
+!define DATABASE_COLOR #FFC000
+!define LLM_COLOR #7030A0
+!define LAYER_CONTROLLER #5B9BD5
+!define LAYER_SERVICE #92D050
+!define LAYER_REPO #FFC000
+
+' === Frontend Layer ===
+package "agent-app (React Frontend)" <<System>> #PRIMARY_COLOR {
+    [OperatorDashboard\n数据看板]
+    [ChatContainer\n对话容器]
+    [Recharts Charts\n可视化图表]
 }
 
-package "agent-app Server (Node.js)" {
-    [Query Routes] as QueryRoutes
-    [NL2SQL Routes] as NL2SQLRoutes
+' === API Proxy Layer ===
+package "agent-app Server (Node.js)" <<System>> #BACKEND_COLOR {
+    [Query Routes\n/api/query/*] as QueryRoutes
+    [NL2SQL Routes\n/api/nl2sql/*] as NL2SQLRoutes
 }
 
-package "operator-agent (Python)" {
-    [OperatorAgent]
-    [JavaServiceTool]
-    [NL2SQLEndpoints]
-    [AgentRegistry]
-}
+' === Agent Layer ===
+package "operator-agent (Python)" <<System>> #SERVICE_COLOR {
+    [OperatorAgent\n主 Agent]
+    [JavaServiceTool\nJava服务调用]
+    [NL2SQLEndpoints\nNL2SQL端点]
 
-package "operator-nl2sql-service (Java Spring Boot)" {
-    package "Controller Layer" {
-        [Nl2SqlController\n(Command)]
-        [OperatorQueryController\n(Query)]
-        [IndicatorQueryController\n(Query)]
-    }
-
-    package "Service Layer (CQRS)" {
-        [Nl2SqlCommandService\n(Command)]
-        [OperatorQueryService\n(Query)]
-        [IndicatorQueryService\n(Query)]
-    }
-
-    package "Repository Layer" {
-        [OperatorRepository]
-        [IndicatorRepository]
+    package "Agent Registry\n(MCP)" <<MCP>> #LightGray {
+        [AgentMCPClient\nMCP客户端]
+        [AgentRegistry\n注册表]
     }
 }
 
-package "MySQL Database" {
-    [operator_info]
-    [site_info]
-    [indicator_info]
+' === Service Layer (CQRS) ===
+package "operator-nl2sql-service (Java Spring Boot)" <<External System>> #SERVICE_COLOR {
+
+    package "Controller Layer" <<Layer>> #LAYER_CONTROLLER {
+        [Nl2SqlController\nPOST /api/v1/nl2sql/query
+(Command)] as NL2SQLCtrl
+        [OperatorQueryController\nGET /api/v1/query/operators
+(Query)] as OpQueryCtrl
+        [IndicatorQueryController\nGET /api/v1/query/indicators/*
+(Query)] as IndQueryCtrl
+    }
+
+    package "Service Layer (CQRS)" <<Layer>> #LAYER_SERVICE {
+        [Nl2SqlCommandService\n(Command)] as NL2SQLCmdSvc
+        [OperatorQueryService\n(Query)] as OpQuerySvc
+        [IndicatorQueryService\n(Query)] as IndQuerySvc
+        [SqlCoderService\nLLM调用] as SqlCoderSvc
+    }
+
+    package "Repository Layer" <<Layer>> #LAYER_REPO {
+        [OperatorRepository\nMyBatis Mapper] as OpRepo
+        [IndicatorRepository\nMyBatis Mapper] as IndRepo
+    }
 }
 
-package "SQLCoder LLM" {
-    [NL2SQL Model]
+' === Database Layer ===
+database "MySQL Database" <<Database>> #DATABASE_COLOR {
+    artifact [operator_info\n运营商维度表] as OpTable
+    artifact [site_info\n站点信息表] as SiteTable
+    artifact [indicator_info\n指标信息表] as IndTable
+    artifact [band_info\n频段维度表] as BandTable
+    artifact [operator_summary\n站点聚合表] as SummaryTable
+}
+
+' === LLM ===
+package "SQLCoder LLM" <<External System>> #LLM_COLOR {
+    [NL2SQL Model\nSelf-hosted LLM]
 }
 
 ' === Relationships ===
-OperatorDashboard --> QueryRoutes : /api/query/*
-OperatorDashboard --> NL2SQLRoutes : /api/nl2sql/*
+OperatorDashboard --> QueryRoutes : HTTP
+OperatorDashboard --> NL2SQLRoutes : HTTP
 ChatContainer --> QueryRoutes
 
-QueryRoutes --> OperatorAgent
-NL2SQLRoutes --> OperatorAgent
+QueryRoutes --> OperatorAgent : /api/query/*
+NL2SQLRoutes --> OperatorAgent : /api/nl2sql/*
 
 OperatorAgent --> JavaServiceTool
 OperatorAgent --> NL2SQLEndpoints
-OperatorAgent --> AgentRegistry : MCP
+OperatorAgent --> AgentMCPClient : MCP
 
-JavaServiceTool --> OperatorQueryController
-JavaServiceTool --> IndicatorQueryController
-NL2SQLEndpoints --> Nl2SqlController
+JavaServiceTool --> OpQueryCtrl : HTTP
+JavaServiceTool --> IndQueryCtrl : HTTP
+NL2SQLEndpoints --> NL2SQLCtrl
 
-Nl2SqlController --> Nl2SqlCommandService
-OperatorQueryController --> OperatorQueryService
-IndicatorQueryController --> IndicatorQueryService
+NL2SQLCtrl --> NL2SQLCmdSvc
+OpQueryCtrl --> OpQuerySvc
+IndQueryCtrl --> IndQuerySvc
 
-Nl2SqlCommandService --> OperatorRepository
-Nl2SqlCommandService --> IndicatorRepository
-OperatorQueryService --> OperatorRepository
-IndicatorQueryService --> IndicatorRepository
+NL2SQLCmdSvc --> SqlCoderSvc
+NL2SQLCmdSvc --> OpRepo
+NL2SQLCmdSvc --> IndRepo
+OpQuerySvc --> OpRepo
+IndQuerySvc --> IndRepo
 
-OperatorRepository --> operator_info
-IndicatorRepository --> site_info
-IndicatorRepository --> indicator_info
+SqlCoderSvc --> NL2SQL Model : REST /v1/completions
 
-Nl2SqlCommandService --> SQLCoder : REST /v1/completions
+OpRepo --> OpTable
+SiteTable -[hidden]- OpTable
+IndRepo --> IndTable
+OpRepo ..> SummaryTable : <<create>>
+IndTable -[hidden]- BandTable
+
+' === Protocol Labels ===
+note as ProtocolNote
+  **Protocol Details**
+  - HTTP/REST for all external calls
+  - JSON for request/response
+  - JDBC for database access
+  - JSON-RPC 2.0 for MCP
+end note
 
 @enduml

@@ -3,28 +3,72 @@
 
 title 场景视图 - Scenario View
 
-skinparam backgroundColor #FEFEFE
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
 skinparam componentStyle rectangle
 
-' === Actors ===
-actor User as "User"
-actor OperatorDashboard as "Operator Dashboard"
-actor JavaNL2SQLService as "Java NL2SQL Service"
-actor SQLCoder as "SQLCoder LLM"
-actor MySQL as "MySQL Database"
-actor OtherAgent as "Other Agent"
-actor KnowledgeBase as "Knowledge Base"
+' === Color Constants ===
+!define PRIMARY_COLOR #4472C4
+!define SECONDARY_COLOR #70AD47
+!define ACCENT_COLOR #FFC000
+!define DATABASE_COLOR #ED7D31
+!define ACTOR_BORDER #5B9BD5
 
-' === Use Cases ===
-rectangle "NL2SQL Query" {
-    usecase UC001 as "UC-001 NL2SQL 自然语言查询"
-    usecase UC002 as "UC-002 运营商数据查询 (CQRS)"
-    usecase UC003 as "UC-003 最新频段指标查询 (CQRS)"
-    usecase UC004 as "UC-004 历史频段指标查询 (CQRS)"
-    usecase UC005 as "UC-005 指标趋势分析"
-    usecase UC006 as "UC-006 数据看板概览"
-    usecase UC007 as "UC-007 电信知识 RAG 查询"
-    usecase UC008 as "UC-008 跨 Agent 数据获取"
+' === Actors ===
+actor User <<Person>> #ACTOR_BORDER
+actor "Operator Dashboard" as Dashboard <<System>> #PRIMARY_COLOR
+actor "Java NL2SQL Service" as JavaNL2SQL <<External System>> #SECONDARY_COLOR
+actor "SQLCoder LLM" as SQLCoder <<External System>> #ACCENT_COLOR
+actor "MySQL Database" as MySQL <<Database>> #DATABASE_COLOR
+actor "Other Agent" as OtherAgent <<Agent>> #PRIMARY_COLOR
+actor "Knowledge Base" as KnowledgeBase <<System>> #SECONDARY_COLOR
+
+' === Use Case Groups ===
+rectangle "NL2SQL 查询 (Natural Language to SQL)" #LightBlue {
+    usecase UC001 as "UC-001 NL2SQL 自然语言查询
+    ---
+    用户通过自然语言查询运营商指标数据"
+
+    usecase UC005 as "UC-005 指标趋势分析
+    ---
+    查看指标在时间范围内的变化趋势"
+
+    UC001 .-> UC005 : <<extend>>
+}
+
+rectangle "CQRS 数据查询 (Command/Query Responsibility Segregation)" #LightGreen {
+    usecase UC002 as "UC-002 运营商数据查询
+    ---
+    查询运营商及其频段小区汇总数据"
+
+    usecase UC003 as "UC-003 最新频段指标查询
+    ---
+    查看各频段最新的 KPI 指标"
+
+    usecase UC004 as "UC-004 历史频段指标查询
+    ---
+    查看特定月份的频段指标数据"
+}
+
+rectangle "数据展示与交互" #LightYellow {
+    usecase UC006 as "UC-006 数据看板概览
+    ---
+    在一个页面内查看关键指标和图表"
+
+    usecase UC009 as "UC-009 运营商数据汇总报告
+    ---
+    生成多维度运营商数据汇总报告"
+}
+
+rectangle "知识与协作" #LightGray {
+    usecase UC007 as "UC-007 电信知识 RAG 查询
+    ---
+    查询电信网络协议、仿真配置等知识"
+
+    usecase UC008 as "UC-008 跨 Agent 数据获取
+    ---
+    通过 MCP 协议从其他 Agent 获取数据"
 }
 
 ' === Relationships ===
@@ -36,32 +80,67 @@ User --> UC005
 User --> UC006
 User --> UC007
 User --> UC008
+User --> UC009
 
-UC001 --> OperatorDashboard
-UC001 --> JavaNL2SQLService
+' NL2SQL Flow
+UC001 --> Dashboard
+UC001 --> JavaNL2SQL
 UC001 --> SQLCoder
 UC001 --> MySQL
+SQLCoder ..> UC001 : <<include>>
 
-UC002 --> OperatorDashboard
-UC002 --> JavaNL2SQLService
+' CQRS Query Flow
+UC002 --> Dashboard
+UC002 --> JavaNL2SQL
 UC002 --> MySQL
 
-UC003 --> OperatorDashboard
-UC003 --> JavaNL2SQLService
+UC003 --> Dashboard
+UC003 --> JavaNL2SQL
 UC003 --> MySQL
 
-UC004 --> OperatorDashboard
-UC004 --> JavaNL2SQLService
+UC004 --> Dashboard
+UC004 --> JavaNL2SQL
 UC004 --> MySQL
 
-UC005 --> OperatorDashboard
-UC005 --> JavaNL2SQLService
-UC005 --> MySQL
+' Report Flow
+UC009 --> JavaNL2SQL
+UC009 --> MySQL
 
-UC006 --> OperatorDashboard
+' Visualization
+UC006 --> Dashboard
 
+' Knowledge Flow
 UC007 --> KnowledgeBase
 
+' Multi-Agent Flow
 UC008 --> OtherAgent
+
+' === Legend ===
+legend right
+|= Element |= Type |
+| <<Person>> | 用户 Actor |
+| <<System>> | 系统组件 |
+| <<External System>> | 外部服务 |
+| <<Database>> | 数据存储 |
+| <<Agent>> | AI Agent |
+| <<include>> | 必选依赖 |
+| <<extend>> | 可选扩展 |
+endlegend
+
+' === Notes ===
+note top of UC001
+  **前置条件**: NL2SQL 服务运行正常，数据库有数据
+  **后置条件**: 返回查询结果和生成的 SQL
+end note
+
+note top of UC002
+  **API**: /api/v1/query/operators
+  **实现**: OperatorQueryService (CQRS Query Side)
+end note
+
+note top of UC003
+  **API**: /api/v1/query/indicators/latest
+  **实现**: IndicatorQueryService 查询 MAX(created_time)
+end note
 
 @enduml

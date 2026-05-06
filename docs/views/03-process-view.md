@@ -8,28 +8,32 @@
 
 ![Process View](../diagrams/03-process-view.png)
 
+**Async Architecture Diagram:** [03b-async-architecture.puml](../diagrams/03b-async-architecture.puml)
+
+![Async Architecture](../diagrams/03b-async-architecture.png)
+
+### 时序图
+
+| 流程 | 文件 |
+|------|------|
+| NL2SQL 查询时序 | [seq-01-nl2sql-query.puml](../diagrams/seq-01-nl2sql-query.puml) |
+| CQRS 查询时序 | [seq-02-cqrs-query.puml](../diagrams/seq-02-cqrs-query.puml) |
+| 工具调用时序 | [seq-03-tool-invocation.puml](../diagrams/seq-03-tool-invocation.puml) |
+| MCP 通信时序 | [seq-04-mcp-communication.puml](../diagrams/seq-04-mcp-communication.puml) |
+
+### 数据流图
+
+| 流程 | 文件 |
+|------|------|
+| NL2SQL 数据流 | [dfd-01-nl2sql-query.puml](../diagrams/dfd-01-nl2sql-query.puml) |
+| CQRS 数据流 | [dfd-02-cqrs-query.puml](../diagrams/dfd-02-cqrs-query.puml) |
+| 系统数据流 | [dfd-03-system-overview.puml](../diagrams/dfd-03-system-overview.puml) |
+
 ## 2. 异步架构
 
 ### 2.1 异步执行模型
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                      Event Loop                              │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │                    Main Task                           │ │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐            │ │
-│  │  │ Coroutine│  │ Coroutine│  │ Coroutine│            │ │
-│  │  │  (Tool)  │  │  (Skill) │  │   (RAG)  │            │ │
-│  │  └────┬─────┘  └────┬─────┘  └────┬─────┘            │ │
-│  │       │              │              │                  │ │
-│  │       ▼              ▼              ▼                  │ │
-│  │  ┌─────────────────────────────────────────┐           │ │
-│  │  │           Async I/O Operations          │           │ │
-│  │  │  (HTTP, File, Database, Vector Store)   │           │ │
-│  │  └─────────────────────────────────────────┘           │ │
-│  └────────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────┘
-```
+请参考 [03b-async-architecture.puml](../diagrams/03b-async-architecture.puml) 中的异步执行模型图。
 
 ### 2.2 并发控制
 
@@ -47,139 +51,29 @@ async def gather_with_concurrency(n, *tasks):
 
 ### 3.1 NL2SQL 命令流程 (CQRS Command Side)
 
-```
-User Request
-     │
-     ▼
-┌─────────────────┐
-│ Nl2SqlController│
-│  POST /nl2sql/  │
-│      query      │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐     ┌─────────────────┐
-│ Nl2SqlCommand   │────>│ SqlCoderService │
-│ Service         │     │  (LLM Call)     │
-└────────┬────────┘     └────────┬────────┘
-         │                        │
-         │ SQL                    │ Generated SQL
-         ▼                        ▼
-┌─────────────────┐     ┌─────────────────┐
-│ isSqlSafe()     │────>│   MyBatis       │
-│ (Validation)    │     │   Executor      │
-└────────┬────────┘     └────────┬────────┘
-         │                        │
-         │ Safe?                  │ Execute
-         ▼                        ▼
-    ┌─────────┐           ┌─────────────┐
-    │  Error  │           │   Results   │
-    └─────────┘           └─────────────┘
-```
+请参考:
+- [seq-01-nl2sql-query.puml](../diagrams/seq-01-nl2sql-query.puml) - NL2SQL 查询完整时序
+- [dfd-01-nl2sql-query.puml](../diagrams/dfd-01-nl2sql-query.puml) - NL2SQL 数据流
 
 ### 3.2 数据查询流程 (CQRS Query Side)
 
-```
-User Request
-     │
-     ▼
-┌─────────────────┐
-│OperatorQuery    │  ┌─────────────────┐
-│ Controller      │─>│IndicatorQuery  │
-│                 │  │ Controller      │
-└────────┬────────┘  └────────┬────────┘
-         │                    │
-         ▼                    ▼
-┌─────────────────┐  ┌─────────────────┐
-│OperatorQuery    │  │IndicatorQuery   │
-│ Service         │  │ Service         │
-└────────┬────────┘  └────────┬────────┘
-         │                    │
-         ▼                    ▼
-┌─────────────────┐  ┌─────────────────┐
-│OperatorRepo     │  │IndicatorRepo    │
-│ (MyBatis)       │  │ (MyBatis)       │
-└────────┬────────┘  └────────┬────────┘
-         │                    │
-         ▼                    ▼
-┌─────────────────────────────────┐
-│        MySQL Database           │
-│  ┌──────────┐  ┌──────────────┐ │
-│  │operator_ │  │ band_info    │ │
-│  │info      │  └──────────────┘ │
-│  └──────────┘  ┌──────────────┐ │
-│  ┌──────────────┐ │site_info    │ │
-│  │operator_     │ └──────────────┘ │
-│  │total_site    │  ┌──────────────┐ │
-│  └──────────────┘  │indicator_    │ │
-│                    │info          │ │
-│                    └──────────────┘ │
-└─────────────────────────────────┘
-```
+请参考:
+- [seq-02-cqrs-query.puml](../diagrams/seq-02-cqrs-query.puml) - CQRS 并行查询时序
+- [dfd-02-cqrs-query.puml](../diagrams/dfd-02-cqrs-query.puml) - CQRS 数据流
 
 ### 3.3 工具调用流程
 
-```
-User Request
-     │
-     ▼
-┌─────────────────┐
-│  OperatorAgent  │
-│    .run()       │
-└────────┬────────┘
-         │ async
-         ▼
-┌─────────────────┐     ┌─────────────────┐
-│  ToolManager    │     │   HTTP Client   │
-│ .invoke_tool()  │────>│  (httpx)        │
-└────────┬────────┘     └────────┬────────┘
-         │                        │
-         │                        │ async request
-         ▼                        ▼
-    ┌─────────┐           ┌─────────────────┐
-    │ ToolResult│<────────│ Java Microservice│
-    └─────────┘           └─────────────────┘
-         │
-         ▼
-    Return to User
-```
+请参考:
+- [seq-03-tool-invocation.puml](../diagrams/seq-03-tool-invocation.puml) - 工具调用时序
 
 ### 3.4 Skill 链式执行流程
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    SkillExecutor                             │
-│                                                             │
-│  Input ──> Skill1 ──> Result1 ──> Skill2 ──> Result2 ──>  │
-│           │                          │                      │
-│           └──────────────────────────┘                      │
-│                    (Optional Chain)                          │
-└─────────────────────────────────────────────────────────────┘
-
-execute_chain():
-  results = []
-  for skill in chain:
-      result = await execute(skill)
-      results.append(result)
-      if not result.success:
-          break
-  return results
-```
+请参考 [03b-async-architecture.puml](../diagrams/03b-async-architecture.puml) 中的 Skill Chain Execution 图。
 
 ### 3.5 MCP 客户端请求流程
 
-```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│ OperatorAgent │────>│  MCPClient   │────>│ Agent Registry│
-│              │<────│              │<────│              │
-└──────────────┘     └──────────────┘     └──────────────┘
-                                                  │
-                                                  │ async
-                                                  ▼
-                                          ┌──────────────┐
-                                          │ Target Agent │
-                                          └──────────────┘
-```
+请参考:
+- [seq-04-mcp-communication.puml](../diagrams/seq-04-mcp-communication.puml) - MCP 通信时序
 
 ## 4. 线程模型
 

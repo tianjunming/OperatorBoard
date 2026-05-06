@@ -3,70 +3,187 @@
 
 title MCP 传输层架构 - MCP Transport Architecture
 
-skinparam backgroundColor #FEFEFE
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam packageStyle rectangle
+skinparam nodesep 30
+skinparam ranksep 40
 
-package "agent-framework.mcp" {
-    [protocol.py\nMCPProtocol\nMCPTool\nMCPServerDefinition] as Protocol
-    [client.py\nMCPClient] as Client
-    [server.py\nMCPServerConnection\nMCPServerManager\nMCPTransportFactory\nStdioTransport] as Server
+' === Color Constants ===
+!define PROTOCOL_COLOR #4472C4
+!define CLIENT_COLOR #70AD47
+!define SERVER_COLOR #ED7D31
+!define HTTP_COLOR #5B9BD5
+!define WS_COLOR #7030A0
+!define STDIO_COLOR #FFC000
+
+' === Core Protocol Package ===
+package "agent-framework.mcp" <<Library>> #PROTOCOL_COLOR {
+
+    package "protocol.py" as proto {
+        [MCPProtocol\nCore Protocol
+        - create_request()
+        - create_response()
+        - create_notification()
+        - parse_message()
+        - validate_schema()] as Protocol
+    }
+
+    package "client.py" as mcp_client {
+        [MCPClient\nJSON-RPC Client
+        - connect()
+        - disconnect()
+        - send_request()
+        - send_notification()] as Client
+    }
+
+    package "server.py" as mcp_server {
+        [MCPServerConnection\nServer Connection
+        - start()
+        - stop()
+        - handle_message()] as ServerConn
+        [MCPServerManager\nServer Manager
+        - register_server()
+        - get_server()
+        - list_servers()] as ServerMgr
+        [MCPTransportFactory\nTransport Factory
+        - create_http_transport()
+        - create_ws_transport()
+        - create_stdio_transport()] as TransportFactory
+        [StdioTransport\nStdio Transport
+        - stdin/stdout I/O
+        - subprocess management] as StdioTransport
+    }
 }
 
-package "agent-framework.mcp.transport" {
-    [http.py\nHTTPTransport\nHTTPTransportClient] as HTTPTransport
-    [websocket.py\nWebSocketTransport\nWebSocketServer] as WSTransport
+' === Transport Implementations ===
+package "agent-framework.mcp.transport" <<Package>> #LightGray {
+
+    package "http.py" as http_pkg {
+        rectangle "HTTP Transport" <<Transport>> #HTTP_COLOR {
+            [HTTPTransport\nServer-side
+            - POST /mcp (JSON-RPC)
+            - GET /health
+            - WS /ws/{client_id}] as HTTPTransport
+
+            [HTTPTransportClient\nClient-side
+            - AsyncHTTPClient
+            - Connection pool] as HTTPClient
+        }
+    }
+
+    package "websocket.py" as ws_pkg {
+        rectangle "WebSocket Transport" <<Transport>> #WS_COLOR {
+            [WebSocketTransport\nBidirectional
+            - Streaming
+            - Ping/Pong keepalive
+            - Request/response correlation] as WSTransport
+
+            [WebSocketServer\nServer-side
+            - Connection management
+            - Message routing] as WSServer
+        }
+    }
+
+    rectangle "Stdio Transport" <<Transport>> #STDIO_COLOR {
+        [StdioTransport\nSubprocess-based
+        - stdin/stdout pipes
+        - JSON-RPC over pipes] as Stdio
+    }
 }
 
-package "External Services" {
-    [FastAPI Server\n(HTTP)] as FastAPI
-    [WebSocket Server] as WSServer
-    [stdio subprocess] as StdioProc
+' === External Services ===
+package "External Services" <<System>> #LightBlue {
+    [FastAPI Server\n(HTTP/WS)] as FastAPI
+    [WebSocket Server] as WSServerExt
+    [stdio subprocess\n(MCPServer)] as StdioProc
 }
 
-' Transport types
-rectangle "HTTP Transport" #LightBlue {
-    HTTPTransport -up-> FastAPI : POST /mcp
-    HTTPTransport -up-> FastAPI : WS /ws/{id}
+' === Transport Type Groupings ===
+rectangle "**Transport Types**" #F5F5F5 {
+    rectangle "HTTP Transport" #HTTP_COLOR {
+        HTTPTransport -up-> FastAPI : POST /mcp
+        HTTPTransport -up-> FastAPI : WS /ws/{id}
+        HTTPClient -up-> FastAPI : HTTP Request
+    }
+
+    rectangle "WebSocket Transport" #WS_COLOR {
+        WSTransport -up-> WSServerExt : ws://
+        note right of WSTransport
+          **Features:**
+          - Bidirectional streaming
+          - Automatic reconnection
+          - Heartbeat ping/pong
+        end note
+    }
+
+    rectangle "Stdio Transport" #STDIO_COLOR {
+        Stdio -up-> StdioProc : stdin/stdout
+        ServerConn -up-> Stdio : pipe I/O
+    }
 }
 
-rectangle "WebSocket Transport" #LightGreen {
-    WSTransport -up-> WSServer : ws://
-}
-
-rectangle "Stdio Transport" #LightYellow {
-    Server -up-> StdioProc : stdin/stdout
-}
-
-' Protocol usage
+' === Protocol Usage ===
 Client --> Protocol : serialize/deserialize
-Server --> Protocol : serialize/deserialize
+ServerConn --> Protocol : serialize/deserialize
 HTTPTransport --> Protocol
+HTTPClient --> Protocol
 WSTransport --> Protocol
+StdioTransport --> Protocol
 
-' Factory pattern
-MCPTransportFactory -down-> HTTPTransport : create
-MCPTransportFactory -down-> WSTransport : create
-MCPTransportFactory -down-> StdioTransport : create
+' === Factory Pattern ===
+TransportFactory -down-> HTTPTransport : create_http()
+TransportFactory -down-> WSTransport : create_websocket()
+TransportFactory -down-> StdioTransport : create_stdio()
 
+' === Protocol Details Note ===
 note top of Protocol
-  JSON-RPC 2.0 Protocol
-  - create_request()
-  - create_response()
-  - create_notification()
-  - parse_message()
+  **JSON-RPC 2.0 Protocol**
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "tool_name",
+      "arguments": {}
+    }
+  }
+  ```
 end note
 
 note top of HTTPTransport
-  Endpoints:
-  - POST /mcp (JSON-RPC)
-  - GET /health
-  - WS /ws/{client_id}
+  **HTTP Endpoints:**
+  - POST /mcp - JSON-RPC request
+  - GET /health - Health check
+  - WS /ws/{client_id} - WebSocket upgrade
 end note
 
 note top of WSTransport
-  Features:
-  - Bidirectional streaming
-  - Ping/pong keepalive
-  - Request/response correlation
+  **WebSocket Features:**
+  - Full-duplex communication
+  - Automatic ping/pong
+  - Message framing
+  - Reconnection support
 end note
+
+note bottom of Stdio
+  **Use Cases:**
+  - Local subprocess communication
+  - Security-sensitive operations
+  - No network exposure
+end note
+
+' === Legend ===
+legend right
+|= Component |= Description |
+| MCPProtocol | JSON-RPC 2.0 message handling |
+| MCPClient | Client-side RPC caller |
+| MCPServerConnection | Server-side connection handler |
+| HTTPTransport | REST-based transport |
+| WebSocketTransport | Bidirectional streaming |
+| StdioTransport | subprocess pipe I/O |
+endlegend
 
 @enduml

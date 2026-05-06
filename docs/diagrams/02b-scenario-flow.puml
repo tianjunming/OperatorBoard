@@ -1,0 +1,207 @@
+@startuml 02b-scenario-flow
+!theme plain
+
+title 场景流: 完整数据查询与可视化流程 (CQRS 架构)
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam packageStyle rectangle
+skinparam nodesep 30
+skinparam ranksep 50
+
+' === Color Constants ===
+!define FRONTEND_COLOR #4472C4
+!define PROXY_COLOR #5B9BD5
+!define AGENT_COLOR #70AD47
+!define SERVICE_COLOR #ED7D31
+!define DATABASE_COLOR #FFC000
+!define LLM_COLOR #7030A0
+
+' === Frontend Layer ===
+package "agent-app (React Frontend)" <<System>> #FRONTEND_COLOR {
+    [OperatorDashboard\n数据看板\n(Recharts)] as Dashboard
+    [ChatContainer\n对话容器] as Chat
+    [Data Visualization\n图表组件] as Charts
+}
+
+' === API Proxy Layer ===
+package "agent-app Server (Node.js)" <<System>> #PROXY_COLOR {
+    [Query Routes\n/api/query/*\n(CQRS Query)] as QueryRoutes
+    [NL2SQL Routes\n/api/nl2sql/*\n(NL2SQL Command)] as NL2SQLRoutes
+}
+
+' === Agent Layer ===
+package "operator-agent (Python)" <<System>> #AGENT_COLOR {
+    [OperatorAgent\n主Agent\n- Intent Detection
+- Tool Routing
+- Response Generation] as OperatorAgent
+
+    [JavaServiceTool\nJava服务调用] as JavaTool
+    [NL2SQLEndpoints\nNL2SQL端点] as NL2SQLEp
+}
+
+' === Service Layer (CQRS) ===
+package "operator-nl2sql-service (Java Spring Boot)" <<External System>> #SERVICE_COLOR {
+
+    package "Controller Layer" <<Layer>> {
+        [Nl2SqlController\nPOST /api/v1/nl2sql/query
+(Command)] as NL2SQLCtrl
+        [OperatorQueryController\nGET /api/v1/query/operators
+(Query)] as OpQueryCtrl
+        [IndicatorQueryController\nGET /api/v1/query/indicators/*
+(Query)] as IndQueryCtrl
+    }
+
+    package "Service Layer" <<Layer>> {
+        [Nl2SqlCommandService\n(CQRS Command)
+- SQL Generation
+- SQL Validation
+- Query Execution] as NL2SQLCmdSvc
+
+        [OperatorQueryService\n(CQRS Query)
+- Operator data
+- Site/Cell summary] as OpQuerySvc
+
+        [IndicatorQueryService\n(CQRS Query)
+- Latest indicators
+- Historical indicators
+- Trend data] as IndQuerySvc
+    }
+
+    package "LLM Service" <<Layer>> {
+        [SqlCoderService\nLLM调用
+- Text to SQL
+- SQL Validation] as SqlCoderSvc
+        [SqlExecutorService\nSQL执行
+- Safety check
+- Result formatting] as SqlExecSvc
+    }
+
+    package "Repository Layer" <<Layer>> {
+        [OperatorRepository\nMyBatis
+operator_info
+site_info
+operator_summary] as OpRepo
+
+        [IndicatorRepository\nMyBatis
+indicator_info
+band_info] as IndRepo
+    }
+}
+
+' === Database Layer ===
+database "MySQL Database\n(operator_db)" <<Database>> #DATABASE_COLOR {
+
+    folder "CQRS Command Side (Write)" #FFC000 {
+        [operator_info]
+        [site_info]
+        [indicator_info]
+        [band_info]
+    }
+
+    folder "CQRS Query Side (Read)" #ED7D31 {
+        [operator_summary\n(Pre-aggregated)]
+        [site_info\n(Normalized)]
+        [indicator_info\n(Normalized)]
+    }
+
+    [SQLCoder LLM\nSelf-hosted] as LLM
+}
+
+' === Data Flow ===
+Dashboard -> QueryRoutes : 1. /api/query/*
+Dashboard -> NL2SQLRoutes : 2. /api/nl2sql/*
+Chat -> QueryRoutes : 3. /api/query/*
+Chat -> NL2SQLRoutes : 4. /api/nl2sql/*
+
+QueryRoutes -> OperatorAgent : 5. HTTP (Chat/Query)
+NL2SQLRoutes -> OperatorAgent : 6. HTTP (NL2SQL)
+
+OperatorAgent -> JavaTool : 7. Tool Call
+OperatorAgent -> NL2SQLEp : 8. NL2SQL Call
+
+JavaTool -> OpQueryCtrl : 9. HTTP /operators
+JavaTool -> IndQueryCtrl : 10. HTTP /indicators/*
+NL2SQLEp -> NL2SQLCtrl : 11. HTTP /nl2sql/query
+
+' CQRS Query Flow
+OpQueryCtrl -> OpQuerySvc : 12. Query Request
+IndQueryCtrl -> IndQuerySvc : 13. Query Request
+
+OpQuerySvc -> OpRepo : 14. Fetch Data
+IndQuerySvc -> IndRepo : 15. Fetch Data
+
+OpRepo -> operator_summary : 16. SELECT
+OpRepo -> site_info : 17. SELECT
+IndRepo -> indicator_info : 18. SELECT
+
+' CQRS Command Flow
+NL2SQLCtrl -> NL2SQLCmdSvc : 19. NL2SQL Request
+NL2SQLCmdSvc -> SqlCoderSvc : 20. Generate SQL
+SqlCoderSvc -> LLM : 21. /v1/completions
+LLM --> SqlCoderSvc : 22. Generated SQL
+
+SqlCoderSvc --> NL2SQLCmdSvc : 23. SQL
+NL2SQLCmdSvc -> SqlExecSvc : 24. Execute SQL
+SqlExecSvc -> indicator_info : 25. SELECT
+
+SqlExecSvc --> NL2SQLCmdSvc : 26. Results
+NL2SQLCmdSvc --> NL2SQLCtrl : 27. Response
+
+' Response Flow
+NL2SQLCtrl --> NL2SQLEp : 28. JSON Result
+NL2SQLEp --> OperatorAgent : 29. Structured Data
+OpQuerySvc --> OpQueryCtrl : 30. Query Result
+OpQueryCtrl --> JavaTool : 31. JSON Result
+IndQuerySvc --> IndQueryCtrl : 32. Query Result
+IndQueryCtrl --> JavaTool : 33. JSON Result
+
+JavaTool --> OperatorAgent : 34. Tool Result
+NL2SQLEp --> OperatorAgent : 35. NL2SQL Result
+
+OperatorAgent --> QueryRoutes : 36. Agent Response
+OperatorAgent --> NL2SQLRoutes : 37. Agent Response
+
+QueryRoutes --> Charts : 38. Query Data
+NL2SQLRoutes --> Charts : 39. NL2SQL Data
+
+Charts --> Dashboard : 40. Visualization
+
+' === Flow Numbers ===
+note top of Dashboard
+  **Flow Start**
+  User interaction triggers
+  data query or NL2SQL request
+end note
+
+note bottom of LLM
+  **Flow End**
+  SQLCoder generates SQL
+  from natural language
+end note
+
+note as FlowNote
+  **CQRS Pattern**
+  Command: NL2SQL Controller -> Nl2SqlCommandService -> SqlCoderService
+  Query: OperatorQueryController/IndicatorQueryController -> Query Services
+
+  **Key Distinction:**
+  - Command writes/deletes data via NL2SQL
+  - Query reads data via optimized repositories
+end note
+
+' === Sequence Labels ===
+legend right
+|= Step |= Description |
+| 1-4 | Frontend initiates HTTP request |
+| 5-8 | Agent routes to appropriate endpoint |
+| 9-10 | Query-side: direct repository access |
+| 11 | Command-side: NL2SQL flow |
+| 14-18 | Data retrieval from MySQL |
+| 20-23 | LLM generates SQL |
+| 28-37 | Response flows back to Agent |
+| 38-40 | Charts render in Dashboard |
+endlegend
+
+@enduml

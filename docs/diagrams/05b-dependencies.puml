@@ -1,0 +1,230 @@
+@startuml 05b-dependencies
+!theme plain
+
+title 依赖关系图 - Dependency Relationships
+
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam packageStyle rectangle
+skinparam nodesep 30
+skinparam ranksep 50
+
+' === Color Constants ===
+!define FRAMEWORK_COLOR #4472C4
+!define AGENT_COLOR #70AD47
+!define SERVICE_COLOR #ED7D31
+!define FRONTEND_COLOR #7030A0
+!define EXTERNAL_COLOR #808080
+
+' === Top-level Packages ===
+package "agent-framework\n(Python Library)" <<Library>> #FRAMEWORK_COLOR {
+
+    package "core" as af_core {
+        [agent.py\nBaseAgent]
+        [types.py\nTool/Skill/AgentConfig]
+        [exceptions.py\nCustom Exceptions]
+    }
+
+    package "api" as af_api {
+        [base.py\nBaseAgentServer]
+        [errors.py\nErrorCode/AgentAPIError]
+        [response.py\nget_error_response()]
+    }
+
+    package "tools" as af_tools {
+        [base.py\nBaseTool]
+        [registry.py\nToolRegistry]
+        [manager.py\nToolManager]
+    }
+
+    package "skills" as af_skills {
+        [base.py\nBaseSkill]
+        [registry.py\nSkillRegistry]
+        [executor.py\nSkillExecutor]
+    }
+
+    package "mcp" as af_mcp {
+        [protocol.py\nMCPProtocol]
+        [client.py\nMCPClient]
+        [server.py\nMCPServer]
+    }
+
+    package "rag" as af_rag {
+        [embeddings.py\nEmbeddingsManager]
+        [vectorstore.py\nVectorStoreManager]
+        [retriever.py\nRAGRetriever]
+    }
+
+    package "config" as af_config {
+        [schema.py\nPydantic Models]
+        [loader.py\nConfigLoader]
+    }
+
+    package "llm" as af_llm {
+        [client.py\nLLMClient]
+        [config.py\nLLMConfig]
+    }
+
+    package "utils" as af_utils {
+        [async_utils.py\nasyncio helpers]
+    }
+}
+
+package "operator-agent\n(Python Application)" <<Application>> #AGENT_COLOR {
+
+    [operator_agent.py\nOperatorAgent]
+    [operator_config.py\nConfig]
+
+    package "capabilities" {
+        [tools/\njava_service_tool.py]
+        [skills/\ndata_skill.py]
+        [rag/\nretriever.py]
+        [mcp/\nclient.py]
+    }
+}
+
+package "operator-service\n(Java Application)" <<Application>> #SERVICE_COLOR {
+
+    [controller/\nControllers]
+    [service/\nServices]
+    [repository/\nRepositories]
+    [entity/\nEntities]
+    [config/\nConfigs]
+}
+
+package "agent-app\n(React Application)" <<Application>> #FRONTEND_COLOR {
+
+    [App.jsx\nComponents]
+    [hooks/\nCustom Hooks]
+    [server/\nProxy]
+}
+
+' === External Dependencies ===
+package "External Libraries" <<External>> #EXTERNAL_COLOR {
+
+    package "Python Dependencies" {
+        [langchain-core\nLLM Framework]
+        [pydantic\nData Validation]
+        [pyyaml\nConfig Files]
+        [chromadb\nVector Store]
+        [httpx\nAsync HTTP]
+        [fastapi\nAPI Server]
+    }
+
+    package "Java Dependencies" {
+        [Spring Boot\nWeb Framework]
+        [MyBatis\nORM]
+        [MySQL Connector\nDatabase]
+        [Lombok\nBoilerplate]
+    }
+
+    package "Frontend Dependencies" {
+        [React 18\nUI Framework]
+        [Recharts\nCharts]
+        [Vite\nBuild Tool]
+        [Lucide Icons\nIcons]
+    }
+}
+
+package "External Services" <<External>> #LightGray {
+    [SQLCoder LLM\nNL2SQL Model]
+    [MySQL 8.0\nDatabase]
+    [ChromaDB\nVector Store]
+    [Agent Registry\nMCP Hub]
+}
+
+' === Core Dependencies (solid arrows) ===
+af_api ..> af_core : imports
+af_tools ..> af_core : extends
+af_skills ..> af_core : extends
+af_mcp ..> af_core : uses
+af_rag ..> af_core : uses
+af_config ..> af_core : uses
+af_llm ..> af_core : uses
+af_utils ..> af_core : uses
+
+' === Application Dependencies (dashed for "uses") ===
+operator_agent.py ..> af_api : uses
+operator_agent.py ..> af_core : uses
+operator_agent.py ..> af_tools : uses
+operator_agent.py ..> af_skills : uses
+
+operator-agent/capabilities/tools ..> af_tools : imports
+operator-agent/capabilities/skills ..> af_skills : imports
+operator-agent/capabilities/rag ..> af_rag : imports
+operator-agent/capabilities/mcp ..> af_mcp : imports
+
+operator-service/controller ..> operator-service/service : calls
+operator-service/service ..> operator-service/repository : calls
+operator-service/repository ..> operator-service/entity : uses
+operator-service/repository ..> "MySQL Connector" : JDBC
+
+agent-app/App.jsx ..> agent-app/hooks : uses
+agent-app/App.jsx ..> agent-app/server : calls
+agent-app/server ..> "React 18" : uses
+
+' === External Library Dependencies ===
+"operator-agent" ..> "langchain-core" : imports
+"operator-agent" ..> "pydantic" : uses
+"operator-agent" ..> "pyyaml" : uses
+"operator-agent" ..> "chromadb" : uses
+"operator-agent" ..> "httpx" : uses
+"operator-agent" ..> "fastapi" : uses
+
+"operator-service" ..> "Spring Boot" : imports
+"operator-service" ..> "MyBatis" : uses
+"operator-service" ..> "MySQL Connector" : imports
+"operator-service" ..> "Lombok" : annotations
+
+"agent-app" ..> "React 18" : imports
+"agent-app" ..> "Recharts" : imports
+"agent-app" ..> "Vite" : build
+"agent-app" ..> "Lucide Icons" : imports
+
+' === External Service Dependencies ===
+operator-agent/capabilities/mcp ..> "Agent Registry" : MCP JSON-RPC
+operator-agent/capabilities/rag ..> "ChromaDB" : HTTP API
+
+operator-service/service ..> "SQLCoder LLM" : REST /v1/completions
+operator-service/repository ..> "MySQL 8.0" : JDBC
+
+' === Dependency Notes ===
+note top of af_core
+  **Core Dependency Rule:**
+  agent-framework/core has NO dependencies
+  on other framework modules.
+  All other modules depend on core.
+end note
+
+note bottom of operator-agent
+  **Dependency Inversion:**
+  operator-agent depends on agent-framework,
+  NOT the other way around.
+  Business logic in capabilities/.
+end note
+
+note as ExternalNote
+  **External Service Dependencies:**
+  - SQLCoder LLM: Self-hosted NL2SQL model
+  - MySQL 8.0: Relational data store
+  - ChromaDB: Vector similarity search
+  - Agent Registry: MCP service discovery
+end note
+
+' === Legend ===
+legend right
+|= Arrow Type |= Meaning |
+| --> | Direct dependency (imports) |
+| ..> | Uses/imports ( loosecoupling) |
+| -[dashed]-> | Optional dependency |
+
+|= Color |= Layer |
+| Blue | Framework (agent-framework) |
+| Green | Python Agents |
+| Orange | Java Service |
+| Purple | Frontend |
+| Gray | External/Utilities |
+endlegend
+
+@enduml

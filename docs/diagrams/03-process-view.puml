@@ -3,64 +3,123 @@
 
 title 进程视图 - Process View
 
-skinparam backgroundColor #FEFEFE
+skinparam backgroundColor #FAFAFA
+skinparam shadowing false
+skinparam defaultFontName Arial
 skinparam activityStyle rectangle
+skinparam swimlaneStyle backgroundColor #F5F5F5
 
-|#wheat|User Request|
+' === Swimlanes ===
+|Switchyard : View Type|
+|User Layer|
+|Async Processing|
+|Query Side|
+|Command Side|
+|Response Layer|
 
 start
 
-:OperatorDashboard\nreceives input;
+|Switchyard|
+:View Type?;
 
 if (View Type?) then (Chat)
+    |User Layer|
     :ChatContainer\ninvokes agent;
-    note right: async/await
+    note right
+      **Async/Await Pattern**
+      Non-blocking I/O
+    end note
+
+    |Async Processing|
     :OperatorAgent\nprocesses query;
     :Intent Detection\n(LLM-based);
+
     if (Intent?) then (nl2sql)
+        |Command Side|
         :JavaServiceTool\ncalls NL2SQL;
+        :Nl2SqlCommandService\n(CQRS Command);
+        :SqlCoderService\n(LLM Call);
+        :SqlExecutor Service;
     else (query)
+        |Query Side|
         :Query Routes\ndirect call;
     endif
+
 else (Dashboard)
+    |User Layer|
     :QueryRoutes\nparallel calls;
+
+    |Query Side|
     fork
-        :OperatorQuery\nService;
-        note right: CQRS Query
+        :OperatorQuery\nController;
+        --> OperatorQuery\nService;
+        --> Operator\nRepository;
+        --> MySQL\nDatabase;
+        note right
+          **CQRS Query Side**
+          Read-optimized path
+        end note
     fork again
-        :IndicatorQuery\nService;
-        note right: CQRS Query
+        :IndicatorQuery\nController;
+        --> IndicatorQuery\nService;
+        --> Indicator\nRepository;
+        --> MySQL\nDatabase;
     end fork
 endif
 
+|Async Processing|
 :HttpClient\nasync request;
 
-|#lightblue|Async Processing|
-
-fork
-    :OperatorQuery\nController;
-    --> OperatorQuery\nService;
-    --> Operator\nRepository;
-    --> MySQL\nDatabase;
-fork again
-    :IndicatorQuery\n Controller;
-    --> IndicatorQuery\nService;
-    --> Indicator\nRepository;
-    --> MySQL\nDatabase;
-end fork
-
-:SQLCoderService\n(LLM Call);
-
-:SqlExecutor\nService;
-
-:MySQL\nDatabase\nExecution;
-
+|Response Layer|
 :Response\nSerialization;
-
-|#wheat|User Response|
 
 :Recharts\nVisualization;
 
 stop
+
+' === Error Handling Paths ===
+|Switchyard|
+split
+    :Normal Flow;
+split again
+    :Error Flow;
+    |Async Processing|
+    :Handle Exception;
+    note right
+      **Error Handling**
+      - Timeout: 30s default
+      - Retry: 3 attempts with backoff
+      - Fallback: return cached data
+    end note
+    |Response Layer|
+    :Return Error\nResponse;
+end split
+
+' === Concurrent Processing ===
+|Query Side|
+partition "Parallel Query Execution" {
+    fork
+        :Fetch operator_info;
+    fork again
+        :Fetch site_info;
+    fork again
+        :Fetch indicator_info;
+    end fork
+
+    note right
+      **Async.gather()**
+      Concurrent database
+      queries with semaphore
+    end note
+}
+
+' === Legend ===
+legend right
+|= Element |= Description |
+| Swimlane | Responsibility boundary |
+| Fork/Join | Parallel execution |
+| If/Else | Decision branch |
+| Split | Alternative paths |
+endlegend
 
 @enduml
