@@ -895,10 +895,309 @@ const examples = {
 
 ---
 
+## 9. React Context 设计
+
+### 9.1 ThemeContext
+
+**功能**: 管理应用主题（浅色/深色/午夜模式）
+
+```jsx
+// src/context/ThemeContext.jsx
+import React, { createContext, useContext, useState, useCallback } from 'react';
+
+export const THEMES = {
+  light: 'light',
+  dark: 'dark',
+  midnight: 'midnight',
+  system: 'system'
+};
+
+export const THEME_LABELS = {
+  light: '浅色',
+  dark: '深色',
+  midnight: '午夜',
+  system: '跟随系统'
+};
+
+const ThemeContext = createContext(null);
+
+export function ThemeProvider({ children }) {
+  const [themeMode, setThemeMode] = useState('system');
+
+  const toggleTheme = useCallback(() => {
+    setThemeMode(prev => {
+      const order = ['light', 'dark', 'midnight'];
+      const idx = order.indexOf(prev);
+      return order[(idx + 1) % order.length];
+    });
+  }, []);
+
+  const value = { themeMode, setThemeMode, toggleTheme };
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+export function useTheme() {
+  const context = useContext(ThemeContext);
+  if (!context) throw new Error('useTheme must be used within ThemeProvider');
+  return context;
+}
+```
+
+### 9.2 ChatContext
+
+**功能**: 管理聊天状态和会话历史
+
+```jsx
+// src/context/ChatContext.jsx
+import React, { createContext, useContext, useState, useCallback } from 'react';
+
+const ChatContext = createContext(null);
+
+export function ChatProvider({ children }) {
+  const [sessions, setSessions] = useState([]);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
+
+  const createSession = useCallback(() => {
+    const newSession = { id: Date.now(), messages: [], createdAt: new Date() };
+    setSessions(prev => [...prev, newSession]);
+    setCurrentSessionId(newSession.id);
+    return newSession;
+  }, []);
+
+  const addMessage = useCallback((sessionId, message) => {
+    setSessions(prev => prev.map(s =>
+      s.id === sessionId ? { ...s, messages: [...s.messages, message] } : s
+    ));
+  }, []);
+
+  const clearCurrentSession = useCallback(() => {
+    setSessions(prev => prev.map(s =>
+      s.id === currentSessionId ? { ...s, messages: [] } : s
+    ));
+  }, [currentSessionId]);
+
+  const value = { sessions, currentSessionId, createSession, addMessage, clearCurrentSession };
+  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
+}
+
+export function useChat() {
+  const context = useContext(ChatContext);
+  if (!context) throw new Error('useChat must be used within ChatProvider');
+  return context;
+}
+```
+
+### 9.3 AuthContext
+
+**功能**: 管理用户认证状态和权限
+
+```jsx
+// src/context/AuthContext.jsx
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+
+const AuthContext = createContext(null);
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [permissions, setPermissions] = useState([]);
+
+  const login = useCallback((userData, accessToken) => {
+    setUser(userData);
+    setToken(accessToken);
+    localStorage.setItem('token', accessToken);
+  }, []);
+
+  const logout = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    setPermissions([]);
+    localStorage.removeItem('token');
+  }, []);
+
+  const hasPermission = useCallback((permission) => {
+    if (!permissions.length) return true; // Superuser
+    return permissions.includes(permission);
+  }, [permissions]);
+
+  const value = { user, token, permissions, login, logout, hasPermission };
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
+  return context;
+}
+```
+
+---
+
+## 10. 新增 React 组件
+
+### 10.1 AdminDashboard
+
+**功能**: 系统管理仪表板，整合用户/角色/权限管理
+
+```jsx
+function AdminDashboard() {
+  const { user, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState('users');
+
+  return (
+    <div className="admin-dashboard">
+      <div className="admin-header">
+        <h2>系统管理</h2>
+        <div className="admin-user-info">
+          <span>欢迎, {user?.full_name || user?.username}</span>
+          <button onClick={logout}>退出登录</button>
+        </div>
+      </div>
+      <div className="admin-tabs">
+        <button className={activeTab === 'users' ? 'active' : ''} onClick={() => setActiveTab('users')}>用户管理</button>
+        <button className={activeTab === 'roles' ? 'active' : ''} onClick={() => setActiveTab('roles')}>角色管理</button>
+        <button className={activeTab === 'permissions' ? 'active' : ''} onClick={() => setActiveTab('permissions')}>权限管理</button>
+      </div>
+      <div className="admin-content">
+        {activeTab === 'users' && <UserManagement />}
+        {activeTab === 'roles' && <RoleManagement />}
+        {activeTab === 'permissions' && <PermissionList />}
+      </div>
+    </div>
+  );
+}
+```
+
+### 10.2 RoleManagement
+
+**功能**: 角色 CRUD 与权限分配
+
+| API 端点 | 方法 | 功能 |
+|----------|------|------|
+| `/api/roles` | GET | 角色列表 |
+| `/api/roles` | POST | 创建角色 |
+| `/api/roles/{id}` | GET/PUT/DELETE | 角色 CRUD |
+| `/api/roles/{id}/permissions` | GET/PUT | 角色权限分配 |
+
+### 10.3 PermissionList
+
+**功能**: 权限列表与树形展示
+
+| API 端点 | 方法 | 功能 |
+|----------|------|------|
+| `/api/permissions` | GET | 权限列表 |
+| `/api/permissions/tree` | GET | 权限树形结构 |
+
+### 10.4 FollowupQuestions
+
+**功能**: 跟进问题组件，显示 AI 推荐的后续问题
+
+```jsx
+function FollowupQuestions({ questions, onQuestionClick, visible }) {
+  if (!visible || !questions || questions.length === 0) return null;
+
+  return (
+    <div className="followup-questions">
+      <div className="followup-header">
+        <MessageSquare size={14} />
+        <span>您可能还想问：</span>
+      </div>
+      <div className="followup-list">
+        {questions.map((question, index) => (
+          <button key={index} className="followup-item" onClick={() => onQuestionClick(question)}>
+            {question}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### 10.5 CommandPalette
+
+**功能**: 命令面板，支持快捷键操作
+
+| 快捷键 | 功能 |
+|--------|------|
+| Cmd+N | 新建对话 |
+| Cmd+T | 切换主题 |
+| Cmd+B | 切换侧边栏 |
+| Cmd+L | 聚焦输入框 |
+| Cmd+/ | 打开帮助 |
+
+### 10.6 MentionPicker
+
+**功能**: 引用历史消息
+
+```jsx
+function MentionPicker({ messages, selectedIndex, onSelect }) {
+  const selectableMessages = messages
+    .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+    .filter(msg => msg.content && msg.content.trim())
+    .slice(-20)
+    .reverse();
+
+  return (
+    <div className="mention-picker">
+      <div className="mention-header"><span>引用历史消息</span></div>
+      <div className="mention-list">
+        {selectableMessages.map((msg, idx) => (
+          <div key={msg.id || idx} className={`mention-item ${selectedIndex === idx ? 'selected' : ''}`}>
+            <span className="mention-role">{msg.role === 'user' ? '你' : 'AI'}</span>
+            <span className="mention-preview">{formatPreview(msg.content)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### 10.7 OperatorTree
+
+**功能**: 运营商树形选择组件
+
+### 10.8 SettingsModal
+
+**功能**: 设置弹窗组件
+
+### 10.9 PermissionGuard
+
+**功能**: 权限守卫组件，控制元素显示/权限检查
+
+```jsx
+function PermissionGuard({ permission, children, fallback = null }) {
+  const { hasPermission } = useAuth();
+
+  if (!hasPermission(permission)) {
+    return fallback;
+  }
+
+  return children;
+}
+```
+
+### 10.10 ErrorBoundary
+
+**功能**: 错误边界组件，捕获子组件错误
+
+### 10.11 图表组件
+
+| 组件 | 功能 |
+|------|------|
+| BandDistributionChart | 频段分布图表 |
+| IndicatorChart | 指标图表 |
+| ChartTypeSelector | 图表类型选择器 |
+
+
+---
+
 ## 8. 版本历史
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.7 | 2026-05-07 | 补充缺失组件文档：AdminDashboard、RoleManagement、PermissionList、FollowupQuestions、CommandPalette、MentionPicker、OperatorTree、SettingsModal、PermissionGuard、ErrorBoundary、BandDistributionChart、IndicatorChart、ChartTypeSelector；新增 ThemeContext、ChatContext、AuthContext |
 | 1.6 | 2026-05-05 | operator_summary表添加traffic_campratio字段；IndicatorSummary实体添加映射；流量指标(分流比/驻留比等)乘以100展示 |
 | 1.5 | 2026-05-01 | 技术博客Word文档深度优化，新增11个可复用Skill |
 | 1.4 | 2026-04-20 | 新增E2E测试套件、数据库一致性验证 |

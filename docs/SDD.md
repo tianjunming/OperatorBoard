@@ -1001,6 +1001,121 @@ data: {"type": "done", "request_id": "req_001"}
 }
 ```
 
+#### 用户管理 API (Port 8084)
+
+##### GET /api/users
+获取用户列表（需system:user:list权限）
+
+**响应**:
+```json
+{
+    "items": [
+        {
+            "id": 1,
+            "username": "admin",
+            "email": "admin@example.com",
+            "full_name": "管理员",
+            "is_superuser": true,
+            "approval_status": "approved",
+            "created_at": "2026-04-16T10:00:00"
+        }
+    ],
+    "total": 1
+}
+```
+
+##### POST /api/users
+创建用户（需system:user:create权限）
+
+**请求**:
+```json
+{
+    "username": "newuser",
+    "password": "password123",
+    "email": "user@example.com",
+    "full_name": "新用户"
+}
+```
+
+##### GET /api/users/{user_id}
+获取用户详情
+
+##### PUT /api/users/{user_id}
+更新用户信息（需system:user:update权限）
+
+##### DELETE /api/users/{user_id}
+删除用户（需system:user:delete权限）
+
+##### GET /api/users/{user_id}/roles
+获取用户角色列表
+
+##### PUT /api/users/{user_id}/roles
+分配用户角色（需system:user:assign-roles权限）
+
+#### 角色管理 API (Port 8084)
+
+##### GET /api/roles
+获取角色列表（需system:role:list权限）
+
+**响应**:
+```json
+{
+    "items": [
+        {
+            "id": 1,
+            "role_code": "admin",
+            "role_name": "管理员",
+            "description": "系统管理员",
+            "permissions": [...]
+        }
+    ],
+    "total": 1
+}
+```
+
+##### POST /api/roles
+创建角色（需system:role:create权限）
+
+##### GET /api/roles/{role_id}
+获取角色详情
+
+##### PUT /api/roles/{role_id}
+更新角色（需system:role:update权限）
+
+##### DELETE /api/roles/{role_id}
+删除角色（需system:role:delete权限）
+
+##### GET /api/roles/{role_id}/permissions
+获取角色权限列表
+
+##### PUT /api/roles/{role_id}/permissions
+分配角色权限（需system:role:assign-permissions权限）
+
+#### 权限管理 API (Port 8084)
+
+##### GET /api/permissions
+获取权限列表（需system:permission:list权限）
+
+##### GET /api/permissions/tree
+获取权限树形结构
+
+**响应**:
+```json
+{
+    "items": [
+        {
+            "id": 1,
+            "permission_code": "system",
+            "permission_name": "系统管理",
+            "children": [
+                {"id": 2, "permission_code": "system:user", "permission_name": "用户管理", ...}
+            ]
+        }
+    ],
+    "total": 10
+}
+```
+
 ### 4.3 前端组件接口
 
 #### ChartBlock Props
@@ -1053,6 +1168,37 @@ interface QueryConfirmationDialogProps {
 ---
 
 ## 5. 组件设计
+
+### 5.0 React Context
+
+#### ThemeContext
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| themeMode | string | 当前主题: light/dark/midnight/system |
+| setThemeMode | function | 设置主题 |
+| toggleTheme | function | 切换主题 |
+
+#### ChatContext
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| sessions | array | 会话列表 |
+| currentSessionId | number | 当前会话ID |
+| createSession | function | 创建新会话 |
+| addMessage | function | 添加消息 |
+| clearCurrentSession | function | 清除当前会话 |
+
+#### AuthContext
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| user | object | 当前用户信息 |
+| token | string | JWT token |
+| permissions | array | 用户权限列表 |
+| login | function | 登录 |
+| logout | function | 登出 |
+| hasPermission | function | 检查权限 |
 
 ### 5.1 前端组件结构
 
@@ -1408,6 +1554,7 @@ nl2sql:
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 1.9 | 2026-05-07 | 补充auth-agent Role/Permission管理API端点；补充ThemeContext、ChatContext、AuthContext章节 |
 | 1.8 | 2026-05-05 | 完善API端点文档(+16个端点)；修正operator_info/indicator_info/operator_summary表Schema；补充times/site-summary/indicator-summary/operator-summary等系列端点 |
 | 1.7 | 2026-05-05 | operator_summary表添加traffic_campratio字段；IndicatorSummary实体添加映射；流量指标(分流比/驻留比等)乘以100展示；operator-agent流量指标乘以100修复 |
 | 1.6 | 2026-05-04 | 重构 Mapper XML 使用规范化 site_info/indicator_info 表 + PIVOT 聚合查询；简化 AuditLog 服务；E2E 测试报告更新；新增 OperatorSummary V4/V5 migration；Permission cache 缓存优化 |
