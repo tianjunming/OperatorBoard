@@ -1,6 +1,6 @@
 # OperatorBoard 软件设计文档
 
-**文档版本**: 1.8
+**文档版本**: 1.9
 **编制日期**: 2026-05-05
 **参考标准**: IEEE 1012 | ISO/IEC/IEEE 42010
 
@@ -1291,6 +1291,405 @@ interface UseStreamingAgentReturn {
   handleConfirmationConfirm: (options: ClarificationOptions) => Promise<void>;
   handleConfirmationCancel: () => void;
 }
+```
+
+### 5.4 RAG 语料加载器设计
+
+RAG (Retrieval-Augmented Generation) 模块支持多种数据源加载，支持数据库、目录、文件等多种业界通用知识加载方式。
+
+#### 5.4.1 加载器架构
+
+```
+BaseLoader (抽象基类)
+├── DirectoryLoader    # 目录扫描加载器
+├── DatabaseLoader     # MySQL数据库加载器
+├── FileLoader         # 单文件加载器
+└── HybridLoader       # 混合加载器（组合多个加载器）
+```
+
+#### 5.4.2 BaseLoader 抽象基类
+
+```python
+# agent_framework/rag/loaders/base.py
+class BaseLoader:
+    """语料加载器抽象基类"""
+
+    @property
+    def source(self) -> str:
+        """返回加载源标识"""
+        pass
+
+    @property
+    def metadata(self) -> Dict[str, Any]:
+        """返回加载器元数据"""
+        pass
+
+    def load(self) -> List[Document]:
+        """加载并返回文档列表"""
+        pass
+```
+
+#### 5.4.3 DirectoryLoader 目录加载器
+
+```python
+# agent_framework/rag/loaders/directory.py
+class DirectoryLoader(BaseLoader):
+    """
+    目录加载器 - 递归扫描目录下的文件
+
+    支持格式: .txt, .md, .json, .csv, .pdf, .docx
+    """
+
+    SUPPORTED_EXTENSIONS = {
+        ".txt", ".md", ".markdown", ".json", ".csv", ".pdf", ".docx"
+    }
+
+    def __init__(
+        self,
+        directory: str,
+        glob_patterns: Optional[List[str]] = None,
+        recursive: bool = True,
+        exclude_patterns: Optional[List[str]] = None,
+        chunk_size: int = 1000,
+        chunk_overlap: int = 200,
+    ):
+        ...
+
+    def load(self) -> List[Document]:
+        """加载目录下所有支持的文档"""
+        ...
+```
+
+**配置示例**:
+```yaml
+rag_loaders:
+  directory_sources:
+    - name: "telecom_docs"
+      type: "directory"
+      path: "./data/telecom_knowledge"
+      recursive: true
+      glob_patterns:
+        - "**/*.txt"
+        - "**/*.md"
+        - "**/*.json"
+      exclude_patterns:
+        - "*.tmp"
+        - "__pycache__"
+      chunk_size: 1000
+      chunk_overlap: 200
+      enabled: true
+```
+
+#### 5.4.4 DatabaseLoader 数据库加载器
+
+```python
+# agent_framework/rag/loaders/database.py
+class DatabaseLoader(BaseLoader):
+    """
+    数据库加载器 - 从 MySQL 查询生成 Document
+
+    支持自定义 SQL 查询模板和行转换函数
+    """
+
+    def __init__(
+        self,
+        connection_config: Dict[str, Any],  # {host, port, user, password, database}
+        query_template: str,
+        row_to_document: Optional[Callable[[Dict], Document]] = None,
+        params: Optional[Dict[str, Any]] = None,
+        metadata_columns: Optional[List[str]] = None,
+        refresh_interval: Optional[int] = None,
+    ):
+        ...
+
+    def load(self) -> List[Document]:
+        """从数据库加载文档（支持缓存和自动刷新）"""
+        ...
+
+    def refresh(self) -> List[Document]:
+        """强制刷新缓存"""
+        ...
+```
+
+**配置示例**:
+```yaml
+rag_loaders:
+  database_sources:
+    - name: "operator_data"
+      type: "database"
+      enabled: true
+      connection:
+        host: "${DB_HOST:localhost}"
+        port: 3306
+        user: "${DB_USERNAME}"
+        password: "${DB_PASSWORD}"
+        database: "operator_db"
+      query_template: |
+        SELECT title, content, category, created_at
+        FROM knowledge_base
+        WHERE deleted_at IS NULL
+      metadata_columns:
+        - category
+        - created_at
+      refresh_interval: 3600
+```
+
+#### 5.4.5 FileLoader 单文件加载器
+
+```python
+# agent_framework/rag/loaders/file.py
+class FileLoader(BaseLoader):
+    """
+    文件加载器 - 从单个文件加载语料
+
+    支持格式: .txt, .md, .json, .csv, .pdf, .docx
+    """
+
+    SUPPORTED_EXTENSIONS = {
+        ".txt", ".md", ".markdown", ".json", ".csv", ".pdf", ".docx"
+    }
+
+    def __init__(
+        self,
+        file_path: Union[str, Path],
+        extract_metadata: bool = True,
+        chunk_size: int = 0,
+        chunk_overlap: int = 0,
+    ):
+        ...
+
+    @property
+    def source(self) -> str:
+        """返回文件源路径"""
+        return f"file://{self._file_path.absolute()}"
+
+    def load(self) -> List[Document]:
+        """加载文件并返回 Document 列表"""
+        ...
+```
+
+**使用示例**:
+```python
+from agent_framework.rag.loaders import FileLoader
+
+loader = FileLoader("./data/guide.md", chunk_size=1000)
+documents = loader.load()
+```
+
+#### 5.4.6 HybridLoader 混合加载器
+
+```python
+# agent_framework/rag/loaders/hybrid.py
+class HybridLoader(BaseLoader):
+    """
+    混合加载器 - 组合多个加载器，统一检索接口
+
+    支持权重配置和优先级设置
+    """
+
+    def __init__(
+        self,
+        loaders: List[BaseLoader],
+        weights: Optional[Dict[str, float]] = None,
+        priority: Optional[List[str]] = None,
+        deduplicate: bool = True,
+    ):
+        ...
+
+    def add_loader(self, loader: BaseLoader, weight: float = 1.0) -> None:
+        """添加一个加载器"""
+        ...
+
+    def set_weight(self, source: str, weight: float) -> None:
+        """设置加载器权重"""
+        ...
+```
+
+#### 5.4.7 DocumentLoaderManager 加载器管理器
+
+```python
+# agent_framework/rag/loaders/manager.py
+class DocumentLoaderManager:
+    """
+    文档加载器管理器 - 统一管理所有语料加载器
+
+    支持从 YAML 配置加载和运行时注册
+    """
+
+    def __init__(self, config_path: Optional[str] = None):
+        ...
+
+    def load_config(self, config_path: str) -> None:
+        """从 YAML 配置文件加载加载器"""
+        ...
+
+    def register_loader(self, name: str, loader: BaseLoader) -> None:
+        """注册一个加载器"""
+        ...
+
+    def load_all(self) -> Dict[str, List[Document]]:
+        """加载所有已注册加载器的文档"""
+        ...
+
+    def refresh(self, name: str) -> List[Document]:
+        """刷新指定加载器的缓存"""
+        ...
+```
+
+#### 5.4.8 DocumentReranker 二次排序器
+
+```python
+# agent_framework/rag/loaders/reranker.py
+class DocumentReranker:
+    """
+    检索结果二次排序器
+
+    支持基于多维度对检索结果进行重新排序：
+    - 向量相似度分数 (SCORE)
+    - 文档时间 (TIME) - 更新的优先
+    - 加载器权重 (WEIGHT)
+    - 文档来源 (SOURCE)
+    - 文档大小 (SIZE)
+    """
+
+    def __init__(
+        self,
+        configs: Optional[List[RerankConfig]] = None,
+        time_field: str = "modified_time",
+        weight_field: str = "weight",
+    ):
+        ...
+
+    def rerank(
+        self,
+        documents: List[Document],
+        scores: Optional[List[float]] = None,
+    ) -> List[Document]:
+        """对文档列表进行二次排序"""
+        ...
+
+
+class HybridReranker(DocumentReranker):
+    """
+    混合排序器
+
+    结合向量相似度、语义相关性和自定义规则进行排序
+    """
+
+    def __init__(
+        self,
+        base_score_weight: float = 0.7,
+        recency_weight: float = 0.2,
+        weight_weight: float = 0.1,
+        **kwargs,
+    ):
+        ...
+
+    def rerank_with_hybrid_score(
+        self,
+        documents: List[Document],
+        base_scores: List[float],
+        reference_time: Optional[datetime] = None,
+    ) -> List[Document]:
+        """使用混合评分重新排序"""
+        ...
+
+
+class RerankConfig:
+    """二次排序配置"""
+    field: SortField      # 排序字段
+    order: SortOrder      # 排序顺序 (ASC/DESC)
+
+
+class SortField(Enum):
+    SCORE = "score"      # 向量相似度分数
+    TIME = "time"        # 文档时间
+    WEIGHT = "weight"    # 加载器权重
+    SOURCE = "source"    # 来源
+    SIZE = "size"        # 文档大小
+
+
+def create_reranker(
+    strategy: str = "default",
+    **kwargs,
+) -> DocumentReranker:
+    """
+    工厂函数：创建排序器
+
+    Args:
+        strategy: 排序策略
+            - "default": 默认基于相似度
+            - "recency": 强调时效性
+            - "hybrid": 混合排序
+            - "weighted": 强调来源权重
+    """
+    ...
+```
+
+**Reranker 配置示例**:
+```yaml
+reranker:
+  default_strategy: "hybrid"
+  strategies:
+    default:
+      type: "DocumentReranker"
+      configs:
+        - field: "score"
+          order: "desc"
+    recency:
+      type: "DocumentReranker"
+      configs:
+        - field: "time"
+          order: "desc"
+        - field: "score"
+          order: "desc"
+    hybrid:
+      type: "HybridReranker"
+      base_score_weight: 0.7
+      recency_weight: 0.2
+      weight_weight: 0.1
+    weighted:
+      type: "DocumentReranker"
+      configs:
+        - field: "weight"
+          order: "desc"
+        - field: "score"
+          order: "desc"
+```
+
+#### 5.4.9 RAGRetriever 检索器集成
+
+```python
+# agent_framework/rag/retriever.py
+class RAGRetriever:
+    """
+    RAG retriever with reranking support
+    """
+
+    def __init__(
+        self,
+        vector_store_manager: VectorStoreManager,
+        default_store: str = "default",
+        default_k: int = 5,
+    ):
+        ...
+
+    def set_reranker(self, reranker) -> None:
+        """设置二次排序器"""
+        ...
+
+    def set_reranker_by_config(self, config: Dict[str, Any]) -> None:
+        """从配置创建并设置排序器"""
+        ...
+
+    async def retrieve_with_scores(
+        self,
+        query: str,
+        k: Optional[int] = None,
+        store_name: Optional[str] = None,
+    ) -> List[tuple[Document, float]]:
+        """检索并返回带分数的文档（支持二次排序）"""
+        ...
 ```
 
 ---
