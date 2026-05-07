@@ -23,6 +23,7 @@ from .errors import (
     GET_AVAILABLE_TIMES_FAILED,
     NL2SQL_QUERY_FAILED,
     INTERNAL_ERROR,
+    INVALID_REQUEST,
     INTENT_DETECTION_FAILED,
 )
 
@@ -3453,7 +3454,7 @@ async def create_vector_store(
             )
         else:
             return get_error_response(
-                ErrorCode.INVALID_REQUEST,
+                INVALID_REQUEST,
                 locale,
                 f"Unsupported loader type: {loader_type}"
             )
@@ -3479,7 +3480,7 @@ async def create_vector_store(
         }
 
     except Exception as e:
-        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
+        return get_error_response(INTERNAL_ERROR, locale, str(e))
 
 
 @app.post("/api/rag/store/update")
@@ -3520,7 +3521,7 @@ async def update_vector_store(
             )
         else:
             return get_error_response(
-                ErrorCode.INVALID_REQUEST,
+                INVALID_REQUEST,
                 locale,
                 f"Unsupported loader type: {loader_type}"
             )
@@ -3543,7 +3544,7 @@ async def update_vector_store(
         }
 
     except Exception as e:
-        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
+        return get_error_response(INTERNAL_ERROR, locale, str(e))
 
 
 @app.post("/api/rag/documents/add")
@@ -3584,7 +3585,7 @@ async def add_documents(
         }
 
     except Exception as e:
-        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
+        return get_error_response(INTERNAL_ERROR, locale, str(e))
 
 
 @app.post("/api/rag/search")
@@ -3646,7 +3647,7 @@ async def search_documents(
             }
 
     except Exception as e:
-        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
+        return get_error_response(INTERNAL_ERROR, locale, str(e))
 
 
 @app.post("/api/rag/store/delete")
@@ -3666,7 +3667,7 @@ async def delete_vector_store(
             "message": f"Deleted store '{store_name}'",
         }
     except Exception as e:
-        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
+        return get_error_response(INTERNAL_ERROR, locale, str(e))
 
 
 @app.get("/api/rag/stores")
@@ -3686,7 +3687,7 @@ async def list_stores(
             "count": len(stores),
         }
     except Exception as e:
-        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
+        return get_error_response(INTERNAL_ERROR, locale, str(e))
 
 
 @app.post("/api/rag/reranker/set")
@@ -3713,7 +3714,7 @@ async def set_reranker(
             "strategy": strategy,
         }
     except Exception as e:
-        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
+        return get_error_response(INTERNAL_ERROR, locale, str(e))
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8080):

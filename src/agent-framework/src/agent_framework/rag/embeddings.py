@@ -178,3 +178,25 @@ class ConfigurableEmbeddings(Embeddings):
     async def aembed_query(self, text: str) -> List[float]:
         """Async embed a query."""
         return await self._embeddings.aembed_query(text)
+
+
+def create_embeddings(provider: str = "openai", **kwargs) -> Embeddings:
+    """
+    Create embeddings instance by provider.
+
+    Args:
+        provider: Provider name ("openai", "huggingface")
+        **kwargs: Additional arguments for the embeddings
+
+    Returns:
+        Embeddings instance
+    """
+    if provider == "openai":
+        OpenAIEmbeddings = _get_openai_embeddings()
+        return OpenAIEmbeddings(**kwargs)
+    elif provider == "huggingface":
+        HuggingFaceEmbeddings = _get_huggingface_embeddings()
+        return HuggingFaceEmbeddings(**kwargs)
+    else:
+        raise EmbeddingError(f"Unsupported embeddings provider: {provider}")
+
