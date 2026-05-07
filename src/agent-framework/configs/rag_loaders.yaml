@@ -101,3 +101,32 @@ embeddings:
   provider: "openai"
   model: "text-embedding-3-small"
   api_key: "${OPENAI_API_KEY:}"
+
+# 二次排序器配置
+reranker:
+  default_strategy: "default"  # default, recency, hybrid, weighted
+  strategies:
+    default:
+      type: "DocumentReranker"
+      configs:
+        - field: "score"
+          order: "desc"
+    recency:
+      type: "DocumentReranker"
+      configs:
+        - field: "time"
+          order: "desc"
+        - field: "score"
+          order: "desc"
+    hybrid:
+      type: "HybridReranker"
+      base_score_weight: 0.7
+      recency_weight: 0.2
+      weight_weight: 0.1
+    weighted:
+      type: "DocumentReranker"
+      configs:
+        - field: "weight"
+          order: "desc"
+        - field: "score"
+          order: "desc"

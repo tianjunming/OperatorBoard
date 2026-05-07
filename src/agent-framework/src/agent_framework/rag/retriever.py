@@ -33,6 +33,7 @@ class RAGRetriever:
         self._default_store = default_store
         self._default_k = default_k
         self._transformers: List[callable] = []
+        self._reranker = None
 
     @property
     def vector_manager(self) -> VectorStoreManager:
@@ -48,6 +49,31 @@ class RAGRetriever:
     def default_k(self) -> int:
         """Get the default number of results."""
         return self._default_k
+
+    @property
+    def reranker(self):
+        """Get the current reranker."""
+        return self._reranker
+
+    def set_reranker(self, reranker) -> None:
+        """
+        Set a reranker for secondary sorting.
+
+        Args:
+            reranker: DocumentReranker or HybridReranker instance
+        """
+        self._reranker = reranker
+
+    def set_reranker_by_config(self, config: Dict[str, Any]) -> None:
+        """
+        Create and set reranker from configuration.
+
+        Args:
+            config: Reranker configuration dict
+        """
+        from .loaders import create_reranker
+        strategy = config.get("strategy", "default")
+        self._reranker = create_reranker(strategy)
 
     def add_transformer(self, transformer: callable) -> None:
         """
@@ -131,6 +157,21 @@ class RAGRetriever:
                     (doc, score) for doc, score in results
                     if score <= score_threshold
                 ]
+
+            # Apply reranking if configured
+            if self._reranker is not None and results:
+                documents = [doc for doc, _ in results]
+                scores = [score for _, score in results]
+                reranked_docs = self._reranker.rerank(documents, scores)
+                # Reconstruct tuples with reranked order
+                reranked_scores = []
+                for doc in reranked_docs:
+                    # Find original score
+                    for orig_doc, orig_score in results:
+                        if orig_doc.page_content == doc.page_content:
+                            reranked_scores.append(orig_score)
+                            break
+                results = list(zip(reranked_docs, reranked_scores))
 
             return results
         except Exception as e:
