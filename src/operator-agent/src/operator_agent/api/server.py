@@ -3326,6 +3326,396 @@ async def _process_agent_request(user_input: str, confirmed: bool = False, local
         return get_error_response(INTERNAL_ERROR, locale, str(e))
 
 
+# ============= RAG Corpus Management Endpoints =============
+
+class LoaderConfig(BaseModel):
+    """Configuration for a document loader."""
+    name: str
+    loader_type: str  # "directory", "database", "file", "hybrid"
+    path: Optional[str] = None
+    recursive: Optional[bool] = True
+    glob_patterns: Optional[List[str]] = None
+    exclude_patterns: Optional[List[str]] = None
+    chunk_size: Optional[int] = 0
+    chunk_overlap: Optional[int] = 0
+    connection_config: Optional[Dict[str, Any]] = None
+    query_template: Optional[str] = None
+    params: Optional[Dict[str, Any]] = None
+    metadata_columns: Optional[List[str]] = None
+    refresh_interval: Optional[int] = None
+
+
+class StoreCreateRequest(BaseModel):
+    """Request to create a vector store."""
+    store_name: str
+    loader: LoaderConfig
+    persist_directory: Optional[str] = None
+    collection_name: str = "default"
+
+
+class DocumentAddRequest(BaseModel):
+    """Request to add documents to a store."""
+    store_name: str
+    documents: List[Dict[str, Any]]  # List of {content, metadata}
+
+
+class SearchRequest(BaseModel):
+    """Request to search documents."""
+    query: str
+    store_name: Optional[str] = "default"
+    k: int = 5
+    score_threshold: Optional[float] = None
+    filter_metadata: Optional[Dict[str, Any]] = None
+
+
+class UpdateStoreRequest(BaseModel):
+    """Request to update store with loader."""
+    store_name: str
+    loader: LoaderConfig
+    clear_existing: bool = False
+
+
+# Global RAG service instance
+_rag_service: Optional[Any] = None
+
+
+def _get_rag_service() -> Any:
+    """Get or create RAG service instance."""
+    global _rag_service
+    if _rag_service is None:
+        from agent_framework.rag.service import RAGService
+        # Use default config path
+        config_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+            "configs", "rag_loaders.yaml"
+        )
+        if os.path.exists(config_path):
+            _rag_service = RAGService(config_path)
+        else:
+            _rag_service = RAGService()
+    return _rag_service
+
+
+@app.post("/api/rag/store/create")
+async def create_vector_store(
+    request: StoreCreateRequest,
+    _: bool = Depends(verify_api_key),
+    locale: str = Depends(get_locale)
+):
+    """
+    Create a vector store from a loader configuration.
+
+    Example request:
+    {
+        "store_name": "knowledge_base",
+        "loader": {
+            "name": "docs",
+            "loader_type": "directory",
+            "path": "./data/docs",
+            "recursive": true,
+            "glob_patterns": ["**/*.md", "**/*.txt"],
+            "chunk_size": 1000
+        },
+        "persist_directory": "./data/vectorstore"
+    }
+    """
+    try:
+        from agent_framework.rag.loaders import DirectoryLoader, DatabaseLoader, FileLoader, HybridLoader
+
+        loader_config = request.loader
+        loader_type = loader_config.loader_type
+
+        # Create loader based on type
+        if loader_type == "directory":
+            loader = DirectoryLoader(
+                directory=loader_config.path,
+                glob_patterns=loader_config.glob_patterns,
+                recursive=loader_config.recursive,
+                exclude_patterns=loader_config.exclude_patterns,
+                chunk_size=loader_config.chunk_size or 1000,
+                chunk_overlap=loader_config.chunk_overlap or 200,
+            )
+        elif loader_type == "file":
+            loader = FileLoader(
+                file_path=loader_config.path,
+                chunk_size=loader_config.chunk_size or 0,
+                chunk_overlap=loader_config.chunk_overlap or 0,
+            )
+        elif loader_type == "database":
+            if not loader_config.connection_config:
+                raise ValueError("connection_config required for database loader")
+            loader = DatabaseLoader(
+                connection_config=loader_config.connection_config,
+                query_template=loader_config.query_template,
+                params=loader_config.params or {},
+                metadata_columns=loader_config.metadata_columns,
+                refresh_interval=loader_config.refresh_interval,
+            )
+        else:
+            return get_error_response(
+                ErrorCode.INVALID_REQUEST,
+                locale,
+                f"Unsupported loader type: {loader_type}"
+            )
+
+        # Get embeddings (requires OpenAI or similar)
+        from agent_framework.rag.embeddings import create_embeddings
+        embeddings = create_embeddings(provider="openai")
+
+        # Create store
+        rag_service = _get_rag_service()
+        rag_service.create_store(
+            store_name=request.store_name,
+            loader=loader,
+            embeddings=embeddings,
+            persist_directory=request.persist_directory,
+            collection_name=request.collection_name,
+        )
+
+        return {
+            "status": "success",
+            "message": f"Vector store '{request.store_name}' created",
+            "store_name": request.store_name,
+        }
+
+    except Exception as e:
+        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
+
+
+@app.post("/api/rag/store/update")
+async def update_vector_store(
+    request: UpdateStoreRequest,
+    _: bool = Depends(verify_api_key),
+    locale: str = Depends(get_locale)
+):
+    """
+    Update a vector store with new documents from a loader.
+    """
+    try:
+        from agent_framework.rag.loaders import DirectoryLoader, DatabaseLoader, FileLoader
+
+        loader_config = request.loader
+        loader_type = loader_config.loader_type
+
+        if loader_type == "directory":
+            loader = DirectoryLoader(
+                directory=loader_config.path,
+                glob_patterns=loader_config.glob_patterns,
+                recursive=loader_config.recursive,
+                exclude_patterns=loader_config.exclude_patterns,
+                chunk_size=loader_config.chunk_size or 1000,
+                chunk_overlap=loader_config.chunk_overlap or 200,
+            )
+        elif loader_type == "file":
+            loader = FileLoader(
+                file_path=loader_config.path,
+                chunk_size=loader_config.chunk_size or 0,
+            )
+        elif loader_type == "database":
+            loader = DatabaseLoader(
+                connection_config=loader_config.connection_config,
+                query_template=loader_config.query_template,
+                params=loader_config.params or {},
+                metadata_columns=loader_config.metadata_columns,
+            )
+        else:
+            return get_error_response(
+                ErrorCode.INVALID_REQUEST,
+                locale,
+                f"Unsupported loader type: {loader_type}"
+            )
+
+        from agent_framework.rag.embeddings import create_embeddings
+        embeddings = create_embeddings(provider="openai")
+
+        rag_service = _get_rag_service()
+        count = rag_service.update_store(
+            store_name=request.store_name,
+            loader=loader,
+            embeddings=embeddings,
+            clear_existing=request.clear_existing,
+        )
+
+        return {
+            "status": "success",
+            "message": f"Added {count} documents to store",
+            "document_count": count,
+        }
+
+    except Exception as e:
+        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
+
+
+@app.post("/api/rag/documents/add")
+async def add_documents(
+    request: DocumentAddRequest,
+    _: bool = Depends(verify_api_key),
+    locale: str = Depends(get_locale)
+):
+    """
+    Add documents directly to a vector store.
+
+    Example request:
+    {
+        "store_name": "knowledge_base",
+        "documents": [
+            {
+                "content": "Document text content",
+                "metadata": {"source": "manual", "category": "guide"}
+            }
+        ]
+    }
+    """
+    try:
+        from langchain_core.documents import Document
+
+        documents = [
+            Document(page_content=doc["content"], metadata=doc.get("metadata", {}))
+            for doc in request.documents
+        ]
+
+        rag_service = _get_rag_service()
+        count = rag_service.add_documents(request.store_name, documents)
+
+        return {
+            "status": "success",
+            "message": f"Added {count} documents",
+            "document_count": count,
+        }
+
+    except Exception as e:
+        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
+
+
+@app.post("/api/rag/search")
+async def search_documents(
+    request: SearchRequest,
+    _: bool = Depends(verify_api_key),
+    locale: str = Depends(get_locale)
+):
+    """
+    Search documents in vector store.
+
+    Example request:
+    {
+        "query": "What is the coverage prediction methodology?",
+        "store_name": "knowledge_base",
+        "k": 5,
+        "score_threshold": 0.7
+    }
+    """
+    try:
+        rag_service = _get_rag_service()
+
+        if request.score_threshold is not None:
+            results = rag_service.search_with_scores(
+                query=request.query,
+                store_name=request.store_name,
+                k=request.k,
+                score_threshold=request.score_threshold,
+            )
+            return {
+                "status": "success",
+                "results": [
+                    {
+                        "content": doc.page_content,
+                        "metadata": doc.metadata,
+                        "score": score,
+                    }
+                    for doc, score in results
+                ],
+                "count": len(results),
+            }
+        else:
+            docs = rag_service.search(
+                query=request.query,
+                store_name=request.store_name,
+                k=request.k,
+                filter_metadata=request.filter_metadata,
+            )
+            return {
+                "status": "success",
+                "results": [
+                    {
+                        "content": doc.page_content,
+                        "metadata": doc.metadata,
+                    }
+                    for doc in docs
+                ],
+                "count": len(docs),
+            }
+
+    except Exception as e:
+        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
+
+
+@app.post("/api/rag/store/delete")
+async def delete_vector_store(
+    store_name: str,
+    _: bool = Depends(verify_api_key),
+    locale: str = Depends(get_locale)
+):
+    """
+    Delete a vector store.
+    """
+    try:
+        rag_service = _get_rag_service()
+        rag_service.vector_manager.delete_store(store_name)
+        return {
+            "status": "success",
+            "message": f"Deleted store '{store_name}'",
+        }
+    except Exception as e:
+        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
+
+
+@app.get("/api/rag/stores")
+async def list_stores(
+    _: bool = Depends(verify_api_key),
+    locale: str = Depends(get_locale)
+):
+    """
+    List all vector stores.
+    """
+    try:
+        rag_service = _get_rag_service()
+        stores = rag_service.list_stores()
+        return {
+            "status": "success",
+            "stores": stores,
+            "count": len(stores),
+        }
+    except Exception as e:
+        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
+
+
+@app.post("/api/rag/reranker/set")
+async def set_reranker(
+    strategy: str = "default",
+    _: bool = Depends(verify_api_key),
+    locale: str = Depends(get_locale)
+):
+    """
+    Set the reranker strategy for search results.
+
+    Available strategies:
+    - "default": Sort by similarity score
+    - "recency": Sort by time (newer first)
+    - "hybrid": Combine score, recency, and weight
+    - "weighted": Sort by weight, then score
+    """
+    try:
+        rag_service = _get_rag_service()
+        rag_service.set_reranker(strategy)
+        return {
+            "status": "success",
+            "message": f"Reranker set to '{strategy}'",
+            "strategy": strategy,
+        }
+    except Exception as e:
+        return get_error_response(ErrorCode.INTERNAL_ERROR, locale, str(e))
+
+
 def run_server(host: str = "0.0.0.0", port: int = 8080):
     """Run the FastAPI server."""
     import uvicorn
