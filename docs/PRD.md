@@ -1,6 +1,6 @@
 # OperatorBoard 需求分析文档
 
-**文档版本**: 1.5
+**文档版本**: 1.6
 **编制日期**: 2026-05-01
 **参考标准**: Google PRD Template | IEEE 830
 
@@ -149,7 +149,16 @@ class BaseSkill:
 |--------|------|--------|
 | DirectoryLoader | 目录扫描，支持txt/md/json/csv/pdf/docx | path, recursive, exclude_patterns, chunk_size |
 | DatabaseLoader | MySQL查询加载 | connection_config, query_template, refresh_interval |
+| FileLoader | 单文件加载，支持txt/md/json/csv/pdf/docx | file_path, extract_metadata, chunk_size |
 | HybridLoader | 多加载器组合 | loaders[], weights, priority, deduplicate |
+
+#### 2.1.6 RAG检索与二次排序
+
+| 组件 | 功能 | 说明 |
+|------|------|------|
+| DocumentReranker | 检索结果二次排序 | 支持score/time/weight/source/size多维排序 |
+| HybridReranker | 混合排序器 | 结合相似度、时效性、权重综合评分 |
+| RAGRetriever | 向量检索器 | 支持reranker集成和元数据过滤 |
 
 ### 2.2 Operator Agent 功能
 

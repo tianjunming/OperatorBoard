@@ -1,6 +1,6 @@
 # OperatorBoard 软件测试文档
 
-**文档版本**: 1.6
+**文档版本**: 1.7
 **编制日期**: 2026-05-01
 **参考标准**: IEEE 829 | ISO/IEC 29119
 
@@ -90,6 +90,20 @@
 | TF-FW-009 | ErrorCode.code | 创建错误码 | code属性正确 |
 | TF-FW-010 | AgentAPIError | 触发异常 | 正确HTTP响应 |
 | TF-FW-011 | get_error_response | 错误码+locale | 本地化消息 |
+
+#### 3.1.4 RAG语料加载器测试
+
+| 测试编号 | 测试项 | 输入 | 预期结果 |
+|---------|-------|------|---------|
+| TF-FW-012 | DirectoryLoader.load | 有效目录路径 | 返回文档列表 |
+| TF-FW-013 | DirectoryLoader缓存 | 重复调用 | 返回缓存结果 |
+| TF-FW-014 | DatabaseLoader.load | 有效SQL查询 | 返回文档列表 |
+| TF-FW-015 | DatabaseLoader刷新 | refresh() | 强制重新查询 |
+| TF-FW-016 | FileLoader.load | 有效文件路径 | 返回文档列表 |
+| TF-FW-017 | HybridLoader.load | 多加载器组合 | 合并去重结果 |
+| TF-FW-018 | DocumentReranker.rerank | 文档+分数 | 按配置排序 |
+| TF-FW-019 | HybridReranker.hybrid | 混合评分 | 综合排序正确 |
+| TF-FW-020 | RAGRetriever.set_reranker | 设置排序器 | 检索结果重排序 |
 
 ### 3.2 Operator Agent测试
 

@@ -1,6 +1,6 @@
 # OperatorBoard 代码设计文档
 
-**文档版本**: 1.6
+**文档版本**: 1.7
 **编制日期**: 2026-05-01
 **参考标准**: Google Style Guide | SOLID Principles
 
@@ -68,8 +68,16 @@ D:\develop\OperatorBoard\
 │   │   │   ├── rag/              # RAG系统
 │   │   │   │   ├── __init__.py
 │   │   │   │   ├── loaders/       # 语料加载器
-│   │   │   │   ├── base.py        # BaseLoader
-│   │   │   │   └── vectorstore.py # VectorStoreManager
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── base.py        # BaseLoader 抽象基类
+│   │   │   │   │   ├── directory.py   # DirectoryLoader 目录加载
+│   │   │   │   │   ├── database.py    # DatabaseLoader 数据库加载
+│   │   │   │   │   ├── file.py        # FileLoader 单文件加载
+│   │   │   │   │   ├── hybrid.py      # HybridLoader 混合加载
+│   │   │   │   │   ├── manager.py     # DocumentLoaderManager 管理器
+│   │   │   │   │   └── reranker.py    # DocumentReranker 二次排序
+│   │   │   │   ├── vectorstore.py # VectorStoreManager
+│   │   │   │   └── retriever.py   # RAGRetriever 检索器
 │   │   │   ├── llm/              # LLM客户端
 │   │   │   │   ├── __init__.py
 │   │   │   │   ├── client.py      # LLMClient
