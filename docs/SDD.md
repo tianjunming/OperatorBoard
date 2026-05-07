@@ -1,6 +1,6 @@
 # OperatorBoard 软件设计文档
 
-**文档版本**: 1.9
+**文档版本**: 1.10
 **编制日期**: 2026-05-05
 **参考标准**: IEEE 1012 | ISO/IEC/IEEE 42010
 
@@ -544,6 +544,121 @@ data: {"type": "error", "code": "E3001", "message": "查询超时"}
 
 event: done
 data: {"type": "done", "request_id": "req_001"}
+```
+
+#### POST /api/rag/store/create
+创建向量存储（从加载器配置）
+
+**请求**:
+```json
+{
+  "store_name": "knowledge_base",
+  "loader": {
+    "name": "docs",
+    "loader_type": "directory",
+    "path": "./data/docs",
+    "recursive": true,
+    "glob_patterns": ["**/*.md", "**/*.txt"],
+    "chunk_size": 1000
+  },
+  "persist_directory": "./data/vectorstore"
+}
+```
+
+**响应**:
+```json
+{
+  "status": "success",
+  "message": "Vector store 'knowledge_base' created",
+  "store_name": "knowledge_base"
+}
+```
+
+#### POST /api/rag/store/update
+更新向量存储（增量添加文档）
+
+**请求**:
+```json
+{
+  "store_name": "knowledge_base",
+  "loader": {
+    "name": "docs",
+    "loader_type": "directory",
+    "path": "./data/docs",
+    "chunk_size": 1000
+  },
+  "clear_existing": false
+}
+```
+
+#### POST /api/rag/documents/add
+直接添加文档到向量存储
+
+**请求**:
+```json
+{
+  "store_name": "knowledge_base",
+  "documents": [
+    {
+      "content": "Document text content",
+      "metadata": {"source": "manual", "category": "guide"}
+    }
+  ]
+}
+```
+
+#### POST /api/rag/search
+搜索向量存储中的文档
+
+**请求**:
+```json
+{
+  "query": "What is the coverage prediction methodology?",
+  "store_name": "knowledge_base",
+  "k": 5,
+  "score_threshold": 0.7
+}
+```
+
+**响应**:
+```json
+{
+  "status": "success",
+  "results": [
+    {
+      "content": "...",
+      "metadata": {"source": "..."},
+      "score": 0.85
+    }
+  ],
+  "count": 3
+}
+```
+
+#### GET /api/rag/stores
+列出所有向量存储
+
+**响应**:
+```json
+{
+  "status": "success",
+  "stores": ["knowledge_base", "telecom_docs"],
+  "count": 2
+}
+```
+
+#### POST /api/rag/reranker/set
+设置二次排序策略
+
+**请求**: `strategy` = "default" | "recency" | "hybrid" | "weighted"
+
+**响应**:
+```json
+{
+  "status": "success",
+  "message": "Reranker set to 'hybrid'",
+  "strategy": "hybrid"
+}
 ```
 
 ### 4.2 Java 微服务接口
